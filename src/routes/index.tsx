@@ -48,20 +48,9 @@ function App() {
 			<Grid size={8}>
 				<Box sx={{ p: 2 }}>
 					<Grid container spacing={2}>
-						{/* Left Column */}
+						{/* Left Column - Primary Input & Main Config */}
 						<Grid size={6}>
-							{/* Character */}
-							<Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-								<Typography variant="h6" gutterBottom>
-									Character
-								</Typography>
-								<Stack direction="row" spacing={1}>
-									<ClassSelect value={classValue} onChange={setClassValue} />
-									<RaceSelect value={raceValue} onChange={setRaceValue} />
-								</Stack>
-							</Paper>
-
-							{/* Items */}
+							{/* Items - Main User Input */}
 							<Paper elevation={1} sx={{ p: 2, mb: 2 }}>
 								<Typography variant="h6" gutterBottom>
 									Items
@@ -86,15 +75,7 @@ function App() {
 								/>
 							</Paper>
 
-							{/* Stats to Optimize */}
-							<Paper elevation={1} sx={{ p: 2 }}>
-								<StatsEntry stats={optimizeStats} onChange={setOptimizeStats} />
-							</Paper>
-						</Grid>
-
-						{/* Right Column */}
-						<Grid size={6}>
-							{/* Constraints */}
+							{/* Constraints - Main Config */}
 							<Paper elevation={1} sx={{ p: 2, mb: 2 }}>
 								<Typography variant="h6" gutterBottom>
 									Constraints
@@ -111,7 +92,26 @@ function App() {
 								</Stack>
 							</Paper>
 
-							{/* Buffs & Consumables */}
+							{/* Stats to Optimize - Main Config */}
+							<Paper elevation={1} sx={{ p: 2 }}>
+								<StatsEntry stats={optimizeStats} onChange={setOptimizeStats} />
+							</Paper>
+						</Grid>
+
+						{/* Right Column - Secondary Config */}
+						<Grid size={6}>
+							{/* Character - 2nd Priority */}
+							<Paper elevation={1} sx={{ p: 2, mb: 2 }}>
+								<Typography variant="h6" gutterBottom>
+									Character
+								</Typography>
+								<Stack direction="row" spacing={1}>
+									<ClassSelect value={classValue} onChange={setClassValue} />
+									<RaceSelect value={raceValue} onChange={setRaceValue} />
+								</Stack>
+							</Paper>
+
+							{/* Buffs & Consumables - Least Important */}
 							<Paper elevation={1} sx={{ p: 2 }}>
 								<Typography variant="h6" gutterBottom>
 									Buffs & Consumables
