@@ -182,25 +182,50 @@ function App() {
 			</Grid>
 
 			<Grid size={4}>
-				<Box display="flex" flexDirection="column">
-					<ItemGroupDisplay items={items} />
-					{items && (
-						<Box mt={2}>
-							<div>
-								Avoidance Score:{" "}
-								{items.reduce((acc, item) => acc + item.avoidanceScore, 0)}
-							</div>
-							<div>
-								Uncritability Score:{" "}
-								{items.reduce((acc, item) => acc + item.uncritabilityScore, 0)}
-							</div>
-							<div>
-								Objective Score:{" "}
-								{items.reduce((acc, item) => acc + item.objectiveScore, 0)}
-							</div>
-						</Box>
+				<Stack spacing={2} sx={{ p: 2 }}>
+					{/* Equipment Slots */}
+					<Paper elevation={1} sx={{ p: 2 }}>
+						<Typography variant="h6" gutterBottom>
+							Equipment
+						</Typography>
+						<ItemGroupDisplay items={items} />
+					</Paper>
+
+					{/* Stats Summary */}
+					{items.length > 0 && (
+						<Paper elevation={1} sx={{ p: 2 }}>
+							<Typography variant="h6" gutterBottom>
+								Stats Summary
+							</Typography>
+							<Stack spacing={1}>
+								<Box sx={{ display: "flex", justifyContent: "space-between" }}>
+									<Typography variant="body2" color="text.secondary">
+										Avoidance Score
+									</Typography>
+									<Typography variant="body2" fontWeight="medium">
+										{items.reduce((acc, item) => acc + item.avoidanceScore, 0).toFixed(2)}
+									</Typography>
+								</Box>
+								<Box sx={{ display: "flex", justifyContent: "space-between" }}>
+									<Typography variant="body2" color="text.secondary">
+										Uncritability Score
+									</Typography>
+									<Typography variant="body2" fontWeight="medium">
+										{items.reduce((acc, item) => acc + item.uncritabilityScore, 0).toFixed(2)}
+									</Typography>
+								</Box>
+								<Box sx={{ display: "flex", justifyContent: "space-between" }}>
+									<Typography variant="body2" color="text.secondary">
+										Objective Score
+									</Typography>
+									<Typography variant="body2" fontWeight="medium">
+										{items.reduce((acc, item) => acc + item.objectiveScore, 0).toFixed(2)}
+									</Typography>
+								</Box>
+							</Stack>
+						</Paper>
 					)}
-				</Box>
+				</Stack>
 			</Grid>
 		</Grid>
 	);
