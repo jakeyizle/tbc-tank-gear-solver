@@ -52,7 +52,7 @@ function App() {
 						<Grid size={6}>
 							{/* Character */}
 							<Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-								<Typography variant="subtitle2" color="text.secondary" gutterBottom>
+								<Typography variant="h6" gutterBottom>
 									Character
 								</Typography>
 								<Stack direction="row" spacing={1}>
@@ -63,7 +63,7 @@ function App() {
 
 							{/* Items */}
 							<Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-								<Typography variant="subtitle2" color="text.secondary" gutterBottom>
+								<Typography variant="h6" gutterBottom>
 									Items
 								</Typography>
 								<TextField
@@ -96,7 +96,7 @@ function App() {
 						<Grid size={6}>
 							{/* Constraints */}
 							<Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-								<Typography variant="subtitle2" color="text.secondary" gutterBottom>
+								<Typography variant="h6" gutterBottom>
 									Constraints
 								</Typography>
 								<Stack direction="row" spacing={3}>
@@ -113,7 +113,7 @@ function App() {
 
 							{/* Buffs & Consumables */}
 							<Paper elevation={1} sx={{ p: 2 }}>
-								<Typography variant="subtitle2" color="text.secondary" gutterBottom>
+								<Typography variant="h6" gutterBottom>
 									Buffs & Consumables
 								</Typography>
 								<Stack direction="row" spacing={2}>
