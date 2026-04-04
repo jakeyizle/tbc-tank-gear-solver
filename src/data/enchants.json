@@ -1,0 +1,660 @@
+[
+	{
+		"name": "Glyph of the Defender",
+		"id": "29186",
+		"effectID": "2999",
+		"type": "Head",
+		"stats": [
+			{ "name": "Defense", "value": 16 },
+			{ "name": "Dodge", "value": 17 }
+		]
+	},
+	{
+		"name": "Glyph of Power",
+		"id": "29191",
+		"effectID": "3002",
+		"type": "Head",
+		"stats": [
+			{ "name": "SpellPower", "value": 22 },
+			{ "name": "SpellHit", "value": 14 }
+		]
+	},
+	{
+		"name": "Glyph of Ferocity",
+		"id": "29192",
+		"effectID": "3003",
+		"type": "Head",
+		"stats": [
+			{ "name": "AttackPower", "value": 34 },
+			{ "name": "RangedAttackPower", "value": 34 },
+			{ "name": "MeleeHit", "value": 16 }
+		]
+	},
+	{
+		"name": "Glyph of the Outcast",
+		"id": "30846",
+		"effectID": "3096",
+		"type": "Head",
+		"stats": [
+			{ "name": "Strength", "value": 17 },
+			{ "name": "Intellect", "value": 16 }
+		]
+	},
+	{
+		"name": "Glyph of the Gladiator",
+		"id": "29193",
+		"effectID": "3004",
+		"type": "Head",
+		"stats": [
+			{ "name": "Stamina", "value": 18 },
+			{ "name": "Resilience", "value": 20 }
+		]
+	},
+	{
+		"name": "Presence of Might",
+		"id": "19782",
+		"effectID": "2583",
+		"type": "Head",
+		"stats": [
+			{ "name": "Stamina", "value": 10 },
+			{ "name": "Defense", "value": 10 },
+			{ "name": "BlockValue", "value": 15 }
+		]
+	},
+	{
+		"name": "Greater Inscription of Discipline",
+		"id": "28886",
+		"effectID": "2982",
+		"type": "Shoulder",
+		"stats": [
+			{ "name": "SpellPower", "value": 18 },
+			{ "name": "SpellCrit", "value": 10 }
+		]
+	},
+	{
+		"name": "Greater Inscription of Vengeance",
+		"id": "28888",
+		"effectID": "2986",
+		"type": "Shoulder",
+		"stats": [
+			{ "name": "AttackPower", "value": 30 },
+			{ "name": "RangedAttackPower", "value": 30 },
+			{ "name": "MeleeCrit", "value": 10 }
+		]
+	},
+	{
+		"name": "Greater Inscription of Warding",
+		"id": "28889",
+		"effectID": "2978",
+		"type": "Shoulder",
+		"stats": [
+			{ "name": "Defense", "value": 10 },
+			{ "name": "Dodge", "value": 15 }
+		]
+	},
+	{
+		"name": "Greater Inscription of the Orb",
+		"id": "28909",
+		"effectID": "2995",
+		"type": "Shoulder",
+		"stats": [
+			{ "name": "SpellPower", "value": 12 },
+			{ "name": "SpellCrit", "value": 15 }
+		]
+	},
+	{
+		"name": "Greater Inscription of the Blade",
+		"id": "28910",
+		"effectID": "2997",
+		"type": "Shoulder",
+		"stats": [
+			{ "name": "AttackPower", "value": 20 },
+			{ "name": "RangedAttackPower", "value": 20 },
+			{ "name": "MeleeCrit", "value": 15 }
+		]
+	},
+	{
+		"name": "Greater Inscription of the Knight",
+		"id": "28911",
+		"effectID": "2991",
+		"type": "Shoulder",
+		"stats": [
+			{ "name": "Defense", "value": 15 },
+			{ "name": "Dodge", "value": 10 }
+		]
+	},
+	{
+		"name": "Zandalar Signet of Mojo",
+		"id": "20076",
+		"effectID": "2605",
+		"type": "Shoulder",
+		"stats": [{ "name": "SpellPower", "value": 18 }]
+	},
+	{
+		"name": "Power of the Scourge",
+		"id": "23545",
+		"effectID": "2721",
+		"type": "Shoulder",
+		"stats": [
+			{ "name": "SpellPower", "value": 15 },
+			{ "name": "SpellCrit", "value": 14 }
+		]
+	},
+	{
+		"name": "Might of the Scourge",
+		"id": "23548",
+		"effectID": "2717",
+		"type": "Shoulder",
+		"stats": [
+			{ "name": "AttackPower", "value": 26 },
+			{ "name": "RangedAttackPower", "value": 26 },
+			{ "name": "MeleeCrit", "value": 14 }
+		]
+	},
+	{
+		"name": "Fortitude of the Scourge",
+		"id": "23549",
+		"effectID": "2716",
+		"type": "Shoulder",
+		"stats": [
+			{ "name": "Stamina", "value": 16 },
+			{ "name": "Armor", "value": 100 }
+		]
+	},
+	{
+		"name": "Enchant Cloak - Dodge",
+		"id": "33148",
+		"effectID": "2622",
+		"type": "Back",
+		"stats": [{ "name": "Dodge", "value": 12 }]
+	},
+	{
+		"name": "Enchant Cloak - Subtlety",
+		"id": "33150",
+		"effectID": "2621",
+		"type": "Back",
+		"stats": []
+	},
+	{
+		"name": "Enchant Cloak - Lesser Agility",
+		"id": "11206",
+		"effectID": "849",
+		"type": "Back",
+		"stats": [{ "name": "Agility", "value": 3 }]
+	},
+	{
+		"name": "Enchant Cloak - Greater Agility",
+		"id": "34004",
+		"effectID": "368",
+		"type": "Back",
+		"stats": [{ "name": "Agility", "value": 12 }]
+	},
+	{
+		"name": "Enchant Cloak - Spell Penetration",
+		"id": "28274",
+		"effectID": "2938",
+		"type": "Back",
+		"stats": [{ "name": "SpellPenetration", "value": 20 }]
+	},
+	{
+		"name": "Enchant Cloak - Greater Shadow Resistance",
+		"id": "28277",
+		"effectID": "1441",
+		"type": "Back",
+		"stats": [{ "name": "ShadowResistance", "value": 15 }]
+	},
+	{
+		"name": "Enchant Cloak - Steelweave",
+		"id": "35756",
+		"effectID": "2648",
+		"type": "Back",
+		"stats": [{ "name": "Defense", "value": 12 }]
+	},
+	{
+		"name": "Chest - Exceptional Health",
+		"id": "27957",
+		"effectID": "2659",
+		"type": "Chest",
+		"stats": [{ "name": "Health", "value": 150 }]
+	},
+	{
+		"name": "Chest - Exceptional Mana",
+		"id": "22546",
+		"effectID": "2660",
+		"type": "Chest",
+		"stats": [{ "name": "Mana", "value": 150 }]
+	},
+	{
+		"name": "Chest - Exceptional Stats",
+		"id": "24003",
+		"effectID": "2661",
+		"type": "Chest",
+		"stats": [
+			{ "name": "Stamina", "value": 6 },
+			{ "name": "Intellect", "value": 6 },
+			{ "name": "Spirit", "value": 6 },
+			{ "name": "Strength", "value": 6 },
+			{ "name": "Agility", "value": 6 }
+		]
+	},
+	{
+		"name": "Chest - Major Resilience",
+		"id": "28270",
+		"effectID": "2933",
+		"type": "Chest",
+		"stats": [{ "name": "Resilience", "value": 15 }]
+	},
+	{
+		"name": "Chest - Major Spirit",
+		"id": "33990",
+		"effectID": "1144",
+		"type": "Chest",
+		"stats": [{ "name": "Spirit", "value": 15 }]
+	},
+	{
+		"name": "Chest - Restore Mana Prime",
+		"id": "33991",
+		"effectID": "3150",
+		"type": "Chest",
+		"stats": [{ "name": "MP5", "value": 6 }]
+	},
+	{
+		"name": "Chest - Defense",
+		"id": "35500",
+		"effectID": "1950",
+		"type": "Chest",
+		"stats": [{ "name": "Defense", "value": 15 }]
+	},
+	{
+		"name": "Major Defense",
+		"id": "22530",
+		"effectID": "2648",
+		"type": "Wrist",
+		"stats": [{ "name": "Defense", "value": 12 }]
+	},
+	{
+		"name": "Bracer - Fortitude",
+		"id": "22533",
+		"effectID": "2649",
+		"type": "Wrist",
+		"stats": [{ "name": "Stamina", "value": 12 }]
+	},
+	{
+		"name": "Bracer - Spellpower",
+		"id": "22534",
+		"effectID": "2650",
+		"type": "Wrist",
+		"stats": [{ "name": "SpellPower", "value": 15 }]
+	},
+	{
+		"name": "Bracer - Major Intellect",
+		"id": "34001",
+		"effectID": "369",
+		"type": "Wrist",
+		"stats": [{ "name": "Intellect", "value": 12 }]
+	},
+	{
+		"name": "Bracer - Brawn",
+		"id": "27899",
+		"effectID": "2647",
+		"type": "Wrist",
+		"stats": [{ "name": "Strength", "value": 12 }]
+	},
+	{
+		"name": "Bracer - Assault",
+		"id": "34002",
+		"effectID": "1593",
+		"type": "Wrist",
+		"stats": [
+			{ "name": "AttackPower", "value": 24 },
+			{ "name": "RangedAttackPower", "value": 24 }
+		]
+	},
+	{
+		"name": "Bracer - Stats",
+		"id": "27905",
+		"effectID": "1891",
+		"type": "Wrist",
+		"stats": [
+			{ "name": "Stamina", "value": 4 },
+			{ "name": "Intellect", "value": 4 },
+			{ "name": "Spirit", "value": 4 },
+			{ "name": "Strength", "value": 4 },
+			{ "name": "Agility", "value": 4 }
+		]
+	},
+	{
+		"name": "Gloves - Shadow Power",
+		"id": "20727",
+		"effectID": "2614",
+		"type": "Hands",
+		"stats": [{ "name": "ShadowSpellPower", "value": 20 }]
+	},
+	{
+		"name": "Gloves - Spell Strike",
+		"id": "28271",
+		"effectID": "2935",
+		"type": "Hands",
+		"stats": [{ "name": "SpellHit", "value": 15 }]
+	},
+	{
+		"name": "Gloves - Major Spellpower",
+		"id": "28272",
+		"effectID": "2937",
+		"type": "Hands",
+		"stats": [{ "name": "SpellPower", "value": 20 }]
+	},
+	{
+		"name": "Gloves - Major Strength",
+		"id": "33995",
+		"effectID": "684",
+		"type": "Hands",
+		"stats": [{ "name": "Strength", "value": 15 }]
+	},
+	{
+		"name": "Gloves - Major Agility",
+		"id": "33152",
+		"effectID": "2564",
+		"type": "Hands",
+		"stats": [{ "name": "Agility", "value": 15 }]
+	},
+	{
+		"name": "Gloves - Threat",
+		"id": "33153",
+		"effectID": "2613",
+		"type": "Hands",
+		"stats": []
+	},
+	{
+		"name": "Runic Spellthread",
+		"id": "24274",
+		"effectID": "2748",
+		"type": "Legs",
+		"stats": [
+			{ "name": "SpellPower", "value": 35 },
+			{ "name": "Stamina", "value": 20 }
+		]
+	},
+	{
+		"name": "Mystic Spellthread",
+		"id": "24273",
+		"effectID": "2747",
+		"type": "Legs",
+		"stats": [
+			{ "name": "SpellPower", "value": 25 },
+			{ "name": "Stamina", "value": 15 }
+		]
+	},
+	{
+		"name": "Cobrahide Leg Armor",
+		"id": "29533",
+		"effectID": "3010",
+		"type": "Legs",
+		"stats": [
+			{ "name": "AttackPower", "value": 40 },
+			{ "name": "RangedAttackPower", "value": 40 },
+			{ "name": "MeleeCrit", "value": 10 }
+		]
+	},
+	{
+		"name": "Clefthide Leg Armor",
+		"id": "29534",
+		"effectID": "3011",
+		"type": "Legs",
+		"stats": [
+			{ "name": "Stamina", "value": 30 },
+			{ "name": "Agility", "value": 10 }
+		]
+	},
+	{
+		"name": "Nethercobra Leg Armor",
+		"id": "29535",
+		"effectID": "3012",
+		"type": "Legs",
+		"stats": [
+			{ "name": "AttackPower", "value": 50 },
+			{ "name": "RangedAttackPower", "value": 50 },
+			{ "name": "MeleeCrit", "value": 12 }
+		]
+	},
+	{
+		"name": "Nethercleft Leg Armor",
+		"id": "29536",
+		"effectID": "3013",
+		"type": "Legs",
+		"stats": [
+			{ "name": "Stamina", "value": 40 },
+			{ "name": "Agility", "value": 12 }
+		]
+	},
+	{
+		"name": "Enchant Boots - Spirit",
+		"id": "16220",
+		"effectID": "851",
+		"type": "Feet",
+		"stats": [{ "name": "Spirit", "value": 5 }]
+	},
+	{
+		"name": "Enchant Boots - Boar's Speed",
+		"id": "35297",
+		"effectID": "2940",
+		"type": "Feet",
+		"stats": [{ "name": "Stamina", "value": 9 }]
+	},
+	{
+		"name": "Enchant Boots - Vitality",
+		"id": "35298",
+		"effectID": "2656",
+		"type": "Feet",
+		"stats": [{ "name": "MP5", "value": 4 }]
+	},
+	{
+		"name": "Enchant Boots - Fortitude",
+		"id": "22543",
+		"effectID": "2649",
+		"type": "Feet",
+		"stats": [{ "name": "Stamina", "value": 12 }]
+	},
+	{
+		"name": "Enchant Boots - Dexterity",
+		"id": "22544",
+		"effectID": "2657",
+		"type": "Feet",
+		"stats": [{ "name": "Agility", "value": 12 }]
+	},
+	{
+		"name": "Enchant Boots - Cat's Swiftness",
+		"id": "28279",
+		"effectID": "2939",
+		"type": "Feet",
+		"stats": [{ "name": "Agility", "value": 6 }]
+	},
+	{
+		"name": "Enchant Boots - Surefooted",
+		"id": "22545",
+		"effectID": "2658",
+		"type": "Feet",
+		"stats": [{ "name": "MeleeHit", "value": 10 }]
+	},
+	{
+		"name": "Weapon - Superior Striking",
+		"id": "16250",
+		"effectID": "1897",
+		"type": "Weapon",
+		"stats": []
+	},
+	{
+		"name": "Weapon - Major Striking",
+		"id": "22552",
+		"effectID": "963",
+		"type": "Weapon",
+		"stats": []
+	},
+	{
+		"name": "Weapon - Crusader",
+		"id": "16252",
+		"effectID": "1900",
+		"type": "Weapon",
+		"stats": []
+	},
+	{
+		"name": "Weapon - Major Intellect",
+		"id": "22551",
+		"effectID": "2666",
+		"type": "Weapon",
+		"stats": [{ "name": "Intellect", "value": 30 }]
+	},
+	{
+		"name": "Savagery",
+		"id": "22554",
+		"effectID": "2667",
+		"type": "Weapon",
+		"enchantType": "TwoHand",
+		"stats": [
+			{ "name": "AttackPower", "value": 70 },
+			{ "name": "RangedAttackPower", "value": 70 }
+		]
+	},
+	{
+		"name": "Weapon - Major Spellpower",
+		"id": "22555",
+		"effectID": "2669",
+		"type": "Weapon",
+		"stats": [{ "name": "SpellPower", "value": 40 }]
+	},
+	{
+		"name": "Sunfire",
+		"id": "22560",
+		"effectID": "2671",
+		"type": "Weapon",
+		"stats": [
+			{ "name": "ArcaneSpellPower", "value": 50 },
+			{ "name": "FireSpellPower", "value": 50 }
+		]
+	},
+	{
+		"name": "Soulfrost",
+		"id": "22561",
+		"effectID": "2672",
+		"type": "Weapon",
+		"stats": [
+			{ "name": "FrostSpellPower", "value": 54 },
+			{ "name": "ShadowSpellPower", "value": 54 }
+		]
+	},
+	{
+		"name": "Weapon - Mongoose",
+		"id": "22559",
+		"effectID": "2673",
+		"type": "Weapon",
+		"stats": []
+	},
+	{
+		"name": "Weapon - Agility",
+		"id": "19445",
+		"effectID": "2564",
+		"type": "Weapon",
+		"stats": [{ "name": "Agility", "value": 15 }]
+	},
+	{
+		"name": "Weapon - Greater Agility",
+		"id": "33165",
+		"effectID": "3222",
+		"type": "Weapon",
+		"stats": [{ "name": "Agility", "value": 20 }]
+	},
+	{
+		"name": "2H Weapon - Major Agility",
+		"id": "22556",
+		"effectID": "2670",
+		"type": "Weapon",
+		"enchantType": "TwoHand",
+		"stats": [{ "name": "Agility", "value": 35 }]
+	},
+	{
+		"name": "Weapon - Executioner",
+		"id": "33307",
+		"effectID": "3225",
+		"type": "Weapon",
+		"stats": []
+	},
+	{
+		"name": "Deathfrost",
+		"id": "35498",
+		"effectID": "3273",
+		"type": "Weapon",
+		"stats": []
+	},
+	{
+		"name": "Shield - Intellect",
+		"id": "22539",
+		"effectID": "2654",
+		"type": "Weapon",
+		"enchantType": "Shield",
+		"stats": [{ "name": "Intellect", "value": 12 }]
+	},
+	{
+		"name": "Shield - Major Stamina",
+		"id": "28282",
+		"effectID": "1071",
+		"type": "Weapon",
+		"enchantType": "Shield",
+		"stats": [{ "name": "Stamina", "value": 18 }]
+	},
+	{
+		"name": "Shield - Resilience",
+		"id": "44383",
+		"effectID": "3229",
+		"type": "Weapon",
+		"enchantType": "Shield",
+		"stats": [{ "name": "Resilience", "value": 12 }]
+	},
+	{
+		"name": "Ring - Striking",
+		"id": "22535",
+		"effectID": "2929",
+		"type": "Finger",
+		"stats": []
+	},
+	{
+		"name": "Ring - Spellpower",
+		"id": "22536",
+		"effectID": "2928",
+		"type": "Finger",
+		"stats": [{ "name": "SpellPower", "value": 12 }]
+	},
+	{
+		"name": "Ring - Stats",
+		"id": "22538",
+		"effectID": "2931",
+		"type": "Finger",
+		"stats": [
+			{ "name": "Stamina", "value": 4 },
+			{ "name": "Intellect", "value": 4 },
+			{ "name": "Spirit", "value": 4 },
+			{ "name": "Strength", "value": 4 },
+			{ "name": "Agility", "value": 4 }
+		]
+	},
+	{
+		"name": "Biznicks 247x128 Accurascope",
+		"id": "18283",
+		"effectID": "2523",
+		"type": "Ranged",
+		"stats": []
+	},
+	{
+		"name": "Khorium Scope",
+		"id": "23765",
+		"effectID": "2723",
+		"type": "Ranged",
+		"stats": []
+	},
+	{
+		"name": "Stabilized Eternium Scope",
+		"id": "23766",
+		"effectID": "2724",
+		"type": "Ranged",
+		"stats": []
+	}
+]
