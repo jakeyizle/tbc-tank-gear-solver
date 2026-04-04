@@ -1,10 +1,13 @@
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
+import Divider from "@mui/material/Divider";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import FormGroup from "@mui/material/FormGroup";
 import FormLabel from "@mui/material/FormLabel";
 import Grid from "@mui/material/Grid";
+import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { createFileRoute } from "@tanstack/react-router";
@@ -43,13 +46,31 @@ function App() {
 	return (
 		<Grid container spacing={2}>
 			<Grid size={8}>
-				<Box display="flex" flexDirection="column" height="100vh">
-					<Box>
-						<Grid container spacing={2}>
-							<Grid size={3}>
-								<Typography variant="h6">Items</Typography>
+				<Stack spacing={3} sx={{ p: 2 }}>
+					{/* Character Section */}
+					<Paper elevation={2} sx={{ p: 3 }}>
+						<Typography variant="h6" gutterBottom>
+							Character
+						</Typography>
+						<Stack direction="row" spacing={2}>
+							<ClassSelect value={classValue} onChange={setClassValue} />
+							<RaceSelect value={raceValue} onChange={setRaceValue} />
+						</Stack>
+					</Paper>
 
-								<TextField label="Item IDs" variant="outlined" />
+					{/* Items & Optimization Section */}
+					<Paper elevation={2} sx={{ p: 3 }}>
+						<Typography variant="h6" gutterBottom>
+							Items
+						</Typography>
+						<Stack spacing={3}>
+							<Box>
+								<TextField
+									label="Item IDs"
+									variant="outlined"
+									fullWidth
+									size="small"
+								/>
 								<FormControlLabel
 									control={
 										<Checkbox
@@ -60,95 +81,99 @@ function App() {
 										/>
 									}
 									label="Lock Enchants and Gems"
+									sx={{ mt: 1 }}
 								/>
-							</Grid>
-							<Grid size={4}>
-								<StatsEntry stats={optimizeStats} onChange={setOptimizeStats} />
-							</Grid>
-							<Grid size={4}>
-								<Typography variant="h6">Constraints</Typography>
-								<CritRadioGroup
-									onChange={setUncritabilitySetting}
-									uncritabilitySetting={uncritabilitySetting}
-								/>
-								<UncrushableRadioGroup
-									onChange={setUncrushabilitySetting}
-									uncrushabilitySetting={uncrushabilitySetting}
-								/>
-							</Grid>
-						</Grid>
-					</Box>
+							</Box>
 
-					<Box mt={2}>
-						<div>Settings</div>
-						<Grid container spacing={2}>
-							{/* Class + Race */}
-							<Grid size={2}>
-								<ClassSelect value={classValue} onChange={setClassValue} />
-							</Grid>
-							<Grid size={10}>
-								<RaceSelect value={raceValue} onChange={setRaceValue} />
-							</Grid>
+							<Divider />
 
-							{/* TODO Buffs */}
-							<Grid size={12}>
+							<StatsEntry stats={optimizeStats} onChange={setOptimizeStats} />
+						</Stack>
+					</Paper>
+
+					{/* Constraints Section */}
+					<Paper elevation={2} sx={{ p: 3 }}>
+						<Typography variant="h6" gutterBottom>
+							Constraints
+						</Typography>
+						<Stack direction={{ xs: "column", sm: "row" }} spacing={4}>
+							<CritRadioGroup
+								onChange={setUncritabilitySetting}
+								uncritabilitySetting={uncritabilitySetting}
+							/>
+							<UncrushableRadioGroup
+								onChange={setUncrushabilitySetting}
+								uncrushabilitySetting={uncrushabilitySetting}
+							/>
+						</Stack>
+					</Paper>
+
+					{/* Buffs & Consumables Section */}
+					<Paper elevation={2} sx={{ p: 3 }}>
+						<Typography variant="h6" gutterBottom>
+							Buffs & Consumables
+						</Typography>
+						<Grid container spacing={3}>
+							<Grid size={{ xs: 12, md: 6 }}>
 								<FormGroup>
-									<FormLabel>Buffs</FormLabel>
+									<FormLabel sx={{ mb: 1 }}>Buffs</FormLabel>
 									<FormControlLabel
-										control={<Checkbox defaultChecked />}
+										control={<Checkbox defaultChecked size="small" />}
 										label="Mark of the Wild"
 									/>
 									<FormControlLabel
-										control={<Checkbox defaultChecked />}
+										control={<Checkbox defaultChecked size="small" />}
 										label="Improved Mark of the Wild"
 									/>
 									<FormControlLabel
-										control={<Checkbox defaultChecked />}
+										control={<Checkbox defaultChecked size="small" />}
 										label="Blessing of Kings"
 									/>
 									<FormControlLabel
-										control={<Checkbox />}
+										control={<Checkbox size="small" />}
 										label="Grace of Air Totem"
 									/>
 								</FormGroup>
 							</Grid>
-							<Grid size={12}>
+							<Grid size={{ xs: 12, md: 6 }}>
 								<FormGroup>
-									<FormLabel>Consumables</FormLabel>
+									<FormLabel sx={{ mb: 1 }}>Consumables</FormLabel>
 									<FormControlLabel
-										control={<Checkbox />}
+										control={<Checkbox size="small" />}
 										label="Scroll of Agility V"
 									/>
 								</FormGroup>
 								<ElixirFlaskFormGroup />
 							</Grid>
 						</Grid>
-					</Box>
+					</Paper>
 
-					<Box mt={2}>
-						<Button
-							onClick={async () => {
-								const items = await solve(
-									itemIds.map((id) => id.toString()),
-									{
-										raceId: raceValue.toString(),
-										classId: classValue.toString(),
-										uncrushabilitySetting,
-										uncritabilitySetting,
-										optimizeStats: optimizeStats,
-										areEnchantsGemsLocked,
-									},
-								);
-								console.log(
-									`Finished - avoidanceScore: ${items.reduce((acc, item) => acc + item.avoidanceScore, 0)} objectiveScore: ${items.reduce((acc, item) => acc + item.objectiveScore, 0)}`,
-								);
-								setItems(items);
-							}}
-						>
-							Submit
-						</Button>
-					</Box>
-				</Box>
+					{/* Submit Button */}
+					<Button
+						variant="contained"
+						size="large"
+						fullWidth
+						onClick={async () => {
+							const items = await solve(
+								itemIds.map((id) => id.toString()),
+								{
+									raceId: raceValue.toString(),
+									classId: classValue.toString(),
+									uncrushabilitySetting,
+									uncritabilitySetting,
+									optimizeStats: optimizeStats,
+									areEnchantsGemsLocked,
+								},
+							);
+							console.log(
+								`Finished - avoidanceScore: ${items.reduce((acc, item) => acc + item.avoidanceScore, 0)} objectiveScore: ${items.reduce((acc, item) => acc + item.objectiveScore, 0)}`,
+							);
+							setItems(items);
+						}}
+					>
+						Solve
+					</Button>
+				</Stack>
 			</Grid>
 
 			<Grid size={4}>
