@@ -9,9 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VariationCRouteImport } from './routes/variation-c'
+import { Route as VariationBRouteImport } from './routes/variation-b'
+import { Route as VariationARouteImport } from './routes/variation-a'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 
+const VariationCRoute = VariationCRouteImport.update({
+  id: '/variation-c',
+  path: '/variation-c',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VariationBRoute = VariationBRouteImport.update({
+  id: '/variation-b',
+  path: '/variation-b',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VariationARoute = VariationARouteImport.update({
+  id: '/variation-a',
+  path: '/variation-a',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
@@ -26,31 +44,70 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/variation-a': typeof VariationARoute
+  '/variation-b': typeof VariationBRoute
+  '/variation-c': typeof VariationCRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/variation-a': typeof VariationARoute
+  '/variation-b': typeof VariationBRoute
+  '/variation-c': typeof VariationCRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/variation-a': typeof VariationARoute
+  '/variation-b': typeof VariationBRoute
+  '/variation-c': typeof VariationCRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about'
+  fullPaths: '/' | '/about' | '/variation-a' | '/variation-b' | '/variation-c'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about'
-  id: '__root__' | '/' | '/about'
+  to: '/' | '/about' | '/variation-a' | '/variation-b' | '/variation-c'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/variation-a'
+    | '/variation-b'
+    | '/variation-c'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  VariationARoute: typeof VariationARoute
+  VariationBRoute: typeof VariationBRoute
+  VariationCRoute: typeof VariationCRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/variation-c': {
+      id: '/variation-c'
+      path: '/variation-c'
+      fullPath: '/variation-c'
+      preLoaderRoute: typeof VariationCRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/variation-b': {
+      id: '/variation-b'
+      path: '/variation-b'
+      fullPath: '/variation-b'
+      preLoaderRoute: typeof VariationBRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/variation-a': {
+      id: '/variation-a'
+      path: '/variation-a'
+      fullPath: '/variation-a'
+      preLoaderRoute: typeof VariationARouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/about': {
       id: '/about'
       path: '/about'
@@ -71,6 +128,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  VariationARoute: VariationARoute,
+  VariationBRoute: VariationBRoute,
+  VariationCRoute: VariationCRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
