@@ -93,7 +93,7 @@ const getGems = (
 const getItem = (id: string) => {
 	const items = Items as Item[];
 	let item = items.find((i) => i.id === id);
-	if (!item) console.error(`Item not found: ${id}`);
+	//if (!item) console.error(`Item not found: ${id}`);
 	item = item ? overrideItem(item) : undefined;
 	return item;
 };

@@ -6,7 +6,6 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import FormGroup from "@mui/material/FormGroup";
 import FormLabel from "@mui/material/FormLabel";
 import Grid from "@mui/material/Grid";
-import LinearProgress from "@mui/material/LinearProgress";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
@@ -50,9 +49,9 @@ function TabPanel(props: TabPanelProps) {
 
 /**
  * Variation B: Tabbed Configuration Panel
- * - Settings organized into tabs (Setup, Optimization, Buffs)
- * - Clean interface that scales well with more options
- * - Stats summary uses progress bars for visual representation
+ * - Setup tab: Items + Constraints + Stats (optimization together)
+ * - Config tab: Class/Race + Buffs & Consumables
+ * - Stats summary displays 10+ stats in a simple grid layout
  */
 function VariationB() {
 	const [classValue, setClassValue] = useState("2");
@@ -76,7 +75,22 @@ function VariationB() {
 	const avoidanceTotal = items.reduce((acc, item) => acc + item.avoidanceScore, 0);
 	const uncritTotal = items.reduce((acc, item) => acc + item.uncritabilityScore, 0);
 	const objectiveTotal = items.reduce((acc, item) => acc + item.objectiveScore, 0);
-	const maxScore = Math.max(avoidanceTotal, uncritTotal, objectiveTotal, 1);
+
+	// Stats data for the summary grid (placeholder values for future expansion)
+	const statsData = [
+		{ label: "Avoidance", value: avoidanceTotal },
+		{ label: "Uncritability", value: uncritTotal },
+		{ label: "Objective", value: objectiveTotal },
+		{ label: "Stamina", value: 0 },
+		{ label: "Armor", value: 0 },
+		{ label: "Defense", value: 0 },
+		{ label: "Dodge", value: 0 },
+		{ label: "Parry", value: 0 },
+		{ label: "Block", value: 0 },
+		{ label: "Block Value", value: 0 },
+		{ label: "Health", value: 0 },
+		{ label: "Resilience", value: 0 },
+	];
 
 	return (
 		<Grid container spacing={2}>
@@ -90,12 +104,11 @@ function VariationB() {
 						sx={{ borderBottom: 1, borderColor: "divider" }}
 					>
 						<Tab label="Setup" />
-						<Tab label="Optimization" />
-						<Tab label="Buffs" />
+						<Tab label="Config" />
 					</Tabs>
 
 					<Box sx={{ p: 2 }}>
-						{/* Tab 0: Setup - Items & Character */}
+						{/* Tab 0: Setup - Items + Constraints + Stats */}
 						<TabPanel value={tabValue} index={0}>
 							<Stack spacing={3}>
 								<Box>
@@ -108,7 +121,7 @@ function VariationB() {
 										fullWidth
 										size="small"
 										multiline
-										rows={3}
+										rows={2}
 									/>
 									<FormControlLabel
 										control={
@@ -129,21 +142,6 @@ function VariationB() {
 
 								<Box>
 									<Typography variant="subtitle1" fontWeight="medium" gutterBottom>
-										Character
-									</Typography>
-									<Stack direction="row" spacing={2}>
-										<ClassSelect value={classValue} onChange={setClassValue} />
-										<RaceSelect value={raceValue} onChange={setRaceValue} />
-									</Stack>
-								</Box>
-							</Stack>
-						</TabPanel>
-
-						{/* Tab 1: Optimization - Constraints & Stats */}
-						<TabPanel value={tabValue} index={1}>
-							<Stack spacing={3}>
-								<Box>
-									<Typography variant="subtitle1" fontWeight="medium" gutterBottom>
 										Constraints
 									</Typography>
 									<Stack direction="row" spacing={4}>
@@ -160,56 +158,65 @@ function VariationB() {
 
 								<Divider />
 
-								<Box>
-									<Typography variant="subtitle1" fontWeight="medium" gutterBottom>
-										Stats to Optimize
-									</Typography>
-									<StatsEntry stats={optimizeStats} onChange={setOptimizeStats} />
-								</Box>
+								<StatsEntry stats={optimizeStats} onChange={setOptimizeStats} />
 							</Stack>
 						</TabPanel>
 
-						{/* Tab 2: Buffs & Consumables */}
-						<TabPanel value={tabValue} index={2}>
-							<Grid container spacing={3}>
-								<Grid size={6}>
+						{/* Tab 1: Config - Character + Buffs & Consumables */}
+						<TabPanel value={tabValue} index={1}>
+							<Stack spacing={3}>
+								<Box>
 									<Typography variant="subtitle1" fontWeight="medium" gutterBottom>
-										Buffs
+										Character
 									</Typography>
-									<FormGroup>
-										<FormControlLabel
-											control={<Checkbox defaultChecked size="small" />}
-											label="Mark of the Wild"
-										/>
-										<FormControlLabel
-											control={<Checkbox defaultChecked size="small" />}
-											label="Improved Mark of the Wild"
-										/>
-										<FormControlLabel
-											control={<Checkbox defaultChecked size="small" />}
-											label="Blessing of Kings"
-										/>
-										<FormControlLabel
-											control={<Checkbox size="small" />}
-											label="Grace of Air Totem"
-										/>
-									</FormGroup>
+									<Stack direction="row" spacing={2}>
+										<ClassSelect value={classValue} onChange={setClassValue} />
+										<RaceSelect value={raceValue} onChange={setRaceValue} />
+									</Stack>
+								</Box>
+
+								<Divider />
+
+								<Grid container spacing={3}>
+									<Grid size={6}>
+										<Typography variant="subtitle1" fontWeight="medium" gutterBottom>
+											Buffs
+										</Typography>
+										<FormGroup>
+											<FormControlLabel
+												control={<Checkbox defaultChecked size="small" />}
+												label="Mark of the Wild"
+											/>
+											<FormControlLabel
+												control={<Checkbox defaultChecked size="small" />}
+												label="Improved Mark of the Wild"
+											/>
+											<FormControlLabel
+												control={<Checkbox defaultChecked size="small" />}
+												label="Blessing of Kings"
+											/>
+											<FormControlLabel
+												control={<Checkbox size="small" />}
+												label="Grace of Air Totem"
+											/>
+										</FormGroup>
+									</Grid>
+									<Grid size={6}>
+										<Typography variant="subtitle1" fontWeight="medium" gutterBottom>
+											Consumables
+										</Typography>
+										<FormGroup>
+											<FormControlLabel
+												control={<Checkbox size="small" />}
+												label="Scroll of Agility V"
+											/>
+										</FormGroup>
+										<Box sx={{ mt: 2 }}>
+											<ElixirFlaskFormGroup />
+										</Box>
+									</Grid>
 								</Grid>
-								<Grid size={6}>
-									<Typography variant="subtitle1" fontWeight="medium" gutterBottom>
-										Consumables
-									</Typography>
-									<FormGroup>
-										<FormControlLabel
-											control={<Checkbox size="small" />}
-											label="Scroll of Agility V"
-										/>
-									</FormGroup>
-									<Box sx={{ mt: 2 }}>
-										<ElixirFlaskFormGroup />
-									</Box>
-								</Grid>
-							</Grid>
+							</Stack>
 						</TabPanel>
 					</Box>
 
@@ -255,50 +262,29 @@ function VariationB() {
 							<Typography variant="h6" gutterBottom>
 								Stats Summary
 							</Typography>
-							<Stack spacing={2}>
-								<Box>
-									<Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-										<Typography variant="body2">Avoidance</Typography>
-										<Typography variant="body2" fontWeight="medium">
-											{avoidanceTotal.toFixed(2)}
-										</Typography>
-									</Box>
-									<LinearProgress
-										variant="determinate"
-										value={(avoidanceTotal / maxScore) * 100}
-										color="success"
-										sx={{ height: 8, borderRadius: 1 }}
-									/>
-								</Box>
-								<Box>
-									<Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-										<Typography variant="body2">Uncritability</Typography>
-										<Typography variant="body2" fontWeight="medium">
-											{uncritTotal.toFixed(2)}
-										</Typography>
-									</Box>
-									<LinearProgress
-										variant="determinate"
-										value={(uncritTotal / maxScore) * 100}
-										color="info"
-										sx={{ height: 8, borderRadius: 1 }}
-									/>
-								</Box>
-								<Box>
-									<Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-										<Typography variant="body2">Objective</Typography>
-										<Typography variant="body2" fontWeight="medium">
-											{objectiveTotal.toFixed(2)}
-										</Typography>
-									</Box>
-									<LinearProgress
-										variant="determinate"
-										value={(objectiveTotal / maxScore) * 100}
-										color="primary"
-										sx={{ height: 8, borderRadius: 1 }}
-									/>
-								</Box>
-							</Stack>
+							<Grid container spacing={1}>
+								{statsData.map((stat) => (
+									<Grid size={6} key={stat.label}>
+										<Box
+											sx={{
+												display: "flex",
+												justifyContent: "space-between",
+												py: 0.5,
+												px: 1,
+												bgcolor: "action.hover",
+												borderRadius: 1,
+											}}
+										>
+											<Typography variant="body2" color="text.secondary">
+												{stat.label}
+											</Typography>
+											<Typography variant="body2" fontWeight="medium">
+												{stat.value.toFixed(2)}
+											</Typography>
+										</Box>
+									</Grid>
+								))}
+							</Grid>
 						</Paper>
 					)}
 				</Stack>

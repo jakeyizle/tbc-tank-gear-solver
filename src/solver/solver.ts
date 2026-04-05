@@ -159,9 +159,9 @@ export const runLPModel = async (lpItems: LPItem[], avoidanceTarget: number, unc
 
 	let result = await glpk.solve(avoidanceModel, solveOptions(glpk));
 	if (result.result.status !== glpk.GLP_OPT) {
-		console.error(
-			"GLPK failed to find an optimal solution, trying to find best result...",
-		);
+		// console.error(
+		// 	"GLPK failed to find an optimal solution, trying to find best result...",
+		// );
 
 		const avoidanceObjective = {
 			direction: glpk.GLP_MAX,
