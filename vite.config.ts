@@ -15,6 +15,20 @@ const config = defineConfig({
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     viteReact(),
   ],
+  optimizeDeps: {
+    include: [
+      '@emotion/react',
+      '@emotion/styled',
+      '@mui/material',
+      '@mui/material/Accordion',
+      '@mui/material/AccordionSummary',
+      '@mui/material/AccordionDetails',
+      '@mui/material/Chip',
+      '@mui/material/Tab',
+      '@mui/material/Tabs',
+      '@mui/material/LinearProgress',
+    ],
+  },
 })
 
 export default config
