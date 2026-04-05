@@ -1,9 +1,10 @@
 import type { Stat } from "./types";
 
 // Agility -> 1 avoidance per 25
-// Defense -> 1 avoidance per 15
+// Defense -> 1 avoidance per 15 rating
 // Dodge -> 1 avoidance per 18.9
 // Parry -> 1 avoidance per 23.6
+// all stats are in ratings, not skill
 export const calculateAvoidance = (stat: Stat, uncrushabilitySetting: number) => {
 	if (uncrushabilitySetting === 0) return 0;
 	switch (stat.name) {

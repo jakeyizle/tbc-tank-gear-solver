@@ -11,6 +11,7 @@ import { gemsSatisfySocketBonus } from "./socketBonus";
 import type {
 	Enchant,
 	Gem,
+	InputItem,
 	Item,
 	ItemVariation,
 	LPItem,
@@ -18,17 +19,40 @@ import type {
 	Stat,
 } from "./types";
 
+const createEmptyEnchant = (): Enchant => {
+	return {
+		name: "",
+		id: "",
+		effectID: "",
+		type: "Ranged",
+		stats: [],
+	}
+}
+
 export const getTransformedItems = (
-	itemIds: string[],
+	inputItems: InputItem[],
 	optimizeStats: Stat[],
 	areEnchantsGemsLocked: boolean,
 	uncrushabilitySetting: number,
 	uncritabilitySetting: number,
 ) => {
-	const items = itemIds.map((id) => getItem(id)).filter((item) => !!item);
-	const itemVariations = createItemVariations(items, optimizeStats, uncrushabilitySetting, uncritabilitySetting);
+	const items = inputItems
+		.map((item) => getItem(item))
+		.filter((item) => !!item);
+	const itemVariations = createItemVariations(
+		items,
+		optimizeStats,
+		uncrushabilitySetting,
+		uncritabilitySetting,
+		areEnchantsGemsLocked,
+	);
 	const lpItems = itemVariations.map((item) =>
-		transformItem(item, optimizeStats, uncrushabilitySetting, uncritabilitySetting),
+		transformItem(
+			item,
+			optimizeStats,
+			uncrushabilitySetting,
+			uncritabilitySetting,
+		),
 	);
 	return lpItems;
 };
@@ -57,6 +81,24 @@ const getEnchants = (
 	enchants = enchants.filter((enchant) => enchant.stats.length > 0);
 	enchants = enchants.filter((enchant) => doesEnchantHaveAScore(enchant));
 	return enchants;
+};
+
+const getGem = (id: string) => {
+	const gemToReturn = Gems.find((g) => g.id === id);
+	if (!gemToReturn) {
+		console.error(`Gem not found: ${id}`);
+		return undefined;
+	}
+	return gemToReturn;
+};
+
+const getEnchantByEffectID = (effectID: string) => {
+	const enchantToReturn = Enchants.find((e) => e.effectID === effectID);
+	if (!enchantToReturn) {
+		console.error(`Enchant not found with effectID: ${effectID}`);
+		return undefined;
+	}
+	return enchantToReturn;
 };
 
 const getGems = (
@@ -90,11 +132,27 @@ const getGems = (
 	return gems;
 };
 
-const getItem = (id: string) => {
+const getItem = (inputItem: InputItem) => {
 	const items = Items as Item[];
-	let item = items.find((i) => i.id === id);
-	if (!item) console.error(`Item not found: ${id}`);
-	item = item ? overrideItem(item) : undefined;
+	let baseItem = items.find((i) => i.id === inputItem.id);
+	if (!baseItem) {
+		console.error(`Item not found: ${inputItem.id}`);
+		return undefined;
+	}
+	baseItem = overrideItem(baseItem);
+	const gems = inputItem.gems
+		.map((gem) => getGem(gem))
+		.filter((gem) => !!gem) as Gem[];
+	const enchant =
+		(inputItem.enchant ? getEnchantByEffectID(inputItem.enchant) : undefined) ||
+		createEmptyEnchant();
+
+	const item: ItemVariation = {
+		...baseItem,
+		gems,
+		enchant: enchant as Enchant,
+		uniqueId: `${inputItem.id}-0`,
+	};
 	return item;
 };
 
@@ -149,10 +207,11 @@ const getEnchantsForItem = (item: Item, enchants: Enchant[]) => {
 };
 
 const createItemVariations = (
-	items: Item[],
+	items: ItemVariation[],
 	optimizeStats: Stat[],
 	uncrushabilitySetting: number,
 	uncritabilitySetting: number,
+	areEnchantsGemsLocked: boolean,
 ) => {
 	const enchants = getEnchants(
 		optimizeStats,
@@ -167,6 +226,12 @@ const createItemVariations = (
 
 	const itemVariations: ItemVariation[] = [];
 	for (const item of items) {
+		// "locking" enchants and gems means that if an item already has an enchant or any gems
+		// we will not create any new variations
+		if (areEnchantsGemsLocked && (item.gems.length > 0 || item.enchant)) {
+			itemVariations.push(item);
+			continue;
+		}
 		let index = 0;
 		let itemEnchants = getEnchantsForItem(item, enchants);
 		// TODO deal with meta gems
@@ -204,9 +269,9 @@ const createItemVariations = (
 		for (const enchant of itemEnchants) {
 			for (const gemCombination of itemGemCombinations) {
 				itemVariations.push({
+					...item,
 					enchant: enchant,
 					gems: gemCombination,
-					...item,
 					uniqueId: `${item.id}-${index}`,
 				});
 				index++;

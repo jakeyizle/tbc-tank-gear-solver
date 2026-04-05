@@ -127,3 +127,9 @@ export interface Gem {
 	stats: Stat[];
 	isUnique?: string;
 }
+
+export interface InputItem {
+	id: string;
+	gems: string[];
+	enchant?: string;
+}

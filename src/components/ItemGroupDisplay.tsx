@@ -10,9 +10,9 @@ const leftSlots: string[] = [
 	"Back",
 	"Chest",
 	"Wrist",
+	"Hands",
 ];
 const rightSlots: string[] = [
-	"Hands",
 	"Waist",
 	"Legs",
 	"Feet",
