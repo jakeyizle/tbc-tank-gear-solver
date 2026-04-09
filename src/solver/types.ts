@@ -133,3 +133,31 @@ export interface InputItem {
 	gems: string[];
 	enchant?: string;
 }
+
+// Multi-configuration support
+export interface SolverConfig {
+	id: number;
+	uncritabilitySetting: number; // 0=yes, 1=no, 2=either
+	uncrushabilitySetting: number; // 0=yes, 1=no, 2=either
+	optimizeStats: Stat[];
+}
+
+export interface SolverResult {
+	configId: number;
+	items: LPItem[];
+	baseAvoidance: number;
+	baseUncritability: number;
+}
+
+export function createDefaultConfig(id: number): SolverConfig {
+	return {
+		id,
+		uncritabilitySetting: 2,
+		uncrushabilitySetting: 1,
+		optimizeStats: [
+			{ name: "Stamina", value: 1 },
+			{ name: "SpellPower", value: 1 },
+			{ name: "SpellHit", value: 1 },
+		],
+	};
+}
