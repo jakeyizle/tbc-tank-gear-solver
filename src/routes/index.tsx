@@ -10,11 +10,14 @@ import FormLabel from "@mui/material/FormLabel";
 import Grid from "@mui/material/Grid";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
+import Tab from "@mui/material/Tab";
+import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import ClassSelect from "#/components/ClassSelect";
+import ConfigManager from "#/components/ConfigManager";
 import CritRadioGroup from "#/components/CritRadioGroup";
 import ElixirFlaskFormGroup from "#/components/ElixirFlaskFormGroup";
 import ItemGroupDisplay from "#/components/ItemGroupDisplay";
@@ -27,8 +30,10 @@ import {
 	getStatFromItem,
 } from "#/helpers.ts/getStatFromItem";
 import { parseItemInput } from "#/helpers.ts/parseItemInput";
+import { useSolverConfigs } from "#/hooks/useSolverConfigs";
 import { solve } from "#/solver";
 import { type LPItem, STAT_NAMES, type Stat } from "#/solver/types";
+import type { SolveResult } from "#/types/SolverConfig";
 
 export const Route = createFileRoute("/")({ component: App });
 
@@ -43,26 +48,76 @@ function App() {
 	const [classValue, setClassValue] = useState("2");
 	const [raceValue, setRaceValue] = useState("1");
 	const [areEnchantsGemsLocked, setAreEnchantsGemsLocked] = useState(false);
-	const [uncritabilitySetting, setUncritabilitySetting] = useState(2);
-	const [uncrushabilitySetting, setUncrushabilitySetting] = useState(1);
-	const [optimizeStats, setOptimizeStats] = useState<Stat[]>([
-		{ name: "Stamina", value: 1 },
-		{ name: "SpellPower", value: 1 },
-		{ name: "SpellHit", value: 1 },
-	]);
 
-	const [results, setResults] = useState<{
-		items: LPItem[];
-		baseAvoidance: number;
-		baseUncritability: number;
-	}>({ items: [], baseAvoidance: 0, baseUncritability: 0 });
+	const {
+		configs,
+		activeConfig,
+		activeConfigId,
+		setActiveConfigId,
+		addConfig,
+		deleteConfig,
+		renameConfig,
+		updateConstraints,
+		updateOptimizeStats,
+	} = useSolverConfigs();
+
+	const [solveResults, setSolveResults] = useState<Map<string, SolveResult>>(
+		new Map()
+	);
+	const [isSolving, setIsSolving] = useState(false);
+	const [activeResultId, setActiveResultId] = useState<string | null>(null);
+
+	const activeResult = activeResultId
+		? solveResults.get(activeResultId)
+		: null;
+	const handleSolveAll = async () => {
+		setIsSolving(true);
+		const newResults = new Map<string, SolveResult>();
+		let firstResultId: string | null = null;
+
+		try {
+			for (const config of configs) {
+				const { items, baseAvoidance, baseUncritability } = await solve(
+					parseItemInput(itemInput),
+					{
+						raceId: raceValue.toString(),
+						classId: classValue.toString(),
+						uncrushabilitySetting: config.uncrushabilitySetting,
+						uncritabilitySetting: config.uncritabilitySetting,
+						optimizeStats: config.optimizeStats,
+						areEnchantsGemsLocked,
+					}
+				);
+				const result: SolveResult = {
+					configId: config.id,
+					configName: config.name,
+					items,
+					baseAvoidance,
+					baseUncritability,
+					timestamp: Date.now(),
+				};
+				newResults.set(config.id, result);
+				if (!firstResultId) {
+					firstResultId = config.id;
+				}
+			}
+			setSolveResults(newResults);
+			if (firstResultId) {
+				setActiveResultId(firstResultId);
+			}
+		} finally {
+			setIsSolving(false);
+		}
+	};
+
+
 	return (
 		<Grid container spacing={2}>
 			<Grid size={6}>
 				<Box sx={{ p: 2 }}>
 					<Grid container spacing={2}>
-						{/* Left Column - Primary Input & Main Config */}
-						<Grid size={6}>
+						{/* Fixed Inputs - Top */}
+						<Grid size={12}>
 							{/* Items - Main User Input */}
 							<Paper elevation={1} sx={{ p: 2, mb: 2 }}>
 								<Typography variant="h6" gutterBottom>
@@ -90,32 +145,7 @@ function App() {
 								/>
 							</Paper>
 
-							{/* Constraints - Main Config */}
-							<Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-								<Typography variant="h6" gutterBottom>
-									Constraints
-								</Typography>
-								<Stack direction="row" spacing={3}>
-									<CritRadioGroup
-										onChange={setUncritabilitySetting}
-										uncritabilitySetting={uncritabilitySetting}
-									/>
-									<UncrushableRadioGroup
-										onChange={setUncrushabilitySetting}
-										uncrushabilitySetting={uncrushabilitySetting}
-									/>
-								</Stack>
-							</Paper>
-
-							{/* Stats to Optimize - Main Config */}
-							<Paper elevation={1} sx={{ p: 2 }}>
-								<StatsEntry stats={optimizeStats} onChange={setOptimizeStats} />
-							</Paper>
-						</Grid>
-
-						{/* Right Column - Secondary Config */}
-						<Grid size={6}>
-							{/* Character - 2nd Priority */}
+							{/* Character */}
 							<Paper elevation={1} sx={{ p: 2, mb: 2 }}>
 								<Typography variant="h6" gutterBottom>
 									Character
@@ -125,87 +155,177 @@ function App() {
 									<RaceSelect value={raceValue} onChange={setRaceValue} />
 								</Stack>
 							</Paper>
+						</Grid>
 
-							{/* Buffs & Consumables - Least Important */}
+						{/* Configurations - Configurable Sections */}
+						<Grid size={12}>
 							<Paper elevation={1} sx={{ p: 2 }}>
-								<Typography variant="h6" gutterBottom>
-									Buffs & Consumables
-								</Typography>
-								<Stack direction="row" spacing={2}>
-									<FormGroup>
-										<FormLabel sx={{ fontSize: "0.75rem" }}>Buffs</FormLabel>
-										<FormControlLabel
-											control={<Checkbox defaultChecked size="small" />}
-											label={
-												<Typography variant="body2">
-													Mark of the Wild
-												</Typography>
-											}
-										/>
-										<FormControlLabel
-											control={<Checkbox defaultChecked size="small" />}
-											label={
-												<Typography variant="body2">Improved MotW</Typography>
-											}
-										/>
-										<FormControlLabel
-											control={<Checkbox defaultChecked size="small" />}
-											label={
-												<Typography variant="body2">
-													Blessing of Kings
-												</Typography>
-											}
-										/>
-										<FormControlLabel
-											control={<Checkbox size="small" />}
-											label={
-												<Typography variant="body2">Grace of Air</Typography>
-											}
-										/>
-									</FormGroup>
-									<Box>
-										<FormGroup>
-											<FormLabel sx={{ fontSize: "0.75rem" }}>
-												Consumables
-											</FormLabel>
-											<FormControlLabel
-												control={<Checkbox size="small" />}
-												label={
-													<Typography variant="body2">
-														Scroll of Agility V
-													</Typography>
-												}
+								<ConfigManager
+									configs={configs}
+									activeConfigId={activeConfigId}
+									onSelectConfig={setActiveConfigId}
+									onAddConfig={addConfig}
+									onDeleteConfig={deleteConfig}
+									onRenameConfig={renameConfig}
+								/>
+
+								{activeConfig && (
+									<Stack spacing={2} sx={{ mt: 2 }}>
+										{/* Constraints */}
+										<Box>
+											<Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+												Constraints
+											</Typography>
+											<Stack direction="row" spacing={3}>
+												<CritRadioGroup
+													onChange={(val) =>
+														updateConstraints(
+															val,
+															activeConfig.uncrushabilitySetting
+														)
+													}
+													uncritabilitySetting={
+														activeConfig.uncritabilitySetting
+													}
+												/>
+												<UncrushableRadioGroup
+													onChange={(val) =>
+														updateConstraints(
+															activeConfig.uncritabilitySetting,
+															val
+														)
+													}
+													uncrushabilitySetting={
+														activeConfig.uncrushabilitySetting
+													}
+												/>
+											</Stack>
+										</Box>
+
+										{/* Stats to Optimize */}
+										<Box>
+											<StatsEntry
+												stats={activeConfig.optimizeStats}
+												onChange={updateOptimizeStats}
 											/>
-										</FormGroup>
-										<ElixirFlaskFormGroup />
-									</Box>
-								</Stack>
+										</Box>
+
+										{/* Buffs & Consumables */}
+										<Box>
+											<Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+												Buffs & Consumables
+											</Typography>
+											<Stack direction="row" spacing={2}>
+												<FormGroup>
+													<FormLabel sx={{ fontSize: "0.75rem" }}>
+														Buffs
+													</FormLabel>
+													<FormControlLabel
+														control={
+															<Checkbox
+																size="small"
+																checked={
+																	activeConfig.buffs
+																		.markOfTheWild
+																}
+															/>
+														}
+														label={
+															<Typography variant="body2">
+																Mark of the Wild
+															</Typography>
+														}
+													/>
+													<FormControlLabel
+														control={
+															<Checkbox
+																size="small"
+																checked={
+																	activeConfig.buffs
+																		.improvedMotw
+																}
+															/>
+														}
+														label={
+															<Typography variant="body2">
+																Improved MotW
+															</Typography>
+														}
+													/>
+													<FormControlLabel
+														control={
+															<Checkbox
+																size="small"
+																checked={
+																	activeConfig.buffs
+																		.blessingOfKings
+																}
+															/>
+														}
+														label={
+															<Typography variant="body2">
+																Blessing of Kings
+															</Typography>
+														}
+													/>
+													<FormControlLabel
+														control={
+															<Checkbox
+																size="small"
+																checked={
+																	activeConfig.buffs
+																		.graceOfAir
+																}
+															/>
+														}
+														label={
+															<Typography variant="body2">
+																Grace of Air
+															</Typography>
+														}
+													/>
+												</FormGroup>
+												<Box>
+													<FormGroup>
+														<FormLabel sx={{ fontSize: "0.75rem" }}>
+															Consumables
+														</FormLabel>
+														<FormControlLabel
+															control={
+																<Checkbox
+																	size="small"
+																	checked={
+																		activeConfig.consumables
+																			.scrollOfAgilityV
+																	}
+																/>
+															}
+															label={
+																<Typography variant="body2">
+																	Scroll of Agility V
+																</Typography>
+															}
+														/>
+													</FormGroup>
+													<ElixirFlaskFormGroup />
+												</Box>
+											</Stack>
+										</Box>
+									</Stack>
+								)}
 							</Paper>
 						</Grid>
 
-						{/* Submit Button - Full Width */}
+						{/* Solve All Button - Full Width */}
 						<Grid size={12}>
 							<Button
 								variant="contained"
 								size="large"
 								fullWidth
-								onClick={async () => {
-									const { items, baseAvoidance, baseUncritability } =
-										await solve(parseItemInput(itemInput), {
-											raceId: raceValue.toString(),
-											classId: classValue.toString(),
-											uncrushabilitySetting,
-											uncritabilitySetting,
-											optimizeStats: optimizeStats,
-											areEnchantsGemsLocked,
-										});
-									console.log(
-										`Finished - avoidanceScore: ${items.reduce((acc, item) => acc + item.avoidanceScore, 0)} objectiveScore: ${items.reduce((acc, item) => acc + item.objectiveScore, 0)}`,
-									);
-									setResults({ items, baseAvoidance, baseUncritability });
-								}}
+								onClick={handleSolveAll}
+								disabled={isSolving}
 							>
-								Solve
+								{isSolving ? "Solving..." : "Solve All"}
 							</Button>
 						</Grid>
 					</Grid>
@@ -214,75 +334,183 @@ function App() {
 
 			<Grid size={6}>
 				<Stack spacing={2} sx={{ p: 2 }}>
-					{/* Equipment Slots */}
-					<Paper elevation={1} sx={{ p: 2 }}>
-						<Typography variant="h6" gutterBottom>
-							Equipment
-						</Typography>
-						<ItemGroupDisplay items={results?.items} />
-					</Paper>
-
-					{/* Stats Summary */}
-					{results?.items && results.items.length > 0 && (
-						<Paper elevation={1} sx={{ p: 2 }}>
-							<Typography variant="h6" gutterBottom>
-								Stats Summary
-							</Typography>
-							<Stack spacing={1}>
-								<Box sx={{ display: "flex", justifyContent: "space-between" }}>
-									<Typography variant="body2" color="text.secondary">
-										Total Avoidance
-									</Typography>
-									<Typography variant="body2" fontWeight="medium">
-										{(
-											getAvoidanceFromItems(results.items) +
-											results.baseAvoidance
-										).toFixed(2)}
-									</Typography>
-									<Typography variant="body2" color="text.secondary">
-										Base Avoidance
-									</Typography>
-									<Typography variant="body2" fontWeight="medium">
-										{results.baseAvoidance.toFixed(2)}
-									</Typography>
-									<Typography variant="body2" color="text.secondary">
-										Avoidance from items
-									</Typography>
-									<Typography variant="body2" fontWeight="medium">
-										{getAvoidanceFromItems(results.items).toFixed(2)}
-									</Typography>
-								</Box>
-								<Box sx={{ display: "flex", justifyContent: "space-between" }}>
-									<Typography variant="body2" color="text.secondary">
-										Uncritability Score
-									</Typography>
-									<Typography variant="body2" fontWeight="medium">
-										{(
-											results.items.reduce(
-												(acc, item) => acc + item.uncritabilityScore,
-												0,
-											) + results.baseUncritability
-										).toFixed(2)}
-									</Typography>
-								</Box>
-								<Box sx={{ display: "flex", justifyContent: "space-between" }}>
-									<Typography variant="body2" color="text.secondary">
-										Objective Score
-									</Typography>
-									<Typography variant="body2" fontWeight="medium">
-										{results.items
-											.reduce((acc, item) => acc + item.objectiveScore, 0)
-											.toFixed(2)}
-									</Typography>
-								</Box>
-								{results.items.length > 0 && (
-									<StatsDisplay
-										items={results.items}
-										stats={["Defense", "Dodge", "Parry", "Block", "Resilience"]}
-										header="Defenses"
+					{/* Results Tabs */}
+					{solveResults.size > 0 && (
+						<>
+							<Tabs
+								value={activeResultId || ""}
+								onChange={(_, newValue) => setActiveResultId(newValue)}
+								variant="scrollable"
+								scrollButtons="auto"
+								sx={{
+									borderBottom: 1,
+									borderColor: "divider",
+									"& .MuiTab-root": {
+										minWidth: 120,
+										textTransform: "none",
+										fontSize: "0.875rem",
+									},
+								}}
+							>
+								{Array.from(solveResults.values()).map((result) => (
+									<Tab
+										key={result.configId}
+										label={result.configName}
+										value={result.configId}
 									/>
-								)}
-							</Stack>
+								))}
+							</Tabs>
+
+							{activeResult && (
+								<>
+									{/* Equipment Slots */}
+									<Paper elevation={1} sx={{ p: 2 }}>
+										<Typography variant="h6" gutterBottom>
+											Equipment
+										</Typography>
+										<ItemGroupDisplay items={activeResult.items} />
+									</Paper>
+
+									{/* Stats Summary */}
+									{activeResult.items && activeResult.items.length > 0 && (
+										<Paper elevation={1} sx={{ p: 2 }}>
+											<Typography variant="h6" gutterBottom>
+												Stats Summary
+											</Typography>
+											<Stack spacing={1}>
+												<Box
+													sx={{
+														display: "flex",
+														justifyContent: "space-between",
+													}}
+												>
+													<Typography
+														variant="body2"
+														color="text.secondary"
+													>
+														Total Avoidance
+													</Typography>
+													<Typography
+														variant="body2"
+														fontWeight="medium"
+													>
+														{(
+															getAvoidanceFromItems(
+																activeResult.items
+															) + activeResult.baseAvoidance
+														).toFixed(2)}
+													</Typography>
+													<Typography
+														variant="body2"
+														color="text.secondary"
+													>
+														Base Avoidance
+													</Typography>
+													<Typography
+														variant="body2"
+														fontWeight="medium"
+													>
+														{activeResult.baseAvoidance.toFixed(
+															2
+														)}
+													</Typography>
+													<Typography
+														variant="body2"
+														color="text.secondary"
+													>
+														Avoidance from items
+													</Typography>
+													<Typography
+														variant="body2"
+														fontWeight="medium"
+													>
+														{getAvoidanceFromItems(
+															activeResult.items
+														).toFixed(2)}
+													</Typography>
+												</Box>
+												<Box
+													sx={{
+														display: "flex",
+														justifyContent: "space-between",
+													}}
+												>
+													<Typography
+														variant="body2"
+														color="text.secondary"
+													>
+														Uncritability Score
+													</Typography>
+													<Typography
+														variant="body2"
+														fontWeight="medium"
+													>
+														{(
+															activeResult.items.reduce(
+																(acc, item) =>
+																	acc +
+																	item.uncritabilityScore,
+																0
+															) + activeResult.baseUncritability
+														).toFixed(2)}
+													</Typography>
+												</Box>
+												<Box
+													sx={{
+														display: "flex",
+														justifyContent: "space-between",
+													}}
+												>
+													<Typography
+														variant="body2"
+														color="text.secondary"
+													>
+														Objective Score
+													</Typography>
+													<Typography
+														variant="body2"
+														fontWeight="medium"
+													>
+														{activeResult.items
+															.reduce(
+																(acc, item) =>
+																	acc +
+																	item.objectiveScore,
+																0
+															)
+															.toFixed(2)}
+													</Typography>
+												</Box>
+												{activeResult.items.length > 0 && (
+													<StatsDisplay
+														items={activeResult.items}
+														stats={[
+															"Defense",
+															"Dodge",
+															"Parry",
+															"Block",
+															"Resilience",
+														]}
+														header="Defenses"
+													/>
+												)}
+											</Stack>
+										</Paper>
+									)}
+								</>
+							)}
+						</>
+					)}
+
+					{solveResults.size === 0 && (
+						<Paper elevation={1} sx={{ p: 2 }}>
+							<Typography
+								variant="body2"
+								color="text.secondary"
+								align="center"
+							>
+								Run "Solve All" to see results
+							</Typography>
 						</Paper>
 					)}
 				</Stack>
