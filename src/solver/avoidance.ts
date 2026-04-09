@@ -1,5 +1,4 @@
 import LevelStats from "../data/level_stats.json";
-import { calculateAvoidance } from "./calculateScores";
 
 const getAgilityByRaceAndClass = (raceId: string, classId: string) => {
 	const entry = LevelStats.find(
@@ -14,16 +13,9 @@ const getAgilityByRaceAndClass = (raceId: string, classId: string) => {
 export const calculateBaseAvoidance = (
 	raceId: string,
 	classId: string,
-	uncrushabilitySetting: number,
 ) => {
 	const baseAgility = getAgilityByRaceAndClass(raceId, classId);
-	const baseAgilityAvoidance = calculateAvoidance(
-		{
-			name: "Agility",
-			value: baseAgility,
-		},
-		uncrushabilitySetting,
-	);
+	const baseAgilityAvoidance = baseAgility / 25;
 
 	// TODO: include buffs (mark of the wild, kings)
 	// talents (paladin parry, paladin defense)
@@ -52,24 +44,25 @@ export const calculateBaseAvoidance = (
 	);
 };
 const BASE_AVOIDANCE_TARGET = 102.4;
-export const calculateAvoidanceTarget = (
-	raceId: string,
-	classId: string,
+export const calculateAvoidanceTarget = (	
 	uncrushabilitySetting: number,
+	baseAvoidance: number
 ) => {
-	if (uncrushabilitySetting === 0) return 0;
-
-	const baseAvoidance = calculateBaseAvoidance(
-		raceId,
-		classId,
-		uncrushabilitySetting,
-	);
+	if (uncrushabilitySetting === 0) return 0;	
 	return BASE_AVOIDANCE_TARGET - baseAvoidance;
 };
 
+export const calculateBaseUncritability = (classId: string) => {
+	// TODO: make configurable by class/talent
+	// 20 defense from AVOIDANCE
+	return 0.8;
+}
+
 // TODO: make configurable (should be either 5.6 or 5.4, but incorporate talents etc)
-export const calculateUncritabilityTarget = (uncritabilitySetting: number) => {
-	const CRIT_TARGET =
-		uncritabilitySetting === 0 ? 0 : uncritabilitySetting === 1 ? 5.4 : 5.6;
+export const calculateUncritabilityTarget = (uncritabilitySetting: number, baseUncritability: number) => {
+	if (uncritabilitySetting === 0) return 0;
+	let CRIT_TARGET =
+		uncritabilitySetting === 1 ? 5.4 : 5.6;
+	CRIT_TARGET -= baseUncritability;
 	return CRIT_TARGET;
 };

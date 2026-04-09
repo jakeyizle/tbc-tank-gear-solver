@@ -1,6 +1,8 @@
+import Backdrop from "@mui/material/Backdrop";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
+import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import FormGroup from "@mui/material/FormGroup";
@@ -17,11 +19,16 @@ import CritRadioGroup from "#/components/CritRadioGroup";
 import ElixirFlaskFormGroup from "#/components/ElixirFlaskFormGroup";
 import ItemGroupDisplay from "#/components/ItemGroupDisplay";
 import RaceSelect from "#/components/RaceSelect";
+import StatsDisplay from "#/components/StatsDisplay";
 import StatsEntry from "#/components/StatsEntry";
 import UncrushableRadioGroup from "#/components/UncrushableRadioGroup";
+import {
+	getAvoidanceFromItems,
+	getStatFromItem,
+} from "#/helpers.ts/getStatFromItem";
 import { parseItemInput } from "#/helpers.ts/parseItemInput";
 import { solve } from "#/solver";
-import type { LPItem, Stat } from "#/solver/types";
+import { type LPItem, STAT_NAMES, type Stat } from "#/solver/types";
 
 export const Route = createFileRoute("/")({ component: App });
 
@@ -47,7 +54,8 @@ function App() {
 	const [results, setResults] = useState<{
 		items: LPItem[];
 		baseAvoidance: number;
-	}>({ items: [], baseAvoidance: 0 });
+		baseUncritability: number;
+	}>({ items: [], baseAvoidance: 0, baseUncritability: 0 });
 	return (
 		<Grid container spacing={2}>
 			<Grid size={6}>
@@ -182,21 +190,19 @@ function App() {
 								size="large"
 								fullWidth
 								onClick={async () => {
-									const { items, baseAvoidance } = await solve(
-										parseItemInput(itemInput),
-										{
+									const { items, baseAvoidance, baseUncritability } =
+										await solve(parseItemInput(itemInput), {
 											raceId: raceValue.toString(),
 											classId: classValue.toString(),
 											uncrushabilitySetting,
 											uncritabilitySetting,
 											optimizeStats: optimizeStats,
 											areEnchantsGemsLocked,
-										},
-									);
+										});
 									console.log(
 										`Finished - avoidanceScore: ${items.reduce((acc, item) => acc + item.avoidanceScore, 0)} objectiveScore: ${items.reduce((acc, item) => acc + item.objectiveScore, 0)}`,
 									);
-									setResults({ items, baseAvoidance });
+									setResults({ items, baseAvoidance, baseUncritability });
 								}}
 							>
 								Solve
@@ -229,10 +235,8 @@ function App() {
 									</Typography>
 									<Typography variant="body2" fontWeight="medium">
 										{(
-											results.items.reduce(
-												(acc, item) => acc + item.avoidanceScore,
-												0,
-											) + results.baseAvoidance
+											getAvoidanceFromItems(results.items) +
+											results.baseAvoidance
 										).toFixed(2)}
 									</Typography>
 									<Typography variant="body2" color="text.secondary">
@@ -245,12 +249,7 @@ function App() {
 										Avoidance from items
 									</Typography>
 									<Typography variant="body2" fontWeight="medium">
-										{(
-											results.items.reduce(
-												(acc, item) => acc + item.avoidanceScore,
-												0,
-											)
-										).toFixed(2)}
+										{getAvoidanceFromItems(results.items).toFixed(2)}
 									</Typography>
 								</Box>
 								<Box sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -258,9 +257,12 @@ function App() {
 										Uncritability Score
 									</Typography>
 									<Typography variant="body2" fontWeight="medium">
-										{results.items
-											.reduce((acc, item) => acc + item.uncritabilityScore, 0)
-											.toFixed(2)}
+										{(
+											results.items.reduce(
+												(acc, item) => acc + item.uncritabilityScore,
+												0,
+											) + results.baseUncritability
+										).toFixed(2)}
 									</Typography>
 								</Box>
 								<Box sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -273,6 +275,13 @@ function App() {
 											.toFixed(2)}
 									</Typography>
 								</Box>
+								{results.items.length > 0 && (
+									<StatsDisplay
+										items={results.items}
+										stats={["Defense", "Dodge", "Parry", "Block", "Resilience"]}
+										header="Defenses"
+									/>
+								)}
 							</Stack>
 						</Paper>
 					)}

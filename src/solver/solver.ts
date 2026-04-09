@@ -1,5 +1,25 @@
-import GLPK, { type GLPK as GLPKType, type LP } from "glpk.js";
+import type { GLPK as GLPKType, LP } from "glpk.js";
 import type { LPItem, ProcessedItemType } from "./types";
+
+// Use a different import strategy for tests to avoid Worker issues
+const loadGLPK = async () => {
+	if (typeof process !== 'undefined' && process.env.VITEST) {
+		// In test environment, use absolute path to avoid Worker issues
+		// biome-ignore lint/style/useNodejsImportProtocol: hacky test workaround
+				const path = await import("path");
+		// biome-ignore lint/style/useNodejsImportProtocol: hacky test workaround
+		const { fileURLToPath } = await import("url");
+		const __filename = fileURLToPath(import.meta.url);
+		const __dirname = path.dirname(__filename);
+		const glpkPath = path.resolve(__dirname, "../../node_modules/glpk.js/dist/glpk.js");
+		const glpkModule = await import(/* @vite-ignore */`file://${glpkPath}`);
+		return glpkModule.default;
+	} else {
+		// In normal environment, use the default import
+		const { default: GLPK } = await import("glpk.js");
+		return GLPK;
+	}
+};
 
 function typeBoundNumber(type: ProcessedItemType) {
 	return type === "Finger" || type === "Trinket" ? 2 : 1;
@@ -130,6 +150,7 @@ const solveOptions = (glpk: GLPKType) => ({
 });
 
 export const runLPModel = async (lpItems: LPItem[], avoidanceTarget: number, uncritabilityTarget: number) => {
+	const GLPK = await loadGLPK();
 	const glpk = await GLPK();
 	const itemsByType = groupItemsByType(lpItems);
 	const itemsByItemId = groupItemsByItemId(lpItems);
@@ -142,20 +163,23 @@ export const runLPModel = async (lpItems: LPItem[], avoidanceTarget: number, unc
 			coef: item.objectiveScore,
 		})),
 	};
-	const avoidanceConstaint = makeAvoidanceConstraint(
-		lpItems,
-		avoidanceTarget,
-		glpk,
-	);
-	const uncritableConstraint = makeUncritableConstraint(lpItems, uncritabilityTarget, glpk);
+	
 	const slotConstraint = makeSlotConstraint(itemsByType, glpk);
 	const baseItemConstraint = makeBaseItemConstaint(itemsByItemId, glpk);
+	
+	const constraints: SubjectTo[] = [...slotConstraint, ...baseItemConstraint];
+	
+	if (avoidanceTarget > 0) {
+		const avoidanceConstaint = makeAvoidanceConstraint(lpItems, avoidanceTarget, glpk);
+		constraints.push(avoidanceConstaint);
+	}
+	
+	if (uncritabilityTarget > 0) {
+		const uncritableConstraint = makeUncritableConstraint(lpItems, uncritabilityTarget, glpk);
+		constraints.push(uncritableConstraint);
+	}
 
-	const avoidanceModel = createModel(
-		objective,
-		[avoidanceConstaint, uncritableConstraint, ...slotConstraint, ...baseItemConstraint],
-		lpItems,
-	);
+	const avoidanceModel = createModel(objective, constraints, lpItems);
 
 	let result = await glpk.solve(avoidanceModel, solveOptions(glpk));
 	if (result.result.status !== glpk.GLP_OPT) {

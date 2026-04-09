@@ -1,12 +1,9 @@
 import Enchants from "../data/enchants.json";
 import Gems from "../data/gems.json";
 import Items from "../data/items.json";
-import {
-	calculateAvoidance,
-	calculateObjectiveScore,
-	calculateUncritability,
-} from "./calculateScores";
 import { overrideItem } from "./itemOverride";
+import { ScoreCalculator } from "./ScoreCalculator";
+import type { SolverConfiguration } from "./SolverConfiguration";
 import { gemsSatisfySocketBonus } from "./socketBonus";
 import type {
 	Enchant,
@@ -16,7 +13,6 @@ import type {
 	ItemVariation,
 	LPItem,
 	ProcessedItemType,
-	Stat,
 } from "./types";
 
 const createEmptyEnchant = (): Enchant => {
@@ -31,55 +27,27 @@ const createEmptyEnchant = (): Enchant => {
 
 export const getTransformedItems = (
 	inputItems: InputItem[],
-	optimizeStats: Stat[],
-	areEnchantsGemsLocked: boolean,
-	uncrushabilitySetting: number,
-	uncritabilitySetting: number,
+	config: SolverConfiguration,
 ) => {
+	const calculator = new ScoreCalculator(config);
 	const items = inputItems
 		.map((item) => getItem(item))
 		.filter((item) => !!item);
 	const itemVariations = createItemVariations(
 		items,
-		optimizeStats,
-		uncrushabilitySetting,
-		uncritabilitySetting,
-		areEnchantsGemsLocked,
+		calculator,
+		config.areEnchantsGemsLocked,
 	);
 	const lpItems = itemVariations.map((item) =>
-		transformItem(
-			item,
-			optimizeStats,
-			uncrushabilitySetting,
-			uncritabilitySetting,
-		),
+		transformItem(item, calculator),
 	);
 	return lpItems;
 };
 
-const getEnchants = (
-	optimizeStats: Stat[],
-	uncrushabilitySetting: number,
-	uncritabilitySetting: number,
-) => {
-	function doesEnchantHaveAScore(enchant: Enchant) {
-		const avoidanceScore = enchant.stats.reduce(
-			(acc, stat) => acc + calculateAvoidance(stat, uncrushabilitySetting),
-			0,
-		);
-		const objectiveScore = enchant.stats.reduce(
-			(acc, stat) => acc + calculateObjectiveScore(stat, optimizeStats),
-			0,
-		);
-		const uncritabilityScore = enchant.stats.reduce(
-			(acc, stat) => acc + calculateUncritability(stat, uncritabilitySetting),
-			0,
-		);
-		return avoidanceScore > 0 || objectiveScore > 0 || uncritabilityScore > 0;
-	}
+const getEnchants = (calculator: ScoreCalculator) => {
 	let enchants = Enchants as Enchant[];
 	enchants = enchants.filter((enchant) => enchant.stats.length > 0);
-	enchants = enchants.filter((enchant) => doesEnchantHaveAScore(enchant));
+	enchants = enchants.filter((enchant) => calculator.hasRelevantStats(enchant.stats));
 	return enchants;
 };
 
@@ -101,34 +69,13 @@ const getEnchantByEffectID = (effectID: string) => {
 	return enchantToReturn;
 };
 
-const getGems = (
-	optimizeStats: Stat[],
-	uncrushabilitySetting: number,
-	uncritabilitySetting: number,
-) => {
-	function doesGemHaveAScore(gem: Gem) {
-		const avoidanceScore = gem.stats.reduce(
-			(acc, stat) => acc + calculateAvoidance(stat, uncrushabilitySetting),
-			0,
-		);
-		const objectiveScore = gem.stats.reduce(
-			(acc, stat) => acc + calculateObjectiveScore(stat, optimizeStats),
-			0,
-		);
-		const uncritabilityScore = gem.stats.reduce(
-			(acc, stat) => acc + calculateUncritability(stat, uncritabilitySetting),
-			0,
-		);
-		return avoidanceScore > 0 || objectiveScore > 0 || uncritabilityScore > 0;
-	}
+const getGems = (calculator: ScoreCalculator) => {
 	let gems = Gems as Gem[];
-	// TODO: make phase configurable
 	gems = gems.filter((gem) => gem.phase === "1");
 	gems = gems.filter((gem) => !gem.isUnique);
-	// TODO: include meta gems
 	gems = gems.filter((gem) => gem.color !== "Meta");
 	gems = gems.filter((gem) => gem.stats.length > 0);
-	gems = gems.filter((gem) => doesGemHaveAScore(gem));
+	gems = gems.filter((gem) => calculator.hasRelevantStats(gem.stats));
 	return gems;
 };
 
@@ -208,27 +155,17 @@ const getEnchantsForItem = (item: Item, enchants: Enchant[]) => {
 
 const createItemVariations = (
 	items: ItemVariation[],
-	optimizeStats: Stat[],
-	uncrushabilitySetting: number,
-	uncritabilitySetting: number,
+	calculator: ScoreCalculator,
 	areEnchantsGemsLocked: boolean,
 ) => {
-	const enchants = getEnchants(
-		optimizeStats,
-		uncrushabilitySetting,
-		uncritabilitySetting,
-	);
-	const gems = getGems(
-		optimizeStats,
-		uncrushabilitySetting,
-		uncritabilitySetting,
-	);
+	const enchants = getEnchants(calculator);
+	const gems = getGems(calculator);
 
 	const itemVariations: ItemVariation[] = [];
 	for (const item of items) {
 		// "locking" enchants and gems means that if an item already has an enchant or any gems
 		// we will not create any new variations
-		if (areEnchantsGemsLocked && (item.gems.length > 0 || item.enchant)) {
+		if (areEnchantsGemsLocked && (item.gems.length > 0 || item.enchant.effectID !== "")) {
 			itemVariations.push(item);
 			continue;
 		}
@@ -283,48 +220,33 @@ const createItemVariations = (
 
 const transformItem = (
 	item: ItemVariation,
-	optimizeStats: Stat[],
-	uncrushabilitySetting: number,
-	uncritabilitySetting: number,
+	calculator: ScoreCalculator,
 ): LPItem => {
-	let avoidanceScore = 0;
-	let objectiveScore = 0;
-	let uncritabilityScore = 0;
+	const itemScores = calculator.calculateScoresForStats(item.stats);
+	const enchantScores = item.enchant.stats.length > 0 
+		? calculator.calculateScoresForStats(item.enchant.stats)
+		: { avoidanceScore: 0, objectiveScore: 0, uncritabilityScore: 0 };
 
-	for (const stat of item.stats) {
-		avoidanceScore += calculateAvoidance(stat, uncrushabilitySetting);
-		objectiveScore += calculateObjectiveScore(stat, optimizeStats);
-		uncritabilityScore += calculateUncritability(stat, uncritabilitySetting);
-	}
+	const gemScores = item.gems.reduce((acc, gem) => {
+		const scores = calculator.calculateScoresForStats(gem.stats);
+		return {
+			avoidanceScore: acc.avoidanceScore + scores.avoidanceScore,
+			objectiveScore: acc.objectiveScore + scores.objectiveScore,
+			uncritabilityScore: acc.uncritabilityScore + scores.uncritabilityScore,
+		};
+	}, { avoidanceScore: 0, objectiveScore: 0, uncritabilityScore: 0 });
 
-	if (item.enchant.stats.length > 0) {
-		for (const stat of item.enchant.stats) {
-			avoidanceScore += calculateAvoidance(stat, uncrushabilitySetting);
-			objectiveScore += calculateObjectiveScore(stat, optimizeStats);
-			uncritabilityScore += calculateUncritability(stat, uncritabilitySetting);
-		}
-	}
-
-	for (const gem of item.gems) {
-		for (const stat of gem.stats) {
-			avoidanceScore += calculateAvoidance(stat, uncrushabilitySetting);
-			objectiveScore += calculateObjectiveScore(stat, optimizeStats);
-			uncritabilityScore += calculateUncritability(stat, uncritabilitySetting);
-		}
-	}
-
-	// TODO: socket bonus
 	const nonMetaSockets = item.sockets
 		.map((s) => s.color)
 		.filter((s) => s !== "Meta");
 	const nonMetaGems = item.gems.map((g) => g.color).filter((g) => g !== "Meta");
-	if (gemsSatisfySocketBonus(nonMetaSockets, nonMetaGems)) {
-		for (const stat of item.socketBonus) {
-			avoidanceScore += calculateAvoidance(stat, uncrushabilitySetting);
-			objectiveScore += calculateObjectiveScore(stat, optimizeStats);
-			uncritabilityScore += calculateUncritability(stat, uncritabilitySetting);
-		}
-	}
+	const socketBonusScores = gemsSatisfySocketBonus(nonMetaSockets, nonMetaGems)
+		? calculator.calculateScoresForStats(item.socketBonus)
+		: { avoidanceScore: 0, objectiveScore: 0, uncritabilityScore: 0 };
+
+	const avoidanceScore = itemScores.avoidanceScore + enchantScores.avoidanceScore + gemScores.avoidanceScore + socketBonusScores.avoidanceScore;
+	const objectiveScore = itemScores.objectiveScore + enchantScores.objectiveScore + gemScores.objectiveScore + socketBonusScores.objectiveScore;
+	const uncritabilityScore = itemScores.uncritabilityScore + enchantScores.uncritabilityScore + gemScores.uncritabilityScore + socketBonusScores.uncritabilityScore;
 
 	let processedType: ProcessedItemType = item.type;
 	if (item.type === "Weapon") {
