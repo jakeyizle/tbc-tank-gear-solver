@@ -22,8 +22,8 @@ const createEmptyEnchant = (): Enchant => {
 		effectID: "",
 		type: "Ranged",
 		stats: [],
-	}
-}
+	};
+};
 
 export const getTransformedItems = (
 	inputItems: InputItem[],
@@ -33,21 +33,17 @@ export const getTransformedItems = (
 	const items = inputItems
 		.map((item) => getItem(item))
 		.filter((item) => !!item);
-	const itemVariations = createItemVariations(
-		items,
-		calculator,
-		config.areEnchantsGemsLocked,
-	);
-	const lpItems = itemVariations.map((item) =>
-		transformItem(item, calculator),
-	);
+	const itemVariations = createItemVariations(items, calculator);
+	const lpItems = itemVariations.map((item) => transformItem(item, calculator));
 	return lpItems;
 };
 
 const getEnchants = (calculator: ScoreCalculator) => {
 	let enchants = Enchants as Enchant[];
 	enchants = enchants.filter((enchant) => enchant.stats.length > 0);
-	enchants = enchants.filter((enchant) => calculator.hasRelevantStats(enchant.stats));
+	enchants = enchants.filter((enchant) =>
+		calculator.hasRelevantStats(enchant.stats),
+	);
 	return enchants;
 };
 
@@ -60,19 +56,22 @@ const getGem = (id: string) => {
 	return gemToReturn;
 };
 
-const getEnchantByEffectID = (effectID: string) => {
-	const enchantToReturn = Enchants.find((e) => e.effectID === effectID);
+const getEnchant = (idOrEffectID: string | undefined): Enchant | undefined => {
+	let enchantToReturn = Enchants.find((e) => e.id === idOrEffectID);
+	enchantToReturn ||= Enchants.find((e) => e.effectID === idOrEffectID);
 	if (!enchantToReturn) {
-		console.error(`Enchant not found with effectID: ${effectID}`);
-		return undefined;
+		if (idOrEffectID) {
+			console.error(`Enchant not found, id or effectID: ${idOrEffectID}`);
+		}
+		return createEmptyEnchant();
 	}
-	return enchantToReturn;
+	return enchantToReturn as Enchant;
 };
 
 const getGems = (calculator: ScoreCalculator) => {
 	let gems = Gems as Gem[];
 	gems = gems.filter((gem) => gem.phase === "1");
-	gems = gems.filter((gem) => !gem.isUnique);
+	gems = gems.filter((gem) => gem.isUnique !== "true");
 	gems = gems.filter((gem) => gem.color !== "Meta");
 	gems = gems.filter((gem) => gem.stats.length > 0);
 	gems = gems.filter((gem) => calculator.hasRelevantStats(gem.stats));
@@ -90,15 +89,14 @@ const getItem = (inputItem: InputItem) => {
 	const gems = inputItem.gems
 		.map((gem) => getGem(gem))
 		.filter((gem) => !!gem) as Gem[];
-	const enchant =
-		(inputItem.enchant ? getEnchantByEffectID(inputItem.enchant) : undefined) ||
-		createEmptyEnchant();
+	const enchant = getEnchant(inputItem.enchant);
 
 	const item: ItemVariation = {
 		...baseItem,
 		gems,
 		enchant: enchant as Enchant,
 		uniqueId: `${inputItem.id}-0`,
+		locked: !!inputItem.locked,
 	};
 	return item;
 };
@@ -156,7 +154,6 @@ const getEnchantsForItem = (item: Item, enchants: Enchant[]) => {
 const createItemVariations = (
 	items: ItemVariation[],
 	calculator: ScoreCalculator,
-	areEnchantsGemsLocked: boolean,
 ) => {
 	const enchants = getEnchants(calculator);
 	const gems = getGems(calculator);
@@ -165,7 +162,7 @@ const createItemVariations = (
 	for (const item of items) {
 		// "locking" enchants and gems means that if an item already has an enchant or any gems
 		// we will not create any new variations
-		if (areEnchantsGemsLocked && (item.gems.length > 0 || item.enchant.effectID !== "")) {
+		if (item.locked && (item.gems.length > 0 || item.enchant.effectID !== "")) {
 			itemVariations.push(item);
 			continue;
 		}
@@ -223,18 +220,22 @@ const transformItem = (
 	calculator: ScoreCalculator,
 ): LPItem => {
 	const itemScores = calculator.calculateScoresForStats(item.stats);
-	const enchantScores = item.enchant.stats.length > 0 
-		? calculator.calculateScoresForStats(item.enchant.stats)
-		: { avoidanceScore: 0, objectiveScore: 0, uncritabilityScore: 0 };
+	const enchantScores =
+		item.enchant.stats.length > 0
+			? calculator.calculateScoresForStats(item.enchant.stats)
+			: { avoidanceScore: 0, objectiveScore: 0, uncritabilityScore: 0 };
 
-	const gemScores = item.gems.reduce((acc, gem) => {
-		const scores = calculator.calculateScoresForStats(gem.stats);
-		return {
-			avoidanceScore: acc.avoidanceScore + scores.avoidanceScore,
-			objectiveScore: acc.objectiveScore + scores.objectiveScore,
-			uncritabilityScore: acc.uncritabilityScore + scores.uncritabilityScore,
-		};
-	}, { avoidanceScore: 0, objectiveScore: 0, uncritabilityScore: 0 });
+	const gemScores = item.gems.reduce(
+		(acc, gem) => {
+			const scores = calculator.calculateScoresForStats(gem.stats);
+			return {
+				avoidanceScore: acc.avoidanceScore + scores.avoidanceScore,
+				objectiveScore: acc.objectiveScore + scores.objectiveScore,
+				uncritabilityScore: acc.uncritabilityScore + scores.uncritabilityScore,
+			};
+		},
+		{ avoidanceScore: 0, objectiveScore: 0, uncritabilityScore: 0 },
+	);
 
 	const nonMetaSockets = item.sockets
 		.map((s) => s.color)
@@ -244,9 +245,21 @@ const transformItem = (
 		? calculator.calculateScoresForStats(item.socketBonus)
 		: { avoidanceScore: 0, objectiveScore: 0, uncritabilityScore: 0 };
 
-	const avoidanceScore = itemScores.avoidanceScore + enchantScores.avoidanceScore + gemScores.avoidanceScore + socketBonusScores.avoidanceScore;
-	const objectiveScore = itemScores.objectiveScore + enchantScores.objectiveScore + gemScores.objectiveScore + socketBonusScores.objectiveScore;
-	const uncritabilityScore = itemScores.uncritabilityScore + enchantScores.uncritabilityScore + gemScores.uncritabilityScore + socketBonusScores.uncritabilityScore;
+	const avoidanceScore =
+		itemScores.avoidanceScore +
+		enchantScores.avoidanceScore +
+		gemScores.avoidanceScore +
+		socketBonusScores.avoidanceScore;
+	const objectiveScore =
+		itemScores.objectiveScore +
+		enchantScores.objectiveScore +
+		gemScores.objectiveScore +
+		socketBonusScores.objectiveScore;
+	const uncritabilityScore =
+		itemScores.uncritabilityScore +
+		enchantScores.uncritabilityScore +
+		gemScores.uncritabilityScore +
+		socketBonusScores.uncritabilityScore;
 
 	let processedType: ProcessedItemType = item.type;
 	if (item.type === "Weapon") {

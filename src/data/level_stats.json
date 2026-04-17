@@ -1,1 +1,678 @@
-[{"race":"1","class":"1","agi":96},{"race":"1","class":"2","agi":77},{"race":"1","class":"4","agi":158},{"race":"1","class":"5","agi":45},{"race":"1","class":"8","agi":39},{"race":"1","class":"9","agi":58},{"race":"2","class":"1","agi":93},{"race":"2","class":"3","agi":148},{"race":"2","class":"4","agi":155},{"race":"2","class":"7","agi":61},{"race":"2","class":"9","agi":55},{"race":"3","class":"1","agi":92},{"race":"3","class":"2","agi":73},{"race":"3","class":"3","agi":147},{"race":"3","class":"4","agi":154},{"race":"3","class":"5","agi":41},{"race":"4","class":"1","agi":101},{"race":"4","class":"3","agi":156},{"race":"4","class":"4","agi":163},{"race":"4","class":"5","agi":50},{"race":"4","class":"11","agi":75},{"race":"5","class":"1","agi":94},{"race":"5","class":"4","agi":156},{"race":"5","class":"5","agi":43},{"race":"5","class":"8","agi":37},{"race":"5","class":"9","agi":56},{"race":"6","class":"1","agi":91},{"race":"6","class":"3","agi":146},{"race":"6","class":"7","agi":59},{"race":"6","class":"11","agi":65},{"race":"7","class":"1","agi":99},{"race":"7","class":"4","agi":161},{"race":"7","class":"8","agi":42},{"race":"7","class":"9","agi":61},{"race":"8","class":"1","agi":98},{"race":"8","class":"3","agi":153},{"race":"8","class":"4","agi":160},{"race":"8","class":"5","agi":47},{"race":"8","class":"7","agi":66},{"race":"8","class":"8","agi":41},{"race":"10","class":"2","agi":79},{"race":"10","class":"3","agi":153},{"race":"10","class":"4","agi":160},{"race":"10","class":"5","agi":47},{"race":"10","class":"8","agi":41},{"race":"10","class":"9","agi":60},{"race":"11","class":"1","agi":93},{"race":"11","class":"2","agi":74},{"race":"11","class":"3","agi":148},{"race":"11","class":"5","agi":42},{"race":"11","class":"7","agi":61},{"race":"11","class":"8","agi":36}]
+[
+	{
+		"race": "1",
+		"class": "1",
+		"stats": [
+			{ "name": "Health", "value": 5596 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 145 },
+			{ "name": "Agility", "value": 96 },
+			{ "name": "Stamina", "value": 133 },
+			{ "name": "Intellect", "value": 33 },
+			{ "name": "Spirit", "value": 51 }
+		]
+	},
+	{
+		"race": "1",
+		"class": "2",
+		"stats": [
+			{ "name": "Health", "value": 3377 },
+			{ "name": "Mana", "value": 2953 },
+			{ "name": "Strength", "value": 126 },
+			{ "name": "Agility", "value": 77 },
+			{ "name": "Stamina", "value": 120 },
+			{ "name": "Intellect", "value": 83 },
+			{ "name": "Spirit", "value": 89 }
+		]
+	},
+	{
+		"race": "1",
+		"class": "4",
+		"stats": [
+			{ "name": "Health", "value": 4415 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 95 },
+			{ "name": "Agility", "value": 158 },
+			{ "name": "Stamina", "value": 89 },
+			{ "name": "Intellect", "value": 39 },
+			{ "name": "Spirit", "value": 58 }
+		]
+	},
+	{
+		"race": "1",
+		"class": "5",
+		"stats": [
+			{ "name": "Health", "value": 3792 },
+			{ "name": "Mana", "value": 4511 },
+			{ "name": "Strength", "value": 39 },
+			{ "name": "Agility", "value": 45 },
+			{ "name": "Stamina", "value": 58 },
+			{ "name": "Intellect", "value": 145 },
+			{ "name": "Spirit", "value": 151 }
+		]
+	},
+	{
+		"race": "1",
+		"class": "8",
+		"stats": [
+			{ "name": "Health", "value": 3723 },
+			{ "name": "Mana", "value": 4228 },
+			{ "name": "Strength", "value": 33 },
+			{ "name": "Agility", "value": 39 },
+			{ "name": "Stamina", "value": 51 },
+			{ "name": "Intellect", "value": 151 },
+			{ "name": "Spirit", "value": 145 }
+		]
+	},
+	{
+		"race": "1",
+		"class": "9",
+		"stats": [
+			{ "name": "Health", "value": 4070 },
+			{ "name": "Mana", "value": 4328 },
+			{ "name": "Strength", "value": 51 },
+			{ "name": "Agility", "value": 58 },
+			{ "name": "Stamina", "value": 76 },
+			{ "name": "Intellect", "value": 133 },
+			{ "name": "Spirit", "value": 131 }
+		]
+	},
+	{
+		"race": "2",
+		"class": "1",
+		"stats": [
+			{ "name": "Health", "value": 5616 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 148 },
+			{ "name": "Agility", "value": 93 },
+			{ "name": "Stamina", "value": 135 },
+			{ "name": "Intellect", "value": 30 },
+			{ "name": "Spirit", "value": 54 }
+		]
+	},
+	{
+		"race": "2",
+		"class": "3",
+		"stats": [
+			{ "name": "Health", "value": 4488 },
+			{ "name": "Mana", "value": 4252 },
+			{ "name": "Strength", "value": 67 },
+			{ "name": "Agility", "value": 148 },
+			{ "name": "Stamina", "value": 110 },
+			{ "name": "Intellect", "value": 74 },
+			{ "name": "Spirit", "value": 86 }
+		]
+	},
+	{
+		"race": "2",
+		"class": "4",
+		"stats": [
+			{ "name": "Health", "value": 4435 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 98 },
+			{ "name": "Agility", "value": 155 },
+			{ "name": "Stamina", "value": 91 },
+			{ "name": "Intellect", "value": 36 },
+			{ "name": "Spirit", "value": 61 }
+		]
+	},
+	{
+		"race": "2",
+		"class": "7",
+		"stats": [
+			{ "name": "Health", "value": 4141 },
+			{ "name": "Mana", "value": 4252 },
+			{ "name": "Strength", "value": 105 },
+			{ "name": "Agility", "value": 61 },
+			{ "name": "Stamina", "value": 116 },
+			{ "name": "Intellect", "value": 105 },
+			{ "name": "Spirit", "value": 123 }
+		]
+	},
+	{
+		"race": "2",
+		"class": "9",
+		"stats": [
+			{ "name": "Health", "value": 4090 },
+			{ "name": "Mana", "value": 4297 },
+			{ "name": "Strength", "value": 54 },
+			{ "name": "Agility", "value": 55 },
+			{ "name": "Stamina", "value": 78 },
+			{ "name": "Intellect", "value": 130 },
+			{ "name": "Spirit", "value": 134 }
+		]
+	},
+	{
+		"race": "3",
+		"class": "1",
+		"stats": [
+			{ "name": "Health", "value": 5626 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 147 },
+			{ "name": "Agility", "value": 92 },
+			{ "name": "Stamina", "value": 136 },
+			{ "name": "Intellect", "value": 32 },
+			{ "name": "Spirit", "value": 50 }
+		]
+	},
+	{
+		"race": "3",
+		"class": "2",
+		"stats": [
+			{ "name": "Health", "value": 4429 },
+			{ "name": "Mana", "value": 3916 },
+			{ "name": "Strength", "value": 128 },
+			{ "name": "Agility", "value": 73 },
+			{ "name": "Stamina", "value": 123 },
+			{ "name": "Intellect", "value": 82 },
+			{ "name": "Spirit", "value": 88 }
+		]
+	},
+	{
+		"race": "3",
+		"class": "3",
+		"stats": [
+			{ "name": "Health", "value": 4498 },
+			{ "name": "Mana", "value": 4254 },
+			{ "name": "Strength", "value": 66 },
+			{ "name": "Agility", "value": 147 },
+			{ "name": "Stamina", "value": 111 },
+			{ "name": "Intellect", "value": 76 },
+			{ "name": "Spirit", "value": 82 }
+		]
+	},
+	{
+		"race": "3",
+		"class": "4",
+		"stats": [
+			{ "name": "Health", "value": 4445 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 97 },
+			{ "name": "Agility", "value": 154 },
+			{ "name": "Stamina", "value": 92 },
+			{ "name": "Intellect", "value": 38 },
+			{ "name": "Spirit", "value": 57 }
+		]
+	},
+	{
+		"race": "3",
+		"class": "5",
+		"stats": [
+			{ "name": "Health", "value": 3822 },
+			{ "name": "Mana", "value": 4496 },
+			{ "name": "Strength", "value": 41 },
+			{ "name": "Agility", "value": 41 },
+			{ "name": "Stamina", "value": 61 },
+			{ "name": "Intellect", "value": 144 },
+			{ "name": "Spirit", "value": 150 }
+		]
+	},
+	{
+		"race": "4",
+		"class": "1",
+		"stats": [
+			{ "name": "Health", "value": 5586 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 142 },
+			{ "name": "Agility", "value": 101 },
+			{ "name": "Stamina", "value": 132 },
+			{ "name": "Intellect", "value": 33 },
+			{ "name": "Spirit", "value": 51 }
+		]
+	},
+	{
+		"race": "4",
+		"class": "3",
+		"stats": [
+			{ "name": "Health", "value": 4458 },
+			{ "name": "Mana", "value": 4255 },
+			{ "name": "Strength", "value": 61 },
+			{ "name": "Agility", "value": 156 },
+			{ "name": "Stamina", "value": 107 },
+			{ "name": "Intellect", "value": 77 },
+			{ "name": "Spirit", "value": 83 }
+		]
+	},
+	{
+		"race": "4",
+		"class": "4",
+		"stats": [
+			{ "name": "Health", "value": 4405 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 92 },
+			{ "name": "Agility", "value": 163 },
+			{ "name": "Stamina", "value": 88 },
+			{ "name": "Intellect", "value": 39 },
+			{ "name": "Spirit", "value": 58 }
+		]
+	},
+	{
+		"race": "4",
+		"class": "5",
+		"stats": [
+			{ "name": "Health", "value": 3791 },
+			{ "name": "Mana", "value": 4511 },
+			{ "name": "Strength", "value": 36 },
+			{ "name": "Agility", "value": 50 },
+			{ "name": "Stamina", "value": 57 },
+			{ "name": "Intellect", "value": 145 },
+			{ "name": "Spirit", "value": 151 }
+		]
+	},
+	{
+		"race": "4",
+		"class": "11",
+		"stats": [
+			{ "name": "Health", "value": 4257 },
+			{ "name": "Mana", "value": 3894 },
+			{ "name": "Strength", "value": 73 },
+			{ "name": "Agility", "value": 75 },
+			{ "name": "Stamina", "value": 82 },
+			{ "name": "Intellect", "value": 120 },
+			{ "name": "Spirit", "value": 133 }
+		]
+	},
+	{
+		"race": "5",
+		"class": "1",
+		"stats": [
+			{ "name": "Health", "value": 5606 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 144 },
+			{ "name": "Agility", "value": 94 },
+			{ "name": "Stamina", "value": 134 },
+			{ "name": "Intellect", "value": 31 },
+			{ "name": "Spirit", "value": 56 }
+		]
+	},
+	{
+		"race": "5",
+		"class": "4",
+		"stats": [
+			{ "name": "Health", "value": 4425 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 94 },
+			{ "name": "Agility", "value": 156 },
+			{ "name": "Stamina", "value": 90 },
+			{ "name": "Intellect", "value": 37 },
+			{ "name": "Spirit", "value": 63 }
+		]
+	},
+	{
+		"race": "5",
+		"class": "5",
+		"stats": [
+			{ "name": "Health", "value": 3802 },
+			{ "name": "Mana", "value": 4481 },
+			{ "name": "Strength", "value": 38 },
+			{ "name": "Agility", "value": 43 },
+			{ "name": "Stamina", "value": 59 },
+			{ "name": "Intellect", "value": 143 },
+			{ "name": "Spirit", "value": 156 }
+		]
+	},
+	{
+		"race": "5",
+		"class": "8",
+		"stats": [
+			{ "name": "Health", "value": 3733 },
+			{ "name": "Mana", "value": 4198 },
+			{ "name": "Strength", "value": 32 },
+			{ "name": "Agility", "value": 37 },
+			{ "name": "Stamina", "value": 52 },
+			{ "name": "Intellect", "value": 149 },
+			{ "name": "Spirit", "value": 150 }
+		]
+	},
+	{
+		"race": "5",
+		"class": "9",
+		"stats": [
+			{ "name": "Health", "value": 4080 },
+			{ "name": "Mana", "value": 4298 },
+			{ "name": "Strength", "value": 50 },
+			{ "name": "Agility", "value": 56 },
+			{ "name": "Stamina", "value": 77 },
+			{ "name": "Intellect", "value": 131 },
+			{ "name": "Spirit", "value": 136 }
+		]
+	},
+	{
+		"race": "6",
+		"class": "1",
+		"stats": [
+			{ "name": "Health", "value": 5616 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 150 },
+			{ "name": "Agility", "value": 91 },
+			{ "name": "Stamina", "value": 135 },
+			{ "name": "Intellect", "value": 28 },
+			{ "name": "Spirit", "value": 53 }
+		]
+	},
+	{
+		"race": "6",
+		"class": "3",
+		"stats": [
+			{ "name": "Health", "value": 4488 },
+			{ "name": "Mana", "value": 4250 },
+			{ "name": "Strength", "value": 69 },
+			{ "name": "Agility", "value": 146 },
+			{ "name": "Stamina", "value": 110 },
+			{ "name": "Intellect", "value": 72 },
+			{ "name": "Spirit", "value": 85 }
+		]
+	},
+	{
+		"race": "6",
+		"class": "7",
+		"stats": [
+			{ "name": "Health", "value": 4141 },
+			{ "name": "Mana", "value": 4250 },
+			{ "name": "Strength", "value": 107 },
+			{ "name": "Agility", "value": 59 },
+			{ "name": "Stamina", "value": 116 },
+			{ "name": "Intellect", "value": 103 },
+			{ "name": "Spirit", "value": 122 }
+		]
+	},
+	{
+		"race": "6",
+		"class": "11",
+		"stats": [
+			{ "name": "Health", "value": 4278 },
+			{ "name": "Mana", "value": 3861 },
+			{ "name": "Strength", "value": 81 },
+			{ "name": "Agility", "value": 65 },
+			{ "name": "Stamina", "value": 85 },
+			{ "name": "Intellect", "value": 115 },
+			{ "name": "Spirit", "value": 135 }
+		]
+	},
+	{
+		"race": "7",
+		"class": "1",
+		"stats": [
+			{ "name": "Health", "value": 5586 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 140 },
+			{ "name": "Agility", "value": 99 },
+			{ "name": "Stamina", "value": 132 },
+			{ "name": "Intellect", "value": 37 },
+			{ "name": "Spirit", "value": 51 }
+		]
+	},
+	{
+		"race": "7",
+		"class": "4",
+		"stats": [
+			{ "name": "Health", "value": 4405 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 90 },
+			{ "name": "Agility", "value": 161 },
+			{ "name": "Stamina", "value": 88 },
+			{ "name": "Intellect", "value": 43 },
+			{ "name": "Spirit", "value": 58 }
+		]
+	},
+	{
+		"race": "7",
+		"class": "8",
+		"stats": [
+			{ "name": "Health", "value": 3722 },
+			{ "name": "Mana", "value": 4288 },
+			{ "name": "Strength", "value": 28 },
+			{ "name": "Agility", "value": 42 },
+			{ "name": "Stamina", "value": 50 },
+			{ "name": "Intellect", "value": 155 },
+			{ "name": "Spirit", "value": 145 }
+		]
+	},
+	{
+		"race": "7",
+		"class": "9",
+		"stats": [
+			{ "name": "Health", "value": 4060 },
+			{ "name": "Mana", "value": 4388 },
+			{ "name": "Strength", "value": 46 },
+			{ "name": "Agility", "value": 61 },
+			{ "name": "Stamina", "value": 75 },
+			{ "name": "Intellect", "value": 137 },
+			{ "name": "Spirit", "value": 131 }
+		]
+	},
+	{
+		"race": "8",
+		"class": "1",
+		"stats": [
+			{ "name": "Health", "value": 5606 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 146 },
+			{ "name": "Agility", "value": 98 },
+			{ "name": "Stamina", "value": 134 },
+			{ "name": "Intellect", "value": 29 },
+			{ "name": "Spirit", "value": 52 }
+		]
+	},
+	{
+		"race": "8",
+		"class": "3",
+		"stats": [
+			{ "name": "Health", "value": 4478 },
+			{ "name": "Mana", "value": 4251 },
+			{ "name": "Strength", "value": 65 },
+			{ "name": "Agility", "value": 153 },
+			{ "name": "Stamina", "value": 109 },
+			{ "name": "Intellect", "value": 73 },
+			{ "name": "Spirit", "value": 84 }
+		]
+	},
+	{
+		"race": "8",
+		"class": "4",
+		"stats": [
+			{ "name": "Health", "value": 4425 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 96 },
+			{ "name": "Agility", "value": 160 },
+			{ "name": "Stamina", "value": 90 },
+			{ "name": "Intellect", "value": 35 },
+			{ "name": "Spirit", "value": 59 }
+		]
+	},
+	{
+		"race": "8",
+		"class": "5",
+		"stats": [
+			{ "name": "Health", "value": 3802 },
+			{ "name": "Mana", "value": 4479 },
+			{ "name": "Strength", "value": 40 },
+			{ "name": "Agility", "value": 47 },
+			{ "name": "Stamina", "value": 59 },
+			{ "name": "Intellect", "value": 141 },
+			{ "name": "Spirit", "value": 152 }
+		]
+	},
+	{
+		"race": "8",
+		"class": "7",
+		"stats": [
+			{ "name": "Health", "value": 4131 },
+			{ "name": "Mana", "value": 4251 },
+			{ "name": "Strength", "value": 103 },
+			{ "name": "Agility", "value": 66 },
+			{ "name": "Stamina", "value": 115 },
+			{ "name": "Intellect", "value": 104 },
+			{ "name": "Spirit", "value": 121 }
+		]
+	},
+	{
+		"race": "8",
+		"class": "8",
+		"stats": [
+			{ "name": "Health", "value": 3733 },
+			{ "name": "Mana", "value": 4182 },
+			{ "name": "Strength", "value": 34 },
+			{ "name": "Agility", "value": 41 },
+			{ "name": "Stamina", "value": 52 },
+			{ "name": "Intellect", "value": 147 },
+			{ "name": "Spirit", "value": 146 }
+		]
+	},
+	{
+		"race": "10",
+		"class": "2",
+		"stats": [
+			{ "name": "Health", "value": 4379 },
+			{ "name": "Mana", "value": 3977 },
+			{ "name": "Strength", "value": 123 },
+			{ "name": "Agility", "value": 79 },
+			{ "name": "Stamina", "value": 119 },
+			{ "name": "Intellect", "value": 87 },
+			{ "name": "Spirit", "value": 88 }
+		]
+	},
+	{
+		"race": "10",
+		"class": "3",
+		"stats": [
+			{ "name": "Health", "value": 4457 },
+			{ "name": "Mana", "value": 4315 },
+			{ "name": "Strength", "value": 61 },
+			{ "name": "Agility", "value": 153 },
+			{ "name": "Stamina", "value": 107 },
+			{ "name": "Intellect", "value": 81 },
+			{ "name": "Spirit", "value": 82 }
+		]
+	},
+	{
+		"race": "10",
+		"class": "4",
+		"stats": [
+			{ "name": "Health", "value": 4405 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 92 },
+			{ "name": "Agility", "value": 160 },
+			{ "name": "Stamina", "value": 88 },
+			{ "name": "Intellect", "value": 43 },
+			{ "name": "Spirit", "value": 57 }
+		]
+	},
+	{
+		"race": "10",
+		"class": "5",
+		"stats": [
+			{ "name": "Health", "value": 3795 },
+			{ "name": "Mana", "value": 4571 },
+			{ "name": "Strength", "value": 36 },
+			{ "name": "Agility", "value": 47 },
+			{ "name": "Stamina", "value": 57 },
+			{ "name": "Intellect", "value": 149 },
+			{ "name": "Spirit", "value": 150 }
+		]
+	},
+	{
+		"race": "10",
+		"class": "8",
+		"stats": [
+			{ "name": "Health", "value": 3726 },
+			{ "name": "Mana", "value": 4288 },
+			{ "name": "Strength", "value": 30 },
+			{ "name": "Agility", "value": 41 },
+			{ "name": "Stamina", "value": 50 },
+			{ "name": "Intellect", "value": 155 },
+			{ "name": "Spirit", "value": 144 }
+		]
+	},
+	{
+		"race": "10",
+		"class": "9",
+		"stats": [
+			{ "name": "Health", "value": 4059 },
+			{ "name": "Mana", "value": 4385 },
+			{ "name": "Strength", "value": 48 },
+			{ "name": "Agility", "value": 60 },
+			{ "name": "Stamina", "value": 75 },
+			{ "name": "Intellect", "value": 137 },
+			{ "name": "Spirit", "value": 130 }
+		]
+	},
+	{
+		"race": "11",
+		"class": "1",
+		"stats": [
+			{ "name": "Health", "value": 5586 },
+			{ "name": "Mana", "value": 0 },
+			{ "name": "Strength", "value": 146 },
+			{ "name": "Agility", "value": 93 },
+			{ "name": "Stamina", "value": 132 },
+			{ "name": "Intellect", "value": 34 },
+			{ "name": "Spirit", "value": 53 }
+		]
+	},
+	{
+		"race": "11",
+		"class": "2",
+		"stats": [
+			{ "name": "Health", "value": 4389 },
+			{ "name": "Mana", "value": 3932 },
+			{ "name": "Strength", "value": 127 },
+			{ "name": "Agility", "value": 74 },
+			{ "name": "Stamina", "value": 119 },
+			{ "name": "Intellect", "value": 84 },
+			{ "name": "Spirit", "value": 91 }
+		]
+	},
+	{
+		"race": "11",
+		"class": "3",
+		"stats": [
+			{ "name": "Health", "value": 4458 },
+			{ "name": "Mana", "value": 4270 },
+			{ "name": "Strength", "value": 65 },
+			{ "name": "Agility", "value": 148 },
+			{ "name": "Stamina", "value": 107 },
+			{ "name": "Intellect", "value": 78 },
+			{ "name": "Spirit", "value": 85 }
+		]
+	},
+	{
+		"race": "11",
+		"class": "5",
+		"stats": [
+			{ "name": "Health", "value": 3791 },
+			{ "name": "Mana", "value": 4526 },
+			{ "name": "Strength", "value": 40 },
+			{ "name": "Agility", "value": 42 },
+			{ "name": "Stamina", "value": 57 },
+			{ "name": "Intellect", "value": 146 },
+			{ "name": "Spirit", "value": 153 }
+		]
+	},
+	{
+		"race": "11",
+		"class": "7",
+		"stats": [
+			{ "name": "Health", "value": 4111 },
+			{ "name": "Mana", "value": 4284 },
+			{ "name": "Strength", "value": 103 },
+			{ "name": "Agility", "value": 61 },
+			{ "name": "Stamina", "value": 113 },
+			{ "name": "Intellect", "value": 109 },
+			{ "name": "Spirit", "value": 122 }
+		]
+	},
+	{
+		"race": "11",
+		"class": "8",
+		"stats": [
+			{ "name": "Health", "value": 3722 },
+			{ "name": "Mana", "value": 4243 },
+			{ "name": "Strength", "value": 34 },
+			{ "name": "Agility", "value": 36 },
+			{ "name": "Stamina", "value": 50 },
+			{ "name": "Intellect", "value": 152 },
+			{ "name": "Spirit", "value": 147 }
+		]
+	}
+]

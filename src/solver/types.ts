@@ -13,6 +13,7 @@ export interface ItemVariation extends Item {
 	enchant: Enchant;
 	gems: Gem[];
 	uniqueId: string;
+	locked: boolean;
 }
 
 export interface LPItem extends Omit<ItemVariation, "type"> {
@@ -70,6 +71,8 @@ export const STAT_NAMES = [
   "NatureResistance",
   "HolySpellPower",
   "FireSpellPower",
+  "Health",
+  "Mana",
 ] as const;
 
 export type StatName = typeof STAT_NAMES[number];
@@ -132,4 +135,5 @@ export interface InputItem {
 	id: string;
 	gems: string[];
 	enchant?: string;
+	locked?: boolean;
 }

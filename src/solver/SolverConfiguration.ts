@@ -15,7 +15,6 @@ export class SolverConfiguration {
 	readonly uncrushabilitySetting: number;
 	readonly uncritabilitySetting: number;
 	readonly optimizeStats: Stat[];
-	readonly areEnchantsGemsLocked: boolean;
 	readonly raceId: string;
 	readonly classId: string;
 
@@ -29,14 +28,12 @@ export class SolverConfiguration {
 		uncrushabilitySetting: number;
 		uncritabilitySetting: number;
 		optimizeStats: Stat[];
-		areEnchantsGemsLocked: boolean;
 		raceId: string;
 		classId: string;
 	}) {
 		this.uncrushabilitySetting = options.uncrushabilitySetting;
 		this.uncritabilitySetting = options.uncritabilitySetting;
 		this.optimizeStats = options.optimizeStats;
-		this.areEnchantsGemsLocked = options.areEnchantsGemsLocked;
 		this.raceId = options.raceId;
 		this.classId = options.classId;
 

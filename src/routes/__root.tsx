@@ -5,6 +5,7 @@ import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
+import { SolveConfigProvider } from '#/contexts/SolveConfigContext';
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -12,7 +13,7 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <>
+    <SolveConfigProvider>
       <Outlet />
       <TanStackDevtools
         config={{
@@ -25,6 +26,6 @@ function RootComponent() {
           },
         ]}
       />
-    </>
+    </SolveConfigProvider>
   )
 }

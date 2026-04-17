@@ -1,20 +1,10 @@
-import LevelStats from "../data/level_stats.json";
-
-const getAgilityByRaceAndClass = (raceId: string, classId: string) => {
-	const entry = LevelStats.find(
-		(entry) => entry.race === raceId && entry.class === classId,
-	);
-	if (!entry) {
-		throw new Error(`No agility found for race ${raceId} and class ${classId}`);
-	}
-	return entry.agi;
-};
+import { getBaseStat } from "#/helpers.ts/getBaseStat";
 
 export const calculateBaseAvoidance = (
 	raceId: string,
 	classId: string,
 ) => {
-	const baseAgility = getAgilityByRaceAndClass(raceId, classId);
+	const baseAgility = getBaseStat("Agility", classId, raceId);
 	const baseAgilityAvoidance = baseAgility / 25;
 
 	// TODO: include buffs (mark of the wild, kings)

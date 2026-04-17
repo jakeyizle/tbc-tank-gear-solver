@@ -6,7 +6,6 @@ import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { useState } from "react";
 import { STAT_NAMES, type Stat, type StatName } from "#/solver/types";
 
 interface StatsEntryProps {

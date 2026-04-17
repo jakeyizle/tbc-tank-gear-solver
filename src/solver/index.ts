@@ -1,10 +1,6 @@
-import {
-	getAvoidanceFromItems,
-	getStatFromItem,
-} from "../helpers.ts/getStatFromItem";
+import type { SolverConfiguration as UISolverConfiguration } from "#/types/SolverConfig";
 import { getTransformedItems } from "./items";
 import { SolverConfiguration } from "./SolverConfiguration";
-import { runLPModel } from "./solver";
 import type { InputItem, LPItem, Stat } from "./types";
 
 interface SolveOptions {
@@ -25,7 +21,9 @@ export const solve = async (
 	baseUncritability: number;
 }> => {
 	return new Promise((resolve, reject) => {
-		const worker = new Worker(new URL("./solver.worker.ts", import.meta.url), { type: "module" });
+		const worker = new Worker(new URL("./solver.worker.ts", import.meta.url), {
+			type: "module",
+		});
 
 		const config = new SolverConfiguration(options);
 		const lpItems = getTransformedItems(items, config);
@@ -42,6 +40,11 @@ export const solve = async (
 				baseAvoidance: config.baseAvoidance,
 				baseUncritability: config.baseUncritability,
 			});
+		};
+
+		worker.onerror = (e) => {
+			console.error(e);
+			reject(e);
 		};
 
 		worker.postMessage({
@@ -75,4 +78,74 @@ export const solve = async (
 		
 	return {items: solvedItems, baseAvoidance: config.baseAvoidance, baseUncritability: config.baseUncritability};
 	*/
+};
+
+interface BaseConfig {
+	areEnchantsGemsLocked: boolean;
+	raceId: string;
+	classId: string;
+}
+
+interface SolverResult {
+	items: LPItem[];
+	baseAvoidance: number;
+	baseUncritability: number;
+	id: string;
+	name: string;
+}
+
+export const solveAll = async (
+	items: InputItem[],
+	baseConfig: BaseConfig,
+	solverConfigs: UISolverConfiguration[],
+): Promise<SolverResult[]> => {
+	// the idea here is to solve in order
+	// the items that are selected are locked, and no variants for those items will be generated for the next configs
+	const solverResults: SolverResult[] = [];
+	let currentInputItems: InputItem[] = items.map((item) => {
+		return { ...item, locked: baseConfig.areEnchantsGemsLocked };
+	});
+
+	for (const solverConfig of solverConfigs) {
+		const result = await solve(currentInputItems, {
+			...baseConfig,
+			...solverConfig,
+		});
+		solverResults.push({
+			...result,
+			id: solverConfig.id,
+			name: solverConfig.name,
+		});
+
+		currentInputItems = replaceInputItems(currentInputItems, result.items);
+	}
+
+	return solverResults;
+};
+
+const replaceInputItems = (
+	inputItems: InputItem[],
+	lockedItems: LPItem[],
+): InputItem[] => {
+	let newInputItems = [...inputItems];
+	for (const lockedItem of lockedItems) {
+		const originalItem = inputItems.find((item) => item.id === lockedItem.id);
+		if (!originalItem) continue;
+
+		const newItem: InputItem = {
+			...lockedItem,
+			gems: lockedItem.gems.map((gem) => gem.id),
+			enchant: lockedItem.enchant ? lockedItem.enchant.id : undefined,
+			locked: true,
+		};
+
+		newInputItems = newInputItems.map((item) => {
+			if (item.id === originalItem.id) {
+				return newItem;
+			}
+			return item;
+		});
+	}
+
+	return newInputItems;
 };

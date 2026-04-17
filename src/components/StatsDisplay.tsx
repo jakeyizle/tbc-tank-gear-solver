@@ -1,6 +1,7 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import { getStatFromItem } from "#/helpers.ts/getStatFromItem";
+import { calculateStat } from "#/helpers.ts/calculateStat";
+import {useSolveConfig} from "#/hooks/useSolveConfig";
 import type { LPItem, StatName } from "#/solver/types";
 
 interface StatsDisplayProps {
@@ -14,6 +15,13 @@ export default function StatsDisplay({
 	stats,
 	header,
 }: StatsDisplayProps) {
+    const { solveConfig } = useSolveConfig();
+    
+    if (!solveConfig) {
+        return null;
+    }
+    
+    const { raceId, classId } = solveConfig;
 	return (
 		<>
 			<Box sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -26,10 +34,7 @@ export default function StatsDisplay({
                             {stat}
                         </Typography>
                         <Typography variant="body2" fontWeight="medium">
-                            {items.reduce(
-                                (acc, item) => acc + (getStatFromItem(item, stat) || 0),
-                                0,
-                            )}
+                            {calculateStat({items, raceId, classId, stat})}
                         </Typography>
                     </Box>
                 ))
