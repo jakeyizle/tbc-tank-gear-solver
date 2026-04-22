@@ -1,9 +1,10 @@
-import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import StatsDisplay from "#/components/StatsDisplay";
 import { getAvoidanceFromItems } from "#/helpers.ts/getStatFromItem";
+import StatCalculator from "#/helpers.ts/StatCalculator";
+import { useSolveConfig } from "#/hooks/useSolveConfig";
 import type { LPItem } from "#/solver/types";
 
 interface StatsSummaryProps {
@@ -12,24 +13,113 @@ interface StatsSummaryProps {
 	baseUncritability: number;
 }
 
-export default function StatsSummary({
-	items,
-	baseAvoidance,
-	baseUncritability,
-}: StatsSummaryProps) {
-	if (!items || items.length === 0) {
+export default function StatsSummary({ items, baseAvoidance, baseUncritability }: StatsSummaryProps) {
+	const { solveConfig } = useSolveConfig();
+	if (!items || items.length === 0 || !solveConfig) {
 		return null;
 	}
 
-	const totalAvoidance = getAvoidanceFromItems(items) + baseAvoidance;
-	const avoidanceFromItems = getAvoidanceFromItems(items);
-	const uncritabilityScore =
-		items.reduce((acc, item) => acc + item.uncritabilityScore, 0) +
-		baseUncritability;
-	const objectiveScore = items.reduce(
-		(acc, item) => acc + item.objectiveScore,
-		0,
+	const statCalculator = new StatCalculator(
+		items,
+		solveConfig.raceId,
+		solveConfig.classId,
 	);
+
+	const avoidance = statCalculator.calculateStat("Avoidance")
+	const properAvoidance = getAvoidanceFromItems(items);
+	console.log(`avoidance: ${avoidance}, properAvoidance: ${properAvoidance}`);
+	console.log(baseAvoidance)
+
+	const summaryStats = [
+		{
+			name: "Avoidance",
+			value: statCalculator.calculateStat("Avoidance") + baseAvoidance,
+		},
+		{
+			name: "Uncritability",
+			value: statCalculator.calculateStat("Uncritability") + baseUncritability,
+		},
+	];
+
+	const survivabilityStats = [
+		{
+			name: "Health",
+			value: statCalculator.calculateStat("Health"),
+		},
+		{
+			name: "Armor",
+			value: statCalculator.calculateStat("Armor"),
+		},
+		{
+			name: "Effective HP",
+			value: statCalculator.calculateStat("Effective HP"),
+		},
+	];
+
+	const threatStats = [
+		{
+			name: "Spell Power",
+			value: statCalculator.calculateStat("SpellPower"),
+		},
+		{
+			name: "Spell Hit",
+			value: statCalculator.calculateStat("SpellHit"),
+		},
+		{
+			name: "Spell Crit",
+			value: statCalculator.calculateStat("SpellCrit"),
+		},
+		{
+			name: "Mana",
+			value: statCalculator.calculateStat("Mana"),
+		},
+	];
+
+	const avoidanceStats = [
+		{
+			name: "Defense",
+			value: statCalculator.calculateStat("Defense"),
+		},
+		{
+			name: "Dodge",
+			value: statCalculator.calculateStat("Dodge"),
+		},
+		{
+			name: "Parry",
+			value: statCalculator.calculateStat("Parry"),
+		},
+		{
+			name: "Block",
+			value: statCalculator.calculateStat("Block"),
+		},
+		{
+			name: "Resilience",
+			value: statCalculator.calculateStat("Resilience"),
+		},
+	];
+
+	const baseStats = [
+		{
+			name: "Strength",
+			value: statCalculator.calculateStat("Strength"),
+		},
+		{
+			name: "Agility",
+			value: statCalculator.calculateStat("Agility"),
+		},
+		{
+			name: "Stamina",
+			value: statCalculator.calculateStat("Stamina"),
+		},
+		{
+			name: "Intellect",
+			value: statCalculator.calculateStat("Intellect"),
+		},
+		{
+			name: "Spirit",
+			value: statCalculator.calculateStat("Spirit"),
+		},
+	];
 
 	return (
 		<Paper elevation={1} sx={{ p: 2 }}>
@@ -37,76 +127,11 @@ export default function StatsSummary({
 				Stats Summary
 			</Typography>
 			<Stack spacing={1}>
-				<Box
-					sx={{
-						display: "flex",
-						justifyContent: "space-between",
-					}}
-				>
-					<Typography variant="body2" color="text.secondary">
-						Total Avoidance
-					</Typography>
-					<Typography variant="body2" fontWeight="medium">
-						{totalAvoidance.toFixed(2)}
-					</Typography>
-					<Typography variant="body2" color="text.secondary">
-						Base Avoidance
-					</Typography>
-					<Typography variant="body2" fontWeight="medium">
-						{baseAvoidance.toFixed(2)}
-					</Typography>
-					<Typography variant="body2" color="text.secondary">
-						Avoidance from items
-					</Typography>
-					<Typography variant="body2" fontWeight="medium">
-						{avoidanceFromItems.toFixed(2)}
-					</Typography>
-				</Box>
-				<Box
-					sx={{
-						display: "flex",
-						justifyContent: "space-between",
-					}}
-				>
-					<Typography variant="body2" color="text.secondary">
-						Uncritability Score
-					</Typography>
-					<Typography variant="body2" fontWeight="medium">
-						{uncritabilityScore.toFixed(2)}
-					</Typography>
-				</Box>
-				<Box
-					sx={{
-						display: "flex",
-						justifyContent: "space-between",
-					}}
-				>
-					<Typography variant="body2" color="text.secondary">
-						Objective Score
-					</Typography>
-					<Typography variant="body2" fontWeight="medium">
-						{objectiveScore.toFixed(2)}
-					</Typography>
-				</Box>
-				<StatsDisplay
-					items={items}
-					stats={[
-						"Health",
-						"Mana",
-					]
-					}
-					header="Health & Mana"
-				 />
-				<StatsDisplay
-					items={items}
-					stats={["Armor", "Defense", "Dodge", "Parry", "Block", "Resilience"]}
-					header="Defenses"
-				/>
-				<StatsDisplay
-					items={items}
-					stats={["SpellPower", "SpellHit", "SpellCrit",]}
-					header="Spell"
-				/>
+				<StatsDisplay stats={summaryStats} header="Defense Summary" />
+				<StatsDisplay stats={survivabilityStats} header="Survivability" />
+				<StatsDisplay stats={threatStats} header="Threat" />
+				<StatsDisplay stats={avoidanceStats} header="Avoidance" />
+				<StatsDisplay stats={baseStats} header="Base Stats" />
 			</Stack>
 		</Paper>
 	);

@@ -53,6 +53,9 @@ function App() {
 			raceId: raceValue.toString(),
 			classId: classValue.toString(),
 			areEnchantsGemsLocked,
+			talentSources: [],
+			abilitySources: [],
+			buffSources: [],
 		}
 
 		// Store the solve configuration values in context

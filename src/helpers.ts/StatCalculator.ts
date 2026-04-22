@@ -19,6 +19,7 @@ export default class StatCalculator {
 		this.raceId = raceId;
 		this.classId = classId;
 	}
+
 	calculateStat(statName: DisplayStatName): number {
 		switch (statName) {
 			case "Health":

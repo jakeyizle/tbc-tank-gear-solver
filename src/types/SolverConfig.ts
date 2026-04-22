@@ -34,9 +34,9 @@ export function createEmptyConfig(id: string, name: string): SolverConfiguration
 		uncritabilitySetting: 2,
 		uncrushabilitySetting: 1,
 		optimizeStats: [
-			{ name: "Stamina", value: 1 },
-			{ name: "SpellPower", value: 1 },
-			{ name: "SpellHit", value: 1 },
+			{ name: "Stamina", value: 1, type: "flat" },
+			{ name: "SpellPower", value: 1, type: "flat" },
+			{ name: "SpellHit", value: 1, type: "flat" },
 		],
 		buffs: {
 			markOfTheWild: true,

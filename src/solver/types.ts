@@ -26,6 +26,7 @@ export interface LPItem extends Omit<ItemVariation, "type"> {
 export interface Stat {
 	name: StatName;
 	value: number;
+	type: 'flat' | 'multiplier';
 }
 
 export interface Socket {
@@ -73,6 +74,7 @@ export const STAT_NAMES = [
   "FireSpellPower",
   "Health",
   "Mana",
+  "Miss",
 ] as const;
 
 export type StatName = typeof STAT_NAMES[number];
@@ -136,4 +138,14 @@ export interface InputItem {
 	gems: string[];
 	enchant?: string;
 	locked?: boolean;
+}
+
+export interface ModifierSource {
+    id: string;
+    name: string;
+    type: 'talent' | 'buff' | 'ability' | 'gear' | 'consumable'
+    maxRank?: number
+    rank?: number
+    classId?: string
+    stats: Stat[];
 }

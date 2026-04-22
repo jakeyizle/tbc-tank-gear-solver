@@ -1,6 +1,6 @@
 import type { Item, Stat, StatName } from "./types";
 
-const createStat = (name: StatName, value: number): Stat => ({ name, value });
+const createStat = (name: StatName, value: number, type: 'flat' | 'multiplier' = 'flat'): Stat => ({ name, value, type });
 
 export const overrideItem = (item: Item) => {
     switch (item.name) {

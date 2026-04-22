@@ -1,7 +1,7 @@
 import type { SolverConfiguration as UISolverConfiguration } from "#/types/SolverConfig";
 import { getTransformedItems } from "./items";
 import { SolverConfiguration } from "./SolverConfiguration";
-import type { InputItem, LPItem, Stat } from "./types";
+import type { InputItem, LPItem, ModifierSource, Stat } from "./types";
 
 interface SolveOptions {
 	uncrushabilitySetting: number;
@@ -10,6 +10,9 @@ interface SolveOptions {
 	areEnchantsGemsLocked: boolean;
 	raceId: string;
 	classId: string;
+	talentSources: ModifierSource[];
+	buffSources: ModifierSource[];
+	abilitySources: ModifierSource[];
 }
 
 export const solve = async (
@@ -84,6 +87,9 @@ interface BaseConfig {
 	areEnchantsGemsLocked: boolean;
 	raceId: string;
 	classId: string;
+	abilitySources: ModifierSource[];
+	talentSources: ModifierSource[];
+	buffSources: ModifierSource[];
 }
 
 interface SolverResult {
