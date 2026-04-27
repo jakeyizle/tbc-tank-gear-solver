@@ -149,3 +149,9 @@ export interface ModifierSource {
     classId?: string
     stats: Stat[];
 }
+
+export type DisplayStatName =
+	| StatName
+	| "Avoidance"
+	| "Uncritability"
+	| "Effective HP";
