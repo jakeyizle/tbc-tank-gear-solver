@@ -8,6 +8,8 @@ import ConfigurationPanel from "#/components/ConfigurationPanel";
 import ItemInputSection from "#/components/ItemInputSection";
 import ResultsPanel from "#/components/ResultsPanel";
 import SolveButton from "#/components/SolveButton";
+import { getAbilities} from "#/data/abilities";
+import {getTalent} from "#/data/talents";
 import { parseItemInput } from "#/helpers.ts/parseItemInput";
 import { useSolveConfig } from "#/hooks/useSolveConfig";
 import { useSolverConfigs } from "#/hooks/useSolverConfigs";
@@ -48,13 +50,23 @@ function App() {
 		const newResults = new Map<string, SolveResult>();
 		let firstResultId: string | null = null;
 
+		// TODO Hardcoded		
+		const abilitySources = getAbilities(classValue.toString());
+	
+		const anticipation = getTalent("anticipation", 5);
+		const deflection = getTalent("deflection", 5);
+		const sacredDuty = getTalent("sacred-duty", 2);
+		const combatExpertise = getTalent("combat-expertise", 5);
+		const talentSources = [anticipation, deflection, sacredDuty, combatExpertise];
+		
 		const items = parseItemInput(itemInput);
+		
 		const baseConfig = {
 			raceId: raceValue.toString(),
 			classId: classValue.toString(),
 			areEnchantsGemsLocked,
-			talentSources: [],
-			abilitySources: [],
+			talentSources,
+			abilitySources,
 			buffSources: [],
 		}
 
@@ -62,6 +74,9 @@ function App() {
 		updateSolveConfig({
 			classId: classValue.toString(),
 			raceId: raceValue.toString(),
+			talentSources,
+			buffSources: [],
+			abilitySources,
 		});
 
 		try {

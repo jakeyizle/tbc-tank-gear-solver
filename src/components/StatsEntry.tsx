@@ -27,7 +27,7 @@ export default function StatsEntry({ stats, onChange }: StatsEntryProps) {
 			if (i === index) {
 				const stat = STAT_NAMES.find((name) => name === newStat);
 				if (stat) {
-					return { name: stat, value: entry.value };
+					return { name: stat, value: entry.value, type: "flat" } as Stat;
 				}
 			}
 			return entry;
@@ -57,7 +57,7 @@ export default function StatsEntry({ stats, onChange }: StatsEntryProps) {
 		const nextAvailable = STAT_NAMES.find((stat) => !usedStats.has(stat));
 		if (!nextAvailable) return;
 
-		const newStats = [...stats, { name: nextAvailable, value: 0 }];
+		const newStats = [...stats, { name: nextAvailable, value: 0, type: "flat" }] as Stat[];
 		onChange(newStats);
 	};
 

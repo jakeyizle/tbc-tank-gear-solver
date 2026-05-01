@@ -27,7 +27,7 @@ export const solve = async (
 		const worker = new Worker(new URL("./solver.worker.ts", import.meta.url), {
 			type: "module",
 		});
-
+		debugger
 		const config = new SolverConfiguration(options);
 		const lpItems = getTransformedItems(items, config);
 		console.log(`avoidance target: ${config.avoidanceTarget}`);

@@ -2,7 +2,6 @@ import Enchants from "../data/enchants.json";
 import Gems from "../data/gems.json";
 import Items from "../data/items.json";
 import { overrideItem } from "./itemOverride";
-import { ScoreCalculator } from "./ScoreCalculator";
 import type { SolverConfiguration } from "./SolverConfiguration";
 import { gemsSatisfySocketBonus } from "./socketBonus";
 import type {
@@ -29,20 +28,19 @@ export const getTransformedItems = (
 	inputItems: InputItem[],
 	config: SolverConfiguration,
 ) => {
-	const calculator = new ScoreCalculator(config);
 	const items = inputItems
 		.map((item) => getItem(item))
 		.filter((item) => !!item);
-	const itemVariations = createItemVariations(items, calculator);
-	const lpItems = itemVariations.map((item) => transformItem(item, calculator));
+	const itemVariations = createItemVariations(items, config);
+	const lpItems = itemVariations.map((item) => transformItem(item, config));
 	return lpItems;
 };
 
-const getEnchants = (calculator: ScoreCalculator) => {
+const getEnchants = (config: SolverConfiguration) => {
 	let enchants = Enchants as Enchant[];
 	enchants = enchants.filter((enchant) => enchant.stats.length > 0);
 	enchants = enchants.filter((enchant) =>
-		calculator.hasRelevantStats(enchant.stats),
+		config.hasRelevantStats(enchant.stats),
 	);
 	return enchants;
 };
@@ -68,13 +66,13 @@ const getEnchant = (idOrEffectID: string | undefined): Enchant | undefined => {
 	return enchantToReturn as Enchant;
 };
 
-const getGems = (calculator: ScoreCalculator) => {
+const getGems = (config: SolverConfiguration) => {
 	let gems = Gems as Gem[];
 	gems = gems.filter((gem) => gem.phase === "1");
 	gems = gems.filter((gem) => gem.isUnique !== "true");
 	gems = gems.filter((gem) => gem.color !== "Meta");
 	gems = gems.filter((gem) => gem.stats.length > 0);
-	gems = gems.filter((gem) => calculator.hasRelevantStats(gem.stats));
+	gems = gems.filter((gem) => config.hasRelevantStats(gem.stats));
 	return gems;
 };
 
@@ -153,10 +151,10 @@ const getEnchantsForItem = (item: Item, enchants: Enchant[]) => {
 
 const createItemVariations = (
 	items: ItemVariation[],
-	calculator: ScoreCalculator,
+	config: SolverConfiguration,
 ) => {
-	const enchants = getEnchants(calculator);
-	const gems = getGems(calculator);
+	const enchants = getEnchants(config);
+	const gems = getGems(config);
 
 	const itemVariations: ItemVariation[] = [];
 	for (const item of items) {
@@ -217,17 +215,17 @@ const createItemVariations = (
 
 const transformItem = (
 	item: ItemVariation,
-	calculator: ScoreCalculator,
+	config: SolverConfiguration,
 ): LPItem => {
-	const itemScores = calculator.calculateScoresForStats(item.stats);
+	const itemScores = config.calculateScoresForStats(item.stats);
 	const enchantScores =
 		item.enchant.stats.length > 0
-			? calculator.calculateScoresForStats(item.enchant.stats)
+			? config.calculateScoresForStats(item.enchant.stats)
 			: { avoidanceScore: 0, objectiveScore: 0, uncritabilityScore: 0 };
 
 	const gemScores = item.gems.reduce(
 		(acc, gem) => {
-			const scores = calculator.calculateScoresForStats(gem.stats);
+			const scores = config.calculateScoresForStats(gem.stats);
 			return {
 				avoidanceScore: acc.avoidanceScore + scores.avoidanceScore,
 				objectiveScore: acc.objectiveScore + scores.objectiveScore,
@@ -242,7 +240,7 @@ const transformItem = (
 		.filter((s) => s !== "Meta");
 	const nonMetaGems = item.gems.map((g) => g.color).filter((g) => g !== "Meta");
 	const socketBonusScores = gemsSatisfySocketBonus(nonMetaSockets, nonMetaGems)
-		? calculator.calculateScoresForStats(item.socketBonus)
+		? config.calculateScoresForStats(item.socketBonus)
 		: { avoidanceScore: 0, objectiveScore: 0, uncritabilityScore: 0 };
 
 	const avoidanceScore =

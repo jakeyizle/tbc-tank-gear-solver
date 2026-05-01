@@ -1,8 +1,12 @@
 import { createContext, type ReactNode, useState } from "react";
+import type { ModifierSource } from "#/solver/types";
 
 export interface SolveConfigContextValue {
 	classId: string;
 	raceId: string;
+	talentSources: ModifierSource[];
+	abilitySources: ModifierSource[];
+	buffSources: ModifierSource[];
 }
 
 export interface SolveConfigContextType {

@@ -2,8 +2,9 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import StatsDisplay from "#/components/StatsDisplay";
-import { getAvoidanceFromItems } from "#/helpers.ts/getStatFromItem";
-import StatCalculator from "#/helpers.ts/StatCalculator";
+import { getBaseStats } from "#/data/baseStats";
+import { convertStatToPercentageOrSkill } from "#/helpers.ts/convertStat";
+import { calculateStatValue } from "#/helpers.ts/stats";
 import { useSolveConfig } from "#/hooks/useSolveConfig";
 import type { LPItem } from "#/solver/types";
 
@@ -13,111 +14,106 @@ interface StatsSummaryProps {
 	baseUncritability: number;
 }
 
-export default function StatsSummary({ items, baseAvoidance, baseUncritability }: StatsSummaryProps) {
+export default function StatsSummary({ items }: StatsSummaryProps) {
 	const { solveConfig } = useSolveConfig();
 	if (!items || items.length === 0 || !solveConfig) {
 		return null;
 	}
-
-	const statCalculator = new StatCalculator(
-		items,
-		solveConfig.raceId,
-		solveConfig.classId,
-	);
-
-	const avoidance = statCalculator.calculateStat("Avoidance")
-	const properAvoidance = getAvoidanceFromItems(items);
-	console.log(`avoidance: ${avoidance}, properAvoidance: ${properAvoidance}`);
-	console.log(baseAvoidance)
+	const baseStats = getBaseStats(solveConfig.raceId, solveConfig.classId);
+	const modifierSources = [...solveConfig.abilitySources, ...solveConfig.buffSources, ...solveConfig.talentSources];
 
 	const summaryStats = [
 		{
 			name: "Avoidance",
-			value: statCalculator.calculateStat("Avoidance") + baseAvoidance,
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "Avoidance"}),
 		},
 		{
 			name: "Uncritability",
-			value: statCalculator.calculateStat("Uncritability") + baseUncritability,
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "Uncritability"}),
 		},
 	];
 
 	const survivabilityStats = [
 		{
 			name: "Health",
-			value: statCalculator.calculateStat("Health"),
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "Health"}),
 		},
 		{
 			name: "Armor",
-			value: statCalculator.calculateStat("Armor"),
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "Armor"}),
 		},
 		{
 			name: "Effective HP",
-			value: statCalculator.calculateStat("Effective HP"),
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "Effective HP"}),
 		},
 	];
 
 	const threatStats = [
 		{
 			name: "Spell Power",
-			value: statCalculator.calculateStat("SpellPower"),
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "SpellPower"}),
 		},
 		{
 			name: "Spell Hit",
-			value: statCalculator.calculateStat("SpellHit"),
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "SpellHit"}),
 		},
 		{
 			name: "Spell Crit",
-			value: statCalculator.calculateStat("SpellCrit"),
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "SpellCrit"}),
 		},
 		{
 			name: "Mana",
-			value: statCalculator.calculateStat("Mana"),
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "Mana"}),
 		},
 	];
 
 	const avoidanceStats = [
 		{
 			name: "Defense",
-			value: statCalculator.calculateStat("Defense"),
+			value: 350 + convertStatToPercentageOrSkill({name: "Defense", value: calculateStatValue({items, modifierSources, baseStats, statName: "Defense"}), type: "flat"}, true),
 		},
 		{
 			name: "Dodge",
-			value: statCalculator.calculateStat("Dodge"),
+			value: convertStatToPercentageOrSkill({name: "Dodge", value: calculateStatValue({items, modifierSources, baseStats, statName: "Dodge"}), type: "flat"}, true),
 		},
 		{
 			name: "Parry",
-			value: statCalculator.calculateStat("Parry"),
+			value: convertStatToPercentageOrSkill({name: "Parry", value: calculateStatValue({items, modifierSources, baseStats, statName: "Parry"}), type: "flat"}, true),
 		},
 		{
 			name: "Block",
-			value: statCalculator.calculateStat("Block"),
+			value: convertStatToPercentageOrSkill({name: "Block", value: calculateStatValue({items, modifierSources, baseStats, statName: "Block"}), type: "flat"}, true),
+		},
+		{
+			name: "Miss",
+			value: convertStatToPercentageOrSkill({name: "Miss", value: calculateStatValue({items, modifierSources, baseStats, statName: "Miss"}), type: "flat"}, true),
 		},
 		{
 			name: "Resilience",
-			value: statCalculator.calculateStat("Resilience"),
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "Resilience", roundDefenseAndResilience: true}),
 		},
 	];
 
-	const baseStats = [
+	const stats = [
 		{
 			name: "Strength",
-			value: statCalculator.calculateStat("Strength"),
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "Strength"}),
 		},
 		{
 			name: "Agility",
-			value: statCalculator.calculateStat("Agility"),
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "Agility"}),
 		},
 		{
 			name: "Stamina",
-			value: statCalculator.calculateStat("Stamina"),
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "Stamina"}),
 		},
 		{
 			name: "Intellect",
-			value: statCalculator.calculateStat("Intellect"),
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "Intellect"}),
 		},
 		{
 			name: "Spirit",
-			value: statCalculator.calculateStat("Spirit"),
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "Spirit"}),
 		},
 	];
 
@@ -131,7 +127,7 @@ export default function StatsSummary({ items, baseAvoidance, baseUncritability }
 				<StatsDisplay stats={survivabilityStats} header="Survivability" />
 				<StatsDisplay stats={threatStats} header="Threat" />
 				<StatsDisplay stats={avoidanceStats} header="Avoidance" />
-				<StatsDisplay stats={baseStats} header="Base Stats" />
+				<StatsDisplay stats={stats} header="Base Stats" />
 			</Stack>
 		</Paper>
 	);

@@ -1,66 +1,135 @@
+import { gemsSatisfySocketBonus } from "#/solver/socketBonus";
 import type {
 	DisplayStatName,
-	ItemVariation,
+	LPItem,
 	ModifierSource,
 	Stat,
 	StatName,
 } from "#/solver/types";
-import { convertStatToPercentageOrSkill } from "./convertStat";
+import {
+	convertStatToPercentageOrSkill,
+	convertStatToRating,
+} from "./convertStat";
 
-export const calculateStatValueForItem = ({
-	item,
-	statName,
-}: {
-	item: ItemVariation;
-	statName: DisplayStatName;
-}): number => {
-	return calculateStatValue({ items: [item], modifierSources: [], statName });
-};
+const AVOIDANCE_PER_DEFENSE_SKILL = 0.04;
 
 export const calculateStatValue = ({
 	items,
 	modifierSources,
+	baseStats,
 	statName,
+	roundDefenseAndResilience = true,
 }: {
-	items: ItemVariation[];
+	items: LPItem[];
 	modifierSources: ModifierSource[];
+	baseStats: Stat[];
 	statName: DisplayStatName;
+	roundDefenseAndResilience?: boolean;
 }): number => {
 	switch (statName) {
 		case "Health":
-			return calculateHealth(items, modifierSources);
+			return calculateHealth(items, modifierSources, baseStats);
 		case "Mana":
-			return calculateMana(items, modifierSources);
+			return calculateMana(items, modifierSources, baseStats);
 		case "Armor":
-			return calculateArmor(items, modifierSources);
+			return calculateArmor(items, modifierSources, baseStats);
 		case "Avoidance":
-			return calculateAvoidance(items, modifierSources);
+			return calculateAvoidance(
+				items,
+				modifierSources,
+				baseStats,
+				roundDefenseAndResilience,
+			);
 		case "Uncritability":
-			return calculateUncritability(items, modifierSources);
+			return calculateUncritability(
+				items,
+				modifierSources,
+				baseStats,
+				roundDefenseAndResilience,
+			);
 		case "Effective HP":
-			return calculateEffectiveHP(items, modifierSources);
+			return calculateEffectiveHP(items, modifierSources, baseStats);
 		case "Dodge":
-			return calculateDodge(items, modifierSources);
+			return calculateDodge(
+				items,
+				modifierSources,
+				baseStats,
+				roundDefenseAndResilience,
+			);
+		case "Parry":
+			return calculateParry(
+				items,
+				modifierSources,
+				baseStats,
+				roundDefenseAndResilience,
+			);
+		case "Miss":
+			return calculateMiss(
+				items,
+				modifierSources,
+				baseStats,
+				roundDefenseAndResilience,
+			);
+		case "Block":
+			return calculateBlock(
+				items,
+				modifierSources,
+				baseStats,
+				roundDefenseAndResilience,
+			);
 		default:
-			return sumStatValue(items, modifierSources, statName);
+			return sumStatValue(items, modifierSources, statName, baseStats);
 	}
 };
 
 const sumStatValue = (
-	items: ItemVariation[],
+	items: LPItem[],
 	modifierSources: ModifierSource[],
 	statName: StatName,
+	baseStats: Stat[],
 ): number => {
 	const itemStats = items
 		.flatMap((x) => x.stats)
 		.filter((x) => x.name === statName);
+	const enchantStats = items
+		.flatMap((x) => x.enchant)
+		.flatMap((x) => x.stats)
+		.filter((x) => x.name === statName);
+	const gemStats = items
+		.flatMap((x) => x.gems)
+		.flatMap((x) => x.stats)
+		.filter((x) => x.name === statName);
+	const socketStats = items.flatMap((item) => {
+		const nonMetaGems = item.gems.map((g) => g.color).filter((g) => g !== "Meta");
+		const nonMetaSockets = item.sockets.map(s=>s.color).filter((s) => s !== "Meta");
+		const hasSocketBonus = gemsSatisfySocketBonus(
+			nonMetaSockets,
+			nonMetaGems,)
+		return hasSocketBonus ? item.socketBonus : [];
+	}).filter((x) => x.name === statName);
 
 	const modifierSourceStats = modifierSources
 		.flatMap((x) => getModifierSourceStats(x))
 		.filter((x) => x.name === statName);
 
-	const flatVal = sumFlatStats([...itemStats, ...modifierSourceStats]);
-	const multVal = sumMultiplierStats([...itemStats, ...modifierSourceStats]);
+	const filteredBaseStats = baseStats.filter((x) => x.name === statName);
+
+	const flatVal = sumFlatStats([
+		...itemStats,
+		...enchantStats,
+		...gemStats,
+		...socketStats,
+		...modifierSourceStats,
+		...filteredBaseStats,
+	]);
+	const multVal = sumMultiplierStats([
+		...itemStats,
+		...enchantStats,
+		...gemStats,
+		...socketStats,
+		...modifierSourceStats,
+		...filteredBaseStats,
+	]);
 
 	const sum = flatVal * multVal;
 	return sum;
@@ -77,7 +146,7 @@ const getModifierSourceStats = (modifierSource: ModifierSource): Stat[] => {
 };
 
 const sumFlatStats = (stats: Stat[]): number => {
-	const flatStats = stats.filter((x) => x.type === "flat");
+	const flatStats = stats.filter((x) => x.type === "flat" || !x.type);
 	return flatStats.reduce((acc, stat) => acc + stat.value, 0);
 };
 
@@ -94,101 +163,236 @@ const calculateHealthFromStamina = (stamina: number): number => {
 };
 
 const calculateHealth = (
-	items: ItemVariation[],
+	items: LPItem[],
 	modifierSources: ModifierSource[],
+	baseStats: Stat[],
 ): number => {
 	// TODO: base health numbers are wrong - they are too high
-	const health = sumStatValue(items, modifierSources, "Health");
-	const stamina = sumStatValue(items, modifierSources, "Stamina");
+	const health = sumStatValue(items, modifierSources, "Health", baseStats);
+	const stamina = sumStatValue(items, modifierSources, "Stamina", baseStats);
 	const healthFromStamina = calculateHealthFromStamina(stamina);
 	return health + healthFromStamina;
 };
 
 const calculateMana = (
-	items: ItemVariation[],
+	items: LPItem[],
 	modifierSources: ModifierSource[],
+	baseStats: Stat[],
 ): number => {
-    // TODO: base mana numbers are wrong - they are too high
-	const mana = sumStatValue(items, modifierSources, "Mana");
-	const intellect = sumStatValue(items, modifierSources, "Intellect");
+	// TODO: base mana numbers are wrong - they are too high
+	const mana = sumStatValue(items, modifierSources, "Mana", baseStats);
+	const intellect = sumStatValue(
+		items,
+		modifierSources,
+		"Intellect",
+		baseStats,
+	);
 	const manaFromIntellect = intellect * 15;
 	return mana + manaFromIntellect;
 };
 
 const calculateArmor = (
-	items: ItemVariation[],
+	items: LPItem[],
 	modifierSources: ModifierSource[],
+	baseStats: Stat[],
 ): number => {
-	const armor = sumStatValue(items, modifierSources, "Armor");
-	const agility = sumStatValue(items, modifierSources, "Agility");
+	const armor = sumStatValue(items, modifierSources, "Armor", baseStats);
+	const agility = sumStatValue(items, modifierSources, "Agility", baseStats);
 	const armorFromAgility = agility * 2;
 	return Math.floor(armor + armorFromAgility);
 };
 
 const calculateDodge = (
-	items: ItemVariation[],
+	items: LPItem[],
 	modifierSources: ModifierSource[],
+	baseStats: Stat[],
+	roundDefenseAndResilience: boolean,
 ): number => {
-	const dodge = sumStatValue(items, modifierSources, "Dodge");
-	const agility = sumStatValue(items, modifierSources, "Agility");
-	// TODO: this based on class
-	const dodgeFromAgility = agility / 25;
-	return dodge + dodgeFromAgility;
+	const dodge = sumStatValue(items, modifierSources, "Dodge", baseStats);
+	// TODO: put defense conversion somewhere
+	// yeah this is fucked up
+	const defenseRating = sumStatValue(
+		items,
+		modifierSources,
+		"Defense",
+		baseStats,
+	);
+	const defenseSkill = convertStatToPercentageOrSkill(
+		{ name: "Defense", value: defenseRating, type: "flat" },
+		roundDefenseAndResilience,
+	);
+	const dodgePercentFromDefense = defenseSkill * AVOIDANCE_PER_DEFENSE_SKILL;
+	const dodgeRatingFromDefense = convertStatToRating({
+		name: "Dodge",
+		value: dodgePercentFromDefense,
+		type: "flat",
+	});
+
+	const agility = sumStatValue(items, modifierSources, "Agility", baseStats);
+	const dodgePercentFromAgility = convertStatToPercentageOrSkill({
+		name: "Agility",
+		value: agility,
+		type: "flat",
+	});
+	const dodgeRatingFromAgility = convertStatToRating({
+		name: "Dodge",
+		value: dodgePercentFromAgility,
+		type: "flat",
+	});
+	return dodge + dodgeRatingFromAgility + dodgeRatingFromDefense;
+};
+
+const calculateParry = (
+	items: LPItem[],
+	modifierSources: ModifierSource[],
+	baseStats: Stat[],
+	roundDefenseAndResilience: boolean,
+): number => {
+	const parry = sumStatValue(items, modifierSources, "Parry", baseStats);
+	// TODO: put defense conversion somewhere
+	// yeah this is fucked up
+	const defenseRating = sumStatValue(
+		items,
+		modifierSources,
+		"Defense",
+		baseStats,
+	);
+	const defenseSkill = convertStatToPercentageOrSkill(
+		{ name: "Defense", value: defenseRating, type: "flat" },
+		roundDefenseAndResilience,
+	);
+	const parryPercentFromDefense = defenseSkill * AVOIDANCE_PER_DEFENSE_SKILL;
+	const parryRatingFromDefense = convertStatToRating({
+		name: "Parry",
+		value: parryPercentFromDefense,
+		type: "flat",
+	});
+	return parry + parryRatingFromDefense;
+};
+
+const calculateBlock = (
+	items: LPItem[],
+	modifierSources: ModifierSource[],
+	baseStats: Stat[],
+	roundDefenseAndResilience: boolean,
+): number => {
+	const block = sumStatValue(items, modifierSources, "Block", baseStats);
+	// TODO: put defense conversion somewhere
+	// yeah this is fucked up
+	const defenseRating = sumStatValue(
+		items,
+		modifierSources,
+		"Defense",
+		baseStats,
+	);
+	const defenseSkill = convertStatToPercentageOrSkill(
+		{ name: "Defense", value: defenseRating, type: "flat" },
+		roundDefenseAndResilience,
+	);
+	const blockPercentFromDefense = defenseSkill * AVOIDANCE_PER_DEFENSE_SKILL;
+	const blockRatingFromDefense = convertStatToRating({
+		name: "Block",
+		value: blockPercentFromDefense,
+		type: "flat",
+	});
+	return block + blockRatingFromDefense;
+};
+
+// unlike other stats, miss is only in percent - there is no miss rating
+const calculateMiss = (
+	items: LPItem[],
+	modifierSources: ModifierSource[],
+	baseStats: Stat[],
+	roundDefenseAndResilience: boolean,
+): number => {
+	const miss = sumStatValue(items, modifierSources, "Miss", baseStats);
+	const defenseRating = sumStatValue(
+		items,
+		modifierSources,
+		"Defense",
+		baseStats,
+	);
+	const defenseSkill = convertStatToPercentageOrSkill(
+		{ name: "Defense", value: defenseRating, type: "flat" },
+		roundDefenseAndResilience,
+	);
+	const missPercentFromDefense = defenseSkill * AVOIDANCE_PER_DEFENSE_SKILL;
+	return miss + missPercentFromDefense;
 };
 
 const calculateUncritability = (
-	items: ItemVariation[],
+	items: LPItem[],
 	modifierSources: ModifierSource[],
+	baseStats: Stat[],
+	roundDefenseAndResilience: boolean,
 ): number => {
 	const defenseRating = calculateStatValue({
 		items,
 		modifierSources,
 		statName: "Defense",
+		baseStats,
 	});
 	const resilienceRating = calculateStatValue({
 		items,
 		modifierSources,
 		statName: "Resilience",
+		baseStats,
 	});
 
-	const defenseSkill = convertStatToPercentageOrSkill({
-		name: "Defense",
-		value: defenseRating,
-		type: "flat",
-	});
-	const resilienceSkill = convertStatToPercentageOrSkill({
-		name: "Resilience",
-		value: resilienceRating,
-		type: "flat",
-	});
+	const defenseSkill = convertStatToPercentageOrSkill(
+		{
+			name: "Defense",
+			value: defenseRating,
+			type: "flat",
+		},
+		roundDefenseAndResilience,
+	);
+	const resilienceSkill = convertStatToPercentageOrSkill(
+		{
+			name: "Resilience",
+			value: resilienceRating,
+			type: "flat",
+		},
+		roundDefenseAndResilience,
+	);
 
 	const uncritabilityFromDefense = defenseSkill * 0.04;
 	return uncritabilityFromDefense + resilienceSkill;
 };
 
 const calculateAvoidance = (
-	items: ItemVariation[],
+	items: LPItem[],
 	modifierSources: ModifierSource[],
+	baseStats: Stat[],
+	roundDefenseAndResilience: boolean,
 ): number => {
 	const dodgeRating = calculateStatValue({
 		items,
 		modifierSources,
 		statName: "Dodge",
+		baseStats,
+		roundDefenseAndResilience,
 	});
 	const parryRating = calculateStatValue({
 		items,
 		modifierSources,
 		statName: "Parry",
+		baseStats,
+		roundDefenseAndResilience,
 	});
 	const blockRating = calculateStatValue({
 		items,
 		modifierSources,
 		statName: "Block",
+		baseStats,
+		roundDefenseAndResilience,
 	});
-	const defenseRating = calculateStatValue({
+	const miss = calculateStatValue({
 		items,
 		modifierSources,
-		statName: "Defense",
+		statName: "Miss",
+		baseStats,
+		roundDefenseAndResilience,
 	});
 
 	const dodge = convertStatToPercentageOrSkill({
@@ -206,30 +410,26 @@ const calculateAvoidance = (
 		value: blockRating,
 		type: "flat",
 	});
-	const defense = convertStatToPercentageOrSkill({
-		name: "Defense",
-		value: defenseRating,
-		type: "flat",
-	});
-	// TODO: figure out where the fuck to put this
-	const avoidanceFromDefense = defense * 0.04 * 4;
 
-	return dodge + parry + block + avoidanceFromDefense;
+	return dodge + parry + block + miss;
 };
 
 const calculateEffectiveHP = (
-	items: ItemVariation[],
+	items: LPItem[],
 	modifierSources: ModifierSource[],
+	baseStats: Stat[],
 ): number => {
 	const health = calculateStatValue({
 		items,
 		modifierSources,
 		statName: "Health",
+		baseStats,
 	});
 	const armor = calculateStatValue({
 		items,
 		modifierSources,
 		statName: "Armor",
+		baseStats,
 	});
 	const armorDR = convertStatToPercentageOrSkill({
 		name: "Armor",
