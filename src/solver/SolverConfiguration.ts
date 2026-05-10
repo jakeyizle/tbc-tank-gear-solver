@@ -21,8 +21,8 @@ export class SolverConfiguration {
 	readonly multiplierModifierSources: ModifierSource[];
 
 	// Derived values
-	readonly avoidanceTarget: number;
-	readonly uncritabilityTarget: number;
+	avoidanceTarget: number;
+	uncritabilityTarget: number;
 	readonly baseAvoidance: number;
 	readonly baseUncritability: number;
 
@@ -112,5 +112,13 @@ export class SolverConfiguration {
 		objectiveScore: number;
 	} {
 		return calculateScores(stats, this.optimizeStats, this.multiplierModifierSources);
+	}
+
+	stepAvoidanceTarget(step: number) {
+		this.avoidanceTarget += step;
+	}
+
+	stepUncritabilityTarget(step: number) {
+		this.uncritabilityTarget += step;
 	}
 }

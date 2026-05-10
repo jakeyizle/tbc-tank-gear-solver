@@ -9,6 +9,10 @@ export const getTalent = (id: string, rank: number): ModifierSource => {
 	return { ...talentData, rank };
 };
 
+export const getTalentsByClass = (classId: string): ModifierSource[] => {
+	return TALENTS.filter((talent) => talent.classId === classId);
+}
+
 export const TALENTS: ModifierSource[] = [
 	{
 		name: "Toughness",

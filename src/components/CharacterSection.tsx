@@ -22,9 +22,14 @@ export default function CharacterSection({
 			<Typography variant="h6" gutterBottom>
 				Character
 			</Typography>
-			<Stack direction="row" spacing={1}>
-				<ClassSelect value={classValue} onChange={setClassValue} />
-				<RaceSelect value={raceValue} onChange={setRaceValue} />
+			<Stack spacing={2}>
+				<Stack direction="row" spacing={1}>
+					<ClassSelect value={classValue} onChange={setClassValue} />
+					<RaceSelect value={raceValue} onChange={setRaceValue} />
+				</Stack>
+				<Typography variant="subtitle1" gutterBottom>
+					Talents
+				</Typography>
 			</Stack>
 		</Paper>
 	);

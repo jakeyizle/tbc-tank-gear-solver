@@ -70,7 +70,6 @@ const getGems = (config: SolverConfiguration) => {
 	let gems = Gems as Gem[];
 	gems = gems.filter((gem) => gem.phase === "1");
 	gems = gems.filter((gem) => gem.isUnique !== "true");
-	gems = gems.filter((gem) => gem.color !== "Meta");
 	gems = gems.filter((gem) => gem.stats.length > 0);
 	gems = gems.filter((gem) => config.hasRelevantStats(gem.stats));
 	return gems;
@@ -155,6 +154,8 @@ const createItemVariations = (
 ) => {
 	const enchants = getEnchants(config);
 	const gems = getGems(config);
+	const filteredGems = gems.filter((gem) => gem.color !== "Meta");
+	const metaGems = gems.filter((gem) => gem.color === "Meta");
 
 	const itemVariations: ItemVariation[] = [];
 	for (const item of items) {
@@ -166,12 +167,21 @@ const createItemVariations = (
 		}
 		let index = 0;
 		let itemEnchants = getEnchantsForItem(item, enchants);
-		// TODO deal with meta gems
 		let socketLength = item.sockets.length;
-		if (item.sockets.find((socket) => socket.color === "Meta")) {
+		const hasMetaSocket = item.sockets.some(
+			(socket) => socket.color === "Meta",
+		);
+
+		if (hasMetaSocket) {
 			socketLength -= 1;
 		}
-		let itemGemCombinations = createGemCombinations(gems, socketLength);
+		let itemGemCombinations = createGemCombinations(filteredGems, socketLength);
+
+		if (hasMetaSocket) {			
+			itemGemCombinations = itemGemCombinations.flatMap((gemCombination) =>
+				metaGems.map((metaGem) => [...gemCombination, metaGem]),
+			);
+		}
 
 		if (itemEnchants.length === 0) {
 			itemEnchants = [

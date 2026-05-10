@@ -39,10 +39,7 @@ const statConversions: Record<StatRatingName, Conversion> = {
 		toRating: (v) => v * 2.3654,
 	},
 	Resilience: {
-		toPercentageOrSkill: (v, roundRating) => {
-			const val = v / 39.4231;
-			return roundRating ? Math.round(val) : val;
-		},
+		toPercentageOrSkill: (v) => v / 39.4231,
 		toRating: (v) => v * 39.4231,
 	},
 	Armor: {

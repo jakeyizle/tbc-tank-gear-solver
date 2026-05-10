@@ -1,3 +1,4 @@
+import { calculateStatValue } from "#/helpers.ts/stats";
 import type { SolverConfiguration as UISolverConfiguration } from "#/types/SolverConfig";
 import { getTransformedItems } from "./items";
 import { SolverConfiguration } from "./SolverConfiguration";
@@ -27,7 +28,6 @@ export const solve = async (
 		const worker = new Worker(new URL("./solver.worker.ts", import.meta.url), {
 			type: "module",
 		});
-		debugger
 		const config = new SolverConfiguration(options);
 		const lpItems = getTransformedItems(items, config);
 		console.log(`avoidance target: ${config.avoidanceTarget}`);
@@ -38,11 +38,50 @@ export const solve = async (
 			console.log("worker result");
 
 			const items = e.data as LPItem[];
-			resolve({
+			const itemAvoidance = calculateStatValue({
 				items,
-				baseAvoidance: config.baseAvoidance,
-				baseUncritability: config.baseUncritability,
+				modifierSources: config.multiplierModifierSources,
+				baseStats: [],
+				statName: "Avoidance",
+				roundDefenseAndResilience: true,
 			});
+			const itemUncrit = calculateStatValue({
+				items,
+				modifierSources: config.multiplierModifierSources,
+				baseStats: [],
+				statName: "Uncritability",
+				roundDefenseAndResilience: true,
+			});
+
+			const isAvoidanceTargetMet = itemAvoidance >= config.avoidanceTarget;
+			const isUncritTargetMet = itemUncrit >= config.uncritabilityTarget;
+			if (!isAvoidanceTargetMet || !isUncritTargetMet) {
+				// defense skill is rounded down in game, but the LP solver cannot account for this so it does not round values
+				// so the total avoidance/uncritability can be off by up to 1 defense skill, which is 0.16 avoidance or 0.04 uncrit
+				// we step by half of the maximum error
+				console.log(`item avoidance: ${itemAvoidance}, avoidance target: ${config.avoidanceTarget}`);
+				console.log(`item uncrit: ${itemUncrit}, uncrit target: ${config.uncritabilityTarget}`);
+				const AVOIDANCE_STEP = 0.16 / 2;
+				const UNCRIT_STEP = 0.04 / 2;
+				if (!isAvoidanceTargetMet) {
+					config.stepAvoidanceTarget(AVOIDANCE_STEP);
+				}
+				if (!isUncritTargetMet) {
+					config.stepUncritabilityTarget(UNCRIT_STEP);
+				}
+
+				worker.postMessage({
+					lpItems,
+					avoidanceTarget: config.avoidanceTarget,
+					uncritabilityTarget: config.uncritabilityTarget,
+				});
+			} else {
+				resolve({
+					items,
+					baseAvoidance: config.baseAvoidance,
+					baseUncritability: config.baseUncritability,
+				});
+			}
 		};
 
 		worker.onerror = (e) => {

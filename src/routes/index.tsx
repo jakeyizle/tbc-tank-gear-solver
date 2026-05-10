@@ -20,7 +20,10 @@ export const Route = createFileRoute("/")({ component: App });
 
 
 function App() {
-	const [itemInput, setItemInput] = useState("");
+	const [itemInput, setItemInput] = useState(() => {
+		const saved = localStorage.getItem("itemInput");
+		return saved || "";
+	});
 	const [classValue, setClassValue] = useState("2");
 	const [raceValue, setRaceValue] = useState("1");
 	const [areEnchantsGemsLocked, setAreEnchantsGemsLocked] = useState(false);
@@ -78,6 +81,8 @@ function App() {
 			buffSources: [],
 			abilitySources,
 		});
+
+		localStorage.setItem("itemInput", itemInput);
 
 		try {
 			const solverResults = await solveAll(items, baseConfig, configs);
