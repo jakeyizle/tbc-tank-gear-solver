@@ -31,7 +31,7 @@ export class SolverConfiguration {
 		uncritabilitySetting: number;
 		optimizeStats: Stat[];
 		talentSources: ModifierSource[];
-		buffSources: ModifierSource[];
+		buffs: ModifierSource[];
 		abilitySources: ModifierSource[];
 		raceId: string;
 		classId: string;
@@ -42,7 +42,7 @@ export class SolverConfiguration {
 		this.baseStats = getBaseStats(options.raceId, options.classId);
 		const modifierSources = [
 			...options.talentSources,
-			...options.buffSources,
+			...options.buffs,
 			...options.abilitySources,
 		];
 		// flat sources are applied against the base targets

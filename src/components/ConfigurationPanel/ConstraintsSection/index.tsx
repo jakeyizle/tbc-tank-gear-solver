@@ -1,8 +1,8 @@
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import CritRadioGroup from "#/components/CritRadioGroup";
-import UncrushableRadioGroup from "#/components/UncrushableRadioGroup";
+import CritRadioGroup from "./CritRadioGroup";
+import UncrushableRadioGroup from "./UncrushableRadioGroup";
 
 interface ConstraintsSectionProps {
 	uncritabilitySetting: number;

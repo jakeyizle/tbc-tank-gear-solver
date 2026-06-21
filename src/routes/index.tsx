@@ -9,13 +9,13 @@ import ItemInputSection from "#/components/ItemInputSection";
 import ResultsPanel from "#/components/ResultsPanel";
 import SolveButton from "#/components/SolveButton";
 import { getAbilities} from "#/data/abilities";
-import {getTalent} from "#/data/talents";
+import {getTalentsByClass} from "#/data/talents";
 import { parseItemInput } from "#/helpers.ts/parseItemInput";
 import { useSolveConfig } from "#/hooks/useSolveConfig";
 import { useSolverConfigs } from "#/hooks/useSolverConfigs";
 import { solveAll } from "#/solver";
+import type { ModifierSource } from "#/solver/types";
 import type { SolveResult } from "#/types/SolverConfig";
-
 export const Route = createFileRoute("/")({ component: App });
 
 
@@ -26,6 +26,7 @@ function App() {
 	});
 	const [classValue, setClassValue] = useState("2");
 	const [raceValue, setRaceValue] = useState("1");
+	const [talents, setTalents] = useState<ModifierSource[]>(getTalentsByClass(classValue).map((talent) => ({ ...talent, rank: talent.maxRank })));
 	const [areEnchantsGemsLocked, setAreEnchantsGemsLocked] = useState(false);
 
 	const {
@@ -38,6 +39,7 @@ function App() {
 		renameConfig,
 		updateConstraints,
 		updateOptimizeStats,
+		updateConfig,
 	} = useSolverConfigs();
 
 	const { updateSolveConfig } = useSolveConfig();
@@ -52,33 +54,24 @@ function App() {
 		setIsSolving(true);
 		const newResults = new Map<string, SolveResult>();
 		let firstResultId: string | null = null;
-
-		// TODO Hardcoded		
-		const abilitySources = getAbilities(classValue.toString());
-	
-		const anticipation = getTalent("anticipation", 5);
-		const deflection = getTalent("deflection", 5);
-		const sacredDuty = getTalent("sacred-duty", 2);
-		const combatExpertise = getTalent("combat-expertise", 5);
-		const talentSources = [anticipation, deflection, sacredDuty, combatExpertise];
+		
+		const abilitySources = getAbilities(classValue);		
 		
 		const items = parseItemInput(itemInput);
 		
 		const baseConfig = {
-			raceId: raceValue.toString(),
-			classId: classValue.toString(),
+			raceId: raceValue,
+			classId: classValue,
 			areEnchantsGemsLocked,
-			talentSources,
+			talentSources: talents,
 			abilitySources,
-			buffSources: [],
 		}
 
 		// Store the solve configuration values in context
 		updateSolveConfig({
-			classId: classValue.toString(),
-			raceId: raceValue.toString(),
-			talentSources,
-			buffSources: [],
+			classId: classValue,
+			raceId: raceValue,
+			talentSources: talents,
 			abilitySources,
 		});
 
@@ -121,6 +114,8 @@ function App() {
 								setClassValue={setClassValue}
 								raceValue={raceValue}
 								setRaceValue={setRaceValue}
+								talents={talents}
+								setTalents={setTalents}
 							/>
 						</Grid>
 
@@ -136,6 +131,7 @@ function App() {
 								renameConfig={renameConfig}
 								updateConstraints={updateConstraints}
 								updateOptimizeStats={updateOptimizeStats}
+								updateConfig={updateConfig}
 							/>
 						</Grid>
 

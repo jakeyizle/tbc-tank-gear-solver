@@ -150,6 +150,10 @@ export interface ModifierSource {
     stats: Stat[];
 }
 
+export type Buff = ModifierSource & {
+	checked: boolean;
+}
+
 export type DisplayStatName =
 	| StatName
 	| "Avoidance"

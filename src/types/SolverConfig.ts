@@ -1,17 +1,14 @@
-import type { LPItem, Stat } from "#/solver/types";
-
+import { getBuffs } from "#/data/buffs";
+import type { Buff, LPItem, ModifierSource, Stat } from "#/solver/types";
 export interface SolverConfiguration {
 	id: string;
 	name: string;
 	uncritabilitySetting: number;
 	uncrushabilitySetting: number;
 	optimizeStats: Stat[];
-	buffs: {
-		markOfTheWild: boolean;
-		improvedMotw: boolean;
-		blessingOfKings: boolean;
-		graceOfAir: boolean;
-	};
+	abilities: ModifierSource[];
+	talents: ModifierSource[];
+	buffs: Buff[];
 	consumables: {
 		scrollOfAgilityV: boolean;
 		elixir: string;
@@ -23,8 +20,16 @@ export interface SolveResult {
 	id: string;
 	name: string;
 	items: LPItem[];
-	baseAvoidance: number;
-	baseUncritability: number;
+	baseConfig: BaseConfig;
+	solverConfig: SolverConfiguration;
+}
+
+export interface BaseConfig {
+	areEnchantsGemsLocked: boolean;
+	raceId: string;
+	classId: string;
+	abilitySources: ModifierSource[];
+	talentSources: ModifierSource[];
 }
 
 export function createEmptyConfig(id: string, name: string): SolverConfiguration {
@@ -38,12 +43,9 @@ export function createEmptyConfig(id: string, name: string): SolverConfiguration
 			{ name: "SpellPower", value: 1, type: "flat" },
 			{ name: "SpellHit", value: 1, type: "flat" },
 		],
-		buffs: {
-			markOfTheWild: true,
-			improvedMotw: true,
-			blessingOfKings: true,
-			graceOfAir: false,
-		},
+		abilities: [],
+		talents: [],
+		buffs: getBuffs(),
 		consumables: {
 			scrollOfAgilityV: false,
 			elixir: "",

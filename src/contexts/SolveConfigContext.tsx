@@ -6,7 +6,6 @@ export interface SolveConfigContextValue {
 	raceId: string;
 	talentSources: ModifierSource[];
 	abilitySources: ModifierSource[];
-	buffSources: ModifierSource[];
 }
 
 export interface SolveConfigContextType {

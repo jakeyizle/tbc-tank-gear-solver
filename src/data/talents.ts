@@ -11,10 +11,11 @@ export const getTalent = (id: string, rank: number): ModifierSource => {
 
 export const getTalentsByClass = (classId: string): ModifierSource[] => {
 	return TALENTS.filter((talent) => talent.classId === classId);
-}
+};
 
 export const TALENTS: ModifierSource[] = [
 	{
+		classId: "2",
 		name: "Toughness",
 		id: "toughness",
 		type: "talent",
@@ -28,6 +29,7 @@ export const TALENTS: ModifierSource[] = [
 		],
 	},
 	{
+		classId: "2",
 		name: "Anticipation",
 		id: "anticipation",
 		type: "talent",
@@ -45,6 +47,7 @@ export const TALENTS: ModifierSource[] = [
 		],
 	},
 	{
+		classId: "2",
 		name: "Sacred Duty",
 		id: "sacred-duty",
 		type: "talent",
@@ -58,6 +61,7 @@ export const TALENTS: ModifierSource[] = [
 		],
 	},
 	{
+		classId: "2",
 		name: "Combat Expertise",
 		id: "combat-expertise",
 		type: "talent",
@@ -71,6 +75,7 @@ export const TALENTS: ModifierSource[] = [
 		],
 	},
 	{
+		classId: "2",
 		name: "Deflection",
 		id: "deflection",
 		type: "talent",

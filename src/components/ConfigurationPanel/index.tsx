@@ -1,12 +1,15 @@
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
-import BuffsConsumablesSection from "#/components/BuffsConsumablesSection";
-import ConfigManager from "#/components/ConfigManager";
-import ConstraintsSection from "#/components/ConstraintsSection";
-import StatsEntry from "#/components/StatsEntry";
+import { getBuffs } from "#/data/buffs";
 import type { Stat } from "#/solver/types";
 import type { SolverConfiguration } from "#/types/SolverConfig";
+import BuffSection from "./BuffSection";
+import ConfigManager from "./ConfigManager";
+import ConstraintsSection from "./ConstraintsSection";
+import StatsEntry from "./StatsEntry";
+
+const BUFFS = getBuffs();
 
 interface ConfigurationPanelProps {
 	configs: SolverConfiguration[];
@@ -18,9 +21,10 @@ interface ConfigurationPanelProps {
 	renameConfig: (id: string, name: string) => void;
 	updateConstraints: (
 		uncritabilitySetting: number,
-		uncrushabilitySetting: number
+		uncrushabilitySetting: number,
 	) => void;
 	updateOptimizeStats: (stats: Stat[]) => void;
+	updateConfig: (id: string, updates: Partial<SolverConfiguration>) => void;
 }
 
 export default function ConfigurationPanel({
@@ -33,7 +37,23 @@ export default function ConfigurationPanel({
 	renameConfig,
 	updateConstraints,
 	updateOptimizeStats,
+	updateConfig,
 }: ConfigurationPanelProps) {
+	const handleBuffChange = (buffId: string) => {
+		if (!activeConfig) return;
+		const newBuffs = activeConfig.buffs.map((buff) => ({
+			...buff,
+			checked: buff.id === buffId ? !buff.checked : buff.checked,
+		}));
+
+		updateConfig(activeConfig.id, { buffs: newBuffs });
+	};
+
+	const displayBuffs = BUFFS.map((buff) => ({
+		...buff,
+		checked: !!activeConfig?.buffs.find((b) => b.id === buff.id)?.checked,
+	}));
+
 	return (
 		<Paper elevation={1} sx={{ p: 2 }}>
 			<ConfigManager
@@ -62,10 +82,11 @@ export default function ConfigurationPanel({
 						/>
 					</Box>
 
-					{/* Buffs & Consumables */}
-					<BuffsConsumablesSection
-						buffs={activeConfig.buffs}
+					{/* Buffs*/}
+					<BuffSection
+						buffs={displayBuffs}
 						consumables={activeConfig.consumables}
+						onBuffChange={handleBuffChange}
 					/>
 				</Stack>
 			)}

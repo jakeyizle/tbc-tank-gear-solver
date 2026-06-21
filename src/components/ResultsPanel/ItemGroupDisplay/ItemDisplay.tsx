@@ -1,6 +1,6 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import ItemTooltips from "../data/item-tooltips.json";
+import ItemTooltips from "#/data/item-tooltips.json";
 
 interface ItemDisplayProps {
 	slotName: string;

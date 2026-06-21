@@ -1,14 +1,18 @@
+import Grid from "@mui/material/Grid";
 import Paper from "@mui/material/Paper";
-import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import ClassSelect from "#/components/ClassSelect";
-import RaceSelect from "#/components/RaceSelect";
+import type { ModifierSource } from "#/solver/types";
+import ClassSelect from "./ClassSelect";
+import RaceSelect from "./RaceSelect";
+import { TalentSection } from "./TalentSection";
 
 interface CharacterSectionProps {
 	classValue: string;
 	setClassValue: (value: string) => void;
 	raceValue: string;
 	setRaceValue: (value: string) => void;
+	talents: ModifierSource[];
+	setTalents: (talents: ModifierSource[]) => void;
 }
 
 export default function CharacterSection({
@@ -16,21 +20,25 @@ export default function CharacterSection({
 	setClassValue,
 	raceValue,
 	setRaceValue,
+	talents,
+	setTalents,
 }: CharacterSectionProps) {
 	return (
 		<Paper elevation={1} sx={{ p: 2, mb: 2 }}>
 			<Typography variant="h6" gutterBottom>
 				Character
 			</Typography>
-			<Stack spacing={2}>
-				<Stack direction="row" spacing={1}>
+			<Grid spacing={1} container>
+				<Grid size={2}>
 					<ClassSelect value={classValue} onChange={setClassValue} />
+				</Grid>
+				<Grid size={2}>
 					<RaceSelect value={raceValue} onChange={setRaceValue} />
-				</Stack>
-				<Typography variant="subtitle1" gutterBottom>
-					Talents
-				</Typography>
-			</Stack>
+				</Grid>
+				<Grid size={8}>
+					<TalentSection talents={talents} setTalents={setTalents} />
+				</Grid>
+			</Grid>
 		</Paper>
 	);
 }

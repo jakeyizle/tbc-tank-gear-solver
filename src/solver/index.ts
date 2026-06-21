@@ -1,5 +1,5 @@
 import { calculateStatValue } from "#/helpers.ts/stats";
-import type { SolverConfiguration as UISolverConfiguration } from "#/types/SolverConfig";
+import type { BaseConfig, SolveResult, SolverConfiguration as UISolverConfiguration } from "#/types/SolverConfig";
 import { getTransformedItems } from "./items";
 import { SolverConfiguration } from "./SolverConfiguration";
 import type { InputItem, LPItem, ModifierSource, Stat } from "./types";
@@ -12,18 +12,14 @@ interface SolveOptions {
 	raceId: string;
 	classId: string;
 	talentSources: ModifierSource[];
-	buffSources: ModifierSource[];
+	buffs: ModifierSource[];
 	abilitySources: ModifierSource[];
 }
 
 export const solve = async (
 	items: InputItem[],
 	options: SolveOptions,
-): Promise<{
-	items: LPItem[];
-	baseAvoidance: number;
-	baseUncritability: number;
-}> => {
+): Promise< LPItem[]> => {
 	return new Promise((resolve, reject) => {
 		const worker = new Worker(new URL("./solver.worker.ts", import.meta.url), {
 			type: "module",
@@ -76,11 +72,7 @@ export const solve = async (
 					uncritabilityTarget: config.uncritabilityTarget,
 				});
 			} else {
-				resolve({
-					items,
-					baseAvoidance: config.baseAvoidance,
-					baseUncritability: config.baseUncritability,
-				});
+				resolve(items);
 			}
 		};
 
@@ -122,47 +114,40 @@ export const solve = async (
 	*/
 };
 
-interface BaseConfig {
-	areEnchantsGemsLocked: boolean;
-	raceId: string;
-	classId: string;
-	abilitySources: ModifierSource[];
-	talentSources: ModifierSource[];
-	buffSources: ModifierSource[];
-}
-
-interface SolverResult {
-	items: LPItem[];
-	baseAvoidance: number;
-	baseUncritability: number;
-	id: string;
-	name: string;
-}
+// interface SolverResult {
+// 	items: LPItem[];
+// 	id: string;
+// 	name: string;
+// 	baseConfig: BaseConfig;
+// 	solverConfig: UISolverConfiguration
+// }
 
 export const solveAll = async (
 	items: InputItem[],
 	baseConfig: BaseConfig,
 	solverConfigs: UISolverConfiguration[],
-): Promise<SolverResult[]> => {
+): Promise<SolveResult[]> => {
 	// the idea here is to solve in order
 	// the items that are selected are locked, and no variants for those items will be generated for the next configs
-	const solverResults: SolverResult[] = [];
+	const solverResults: SolveResult[] = [];
 	let currentInputItems: InputItem[] = items.map((item) => {
 		return { ...item, locked: baseConfig.areEnchantsGemsLocked };
 	});
 
 	for (const solverConfig of solverConfigs) {
-		const result = await solve(currentInputItems, {
+		const items = await solve(currentInputItems, {
 			...baseConfig,
 			...solverConfig,
 		});
 		solverResults.push({
-			...result,
+			items,
 			id: solverConfig.id,
 			name: solverConfig.name,
+			baseConfig,
+			solverConfig
 		});
 
-		currentInputItems = replaceInputItems(currentInputItems, result.items);
+		currentInputItems = replaceInputItems(currentInputItems, items);
 	}
 
 	return solverResults;

@@ -7,7 +7,7 @@ export const overrideItem = (item: Item) => {
         case "Libram of Repentance":
             return { ...item, stats: [createStat("Block", 42)] };
         case "Libram of the Eternal Rest":
-            return {...item, stats: [createStat("SpellPower", 12)] };
+            return {...item, stats: [createStat("SpellPower", 1)] };
         default:
             return item;
     }

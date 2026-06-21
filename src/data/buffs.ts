@@ -1,5 +1,6 @@
-import type { ModifierSource } from "../solver/types";
+import type { Buff, ModifierSource } from "../solver/types";
 
+export const getBuffs = ():Buff[] => BUFFS.map((buff) => ({...buff, checked: false}));
 export const BUFFS: ModifierSource[] = [
     {
         name: "Mark of the Wild",
@@ -94,6 +95,18 @@ export const BUFFS: ModifierSource[] = [
                 name: "Intellect",
                 value: .1,
                 type: "multiplier"
+            }
+        ]
+    },
+    {
+        "id": "scroll-of-agility-v",
+        "name": "Scroll of Agility V",
+        "type": "buff",
+        "stats": [
+            {
+                "name": "Agility",
+                "value": 20,
+                "type": "flat"
             }
         ]
     }

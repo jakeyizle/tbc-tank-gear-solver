@@ -34,7 +34,7 @@ const statConversions: Record<StatRatingName, Conversion> = {
 	Defense: {
 		toPercentageOrSkill: (v, roundRating) => {
 			const val = v / 2.3654;
-      return roundRating ? Math.round(val) : val;
+      return roundRating ? Math.floor(val) : val;
     },
 		toRating: (v) => v * 2.3654,
 	},

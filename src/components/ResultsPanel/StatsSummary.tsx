@@ -1,26 +1,26 @@
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import StatsDisplay from "#/components/StatsDisplay";
 import { getBaseStats } from "#/data/baseStats";
 import { convertStatToPercentageOrSkill } from "#/helpers.ts/convertStat";
 import { calculateStatValue } from "#/helpers.ts/stats";
-import { useSolveConfig } from "#/hooks/useSolveConfig";
 import type { LPItem } from "#/solver/types";
+import type { BaseConfig, SolverConfiguration } from "#/types/SolverConfig";
+import StatsDisplay from "./StatsDisplay";
 
 interface StatsSummaryProps {
 	items: LPItem[];
-	baseAvoidance: number;
-	baseUncritability: number;
+	baseConfig: BaseConfig;
+	solverConfig: SolverConfiguration;
 }
 
-export default function StatsSummary({ items }: StatsSummaryProps) {
-	const { solveConfig } = useSolveConfig();
-	if (!items || items.length === 0 || !solveConfig) {
+export default function StatsSummary({ items, baseConfig, solverConfig }: StatsSummaryProps) {
+	
+	if (!items || items.length === 0) {
 		return null;
-	}
-	const baseStats = getBaseStats(solveConfig.raceId, solveConfig.classId);
-	const modifierSources = [...solveConfig.abilitySources, ...solveConfig.buffSources, ...solveConfig.talentSources];
+	}	
+	const baseStats = getBaseStats(baseConfig.raceId, baseConfig.classId);
+	const modifierSources = [...baseConfig.abilitySources, ...baseConfig.talentSources, ...solverConfig.buffs];
 
 	const summaryStats = [
 		{

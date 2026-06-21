@@ -1,5 +1,6 @@
 import { gemsSatisfySocketBonus } from "#/solver/socketBonus";
 import type {
+	Buff,
 	DisplayStatName,
 	LPItem,
 	ModifierSource,
@@ -8,7 +9,7 @@ import type {
 } from "#/solver/types";
 import {
 	convertStatToPercentageOrSkill,
-	convertStatToRating,
+	convertStatToRating, 
 } from "./convertStat";
 
 const AVOIDANCE_PER_DEFENSE_SKILL = 0.04;
@@ -77,6 +78,14 @@ export const calculateStatValue = ({
 				baseStats,
 				roundDefenseAndResilience,
 			);
+		case "Stamina":
+		case "Agility":
+		case "Intellect":
+		case "Spirit":
+		case "Strength":
+			return Math.floor(
+				sumStatValue(items, modifierSources, statName, baseStats),
+			);
 		default:
 			return sumStatValue(items, modifierSources, statName, baseStats);
 	}
@@ -99,14 +108,21 @@ const sumStatValue = (
 		.flatMap((x) => x.gems)
 		.flatMap((x) => x.stats)
 		.filter((x) => x.name === statName);
-	const socketStats = items.flatMap((item) => {
-		const nonMetaGems = item.gems.map((g) => g.color).filter((g) => g !== "Meta");
-		const nonMetaSockets = item.sockets.map(s=>s.color).filter((s) => s !== "Meta");
-		const hasSocketBonus = gemsSatisfySocketBonus(
-			nonMetaSockets,
-			nonMetaGems,)
-		return hasSocketBonus ? item.socketBonus : [];
-	}).filter((x) => x.name === statName);
+	const socketStats = items
+		.flatMap((item) => {
+			const nonMetaGems = item.gems
+				.map((g) => g.color)
+				.filter((g) => g !== "Meta");
+			const nonMetaSockets = item.sockets
+				.map((s) => s.color)
+				.filter((s) => s !== "Meta");
+			const hasSocketBonus = gemsSatisfySocketBonus(
+				nonMetaSockets,
+				nonMetaGems,
+			);
+			return hasSocketBonus ? item.socketBonus : [];
+		})
+		.filter((x) => x.name === statName);
 
 	const modifierSourceStats = modifierSources
 		.flatMap((x) => getModifierSourceStats(x))
@@ -135,7 +151,10 @@ const sumStatValue = (
 	return sum;
 };
 
-const getModifierSourceStats = (modifierSource: ModifierSource): Stat[] => {
+const getModifierSourceStats = (
+	modifierSource: ModifierSource | Buff,
+): Stat[] => {
+	if ("checked" in modifierSource && !modifierSource.checked) return [];
 	const rank = modifierSource.rank ?? 1;
 	return modifierSource.stats.map((stat) => {
 		return {
@@ -169,7 +188,12 @@ const calculateHealth = (
 ): number => {
 	// TODO: base health numbers are wrong - they are too high
 	const health = sumStatValue(items, modifierSources, "Health", baseStats);
-	const stamina = sumStatValue(items, modifierSources, "Stamina", baseStats);
+	const stamina = calculateStatValue({
+		items,
+		modifierSources,
+		statName: "Stamina",
+		baseStats,
+	});
 	const healthFromStamina = calculateHealthFromStamina(stamina);
 	return health + healthFromStamina;
 };
@@ -181,12 +205,12 @@ const calculateMana = (
 ): number => {
 	// TODO: base mana numbers are wrong - they are too high
 	const mana = sumStatValue(items, modifierSources, "Mana", baseStats);
-	const intellect = sumStatValue(
+	const intellect = calculateStatValue({
 		items,
 		modifierSources,
-		"Intellect",
+		statName: "Intellect",
 		baseStats,
-	);
+	});
 	const manaFromIntellect = intellect * 15;
 	return mana + manaFromIntellect;
 };
@@ -197,7 +221,7 @@ const calculateArmor = (
 	baseStats: Stat[],
 ): number => {
 	const armor = sumStatValue(items, modifierSources, "Armor", baseStats);
-	const agility = sumStatValue(items, modifierSources, "Agility", baseStats);
+	const agility = calculateStatValue({items, modifierSources, statName: "Agility", baseStats});
 	const armorFromAgility = agility * 2;
 	return Math.floor(armor + armorFromAgility);
 };
@@ -211,12 +235,12 @@ const calculateDodge = (
 	const dodge = sumStatValue(items, modifierSources, "Dodge", baseStats);
 	// TODO: put defense conversion somewhere
 	// yeah this is fucked up
-	const defenseRating = sumStatValue(
+	const defenseRating = calculateStatValue({
 		items,
 		modifierSources,
-		"Defense",
+		statName: "Defense",
 		baseStats,
-	);
+	});
 	const defenseSkill = convertStatToPercentageOrSkill(
 		{ name: "Defense", value: defenseRating, type: "flat" },
 		roundDefenseAndResilience,
@@ -228,7 +252,12 @@ const calculateDodge = (
 		type: "flat",
 	});
 
-	const agility = sumStatValue(items, modifierSources, "Agility", baseStats);
+	const agility = calculateStatValue({
+		items,
+		modifierSources,
+		statName: "Agility",
+		baseStats,
+	});
 	const dodgePercentFromAgility = convertStatToPercentageOrSkill({
 		name: "Agility",
 		value: agility,
@@ -251,12 +280,12 @@ const calculateParry = (
 	const parry = sumStatValue(items, modifierSources, "Parry", baseStats);
 	// TODO: put defense conversion somewhere
 	// yeah this is fucked up
-	const defenseRating = sumStatValue(
+	const defenseRating = calculateStatValue({
 		items,
 		modifierSources,
-		"Defense",
+		statName: "Defense",
 		baseStats,
-	);
+	});
 	const defenseSkill = convertStatToPercentageOrSkill(
 		{ name: "Defense", value: defenseRating, type: "flat" },
 		roundDefenseAndResilience,
@@ -279,12 +308,12 @@ const calculateBlock = (
 	const block = sumStatValue(items, modifierSources, "Block", baseStats);
 	// TODO: put defense conversion somewhere
 	// yeah this is fucked up
-	const defenseRating = sumStatValue(
+	const defenseRating = calculateStatValue({
 		items,
 		modifierSources,
-		"Defense",
+		statName: "Defense",
 		baseStats,
-	);
+	});
 	const defenseSkill = convertStatToPercentageOrSkill(
 		{ name: "Defense", value: defenseRating, type: "flat" },
 		roundDefenseAndResilience,
@@ -306,12 +335,12 @@ const calculateMiss = (
 	roundDefenseAndResilience: boolean,
 ): number => {
 	const miss = sumStatValue(items, modifierSources, "Miss", baseStats);
-	const defenseRating = sumStatValue(
+	const defenseRating = calculateStatValue({
 		items,
 		modifierSources,
-		"Defense",
+		statName:"Defense",
 		baseStats,
-	);
+});
 	const defenseSkill = convertStatToPercentageOrSkill(
 		{ name: "Defense", value: defenseRating, type: "flat" },
 		roundDefenseAndResilience,

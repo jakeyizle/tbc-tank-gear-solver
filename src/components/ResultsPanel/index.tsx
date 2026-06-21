@@ -1,12 +1,11 @@
 import Paper from "@mui/material/Paper";
-import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import EmptyResultsPlaceholder from "#/components/EmptyResultsPlaceholder";
-import ItemGroupDisplay from "#/components/ItemGroupDisplay";
-import ResultsTabs from "#/components/ResultsTabs";
-import StatsSummary from "#/components/StatsSummary";
 import type { SolveResult } from "#/types/SolverConfig";
+import EmptyResultsPlaceholder from "./EmptyResultsPlaceholder";
+import ItemGroupDisplay from "./ItemGroupDisplay";
 import LoadingResultsPlaceholder from "./LoadingResultsPlaceHolder";
+import ResultsTabs from "./ResultsTabs";
+import StatsSummary from "./StatsSummary";
 
 interface ResultsPanelProps {
 	solveResults: Map<string, SolveResult>;
@@ -54,8 +53,8 @@ export default function ResultsPanel({
 					{/* Stats Summary */}
 					<StatsSummary
 						items={activeResult.items}
-						baseAvoidance={activeResult.baseAvoidance}
-						baseUncritability={activeResult.baseUncritability}
+						baseConfig={activeResult.baseConfig}
+						solverConfig={activeResult.solverConfig}
 					/>
 				</>
 			)}
