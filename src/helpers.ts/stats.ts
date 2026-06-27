@@ -24,10 +24,12 @@ export const calculateStatValue = ({
 	items: LPItem[];
 	modifierSources: ModifierSource[];
 	baseStats: Stat[];
-	statName: DisplayStatName;
+	statName: DisplayStatName | "TotalHealth";
 	roundDefenseAndResilience?: boolean;
 }): number => {
 	switch (statName) {
+		case "TotalHealth":
+			return calculateTotalHealth(items, modifierSources, baseStats);
 		case "Health":
 			return calculateHealth(items, modifierSources, baseStats);
 		case "Mana":
@@ -181,7 +183,9 @@ const calculateHealthFromStamina = (stamina: number): number => {
 	return (staminaRounded - 20) * 10 + 20;
 };
 
-const calculateHealth = (
+// the difference between health and total health
+// is that total health must use a more complicated stam -> hp formula
+const calculateTotalHealth = (
 	items: LPItem[],
 	modifierSources: ModifierSource[],
 	baseStats: Stat[],
@@ -195,6 +199,22 @@ const calculateHealth = (
 		baseStats,
 	});
 	const healthFromStamina = calculateHealthFromStamina(stamina);
+	return health + healthFromStamina;
+};
+const calculateHealth = (
+	items: LPItem[],
+	modifierSources: ModifierSource[],
+	baseStats: Stat[],
+): number => {
+	// TODO: base health numbers are wrong - they are too high
+	const health = sumStatValue(items, modifierSources, "Health", baseStats);
+	const stamina = calculateStatValue({
+		items,
+		modifierSources,
+		statName: "Stamina",
+		baseStats,
+	});
+	const healthFromStamina = stamina * 10;
 	return health + healthFromStamina;
 };
 

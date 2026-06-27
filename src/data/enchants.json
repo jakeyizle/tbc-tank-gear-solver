@@ -635,26 +635,5 @@
 			{ "name": "Strength", "value": 4 },
 			{ "name": "Agility", "value": 4 }
 		]
-	},
-	{
-		"name": "Biznicks 247x128 Accurascope",
-		"id": "18283",
-		"effectID": "2523",
-		"type": "Ranged",
-		"stats": []
-	},
-	{
-		"name": "Khorium Scope",
-		"id": "23765",
-		"effectID": "2723",
-		"type": "Ranged",
-		"stats": []
-	},
-	{
-		"name": "Stabilized Eternium Scope",
-		"id": "23766",
-		"effectID": "2724",
-		"type": "Ranged",
-		"stats": []
 	}
 ]

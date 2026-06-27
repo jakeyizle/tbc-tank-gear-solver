@@ -58,8 +58,7 @@ export default function ConfigManager({
 				<Typography variant="h6">Configurations</Typography>
 				<Button
 					startIcon={<AddIcon />}
-					onClick={onAddConfig}
-					disabled={configs.length >= 5}
+					onClick={onAddConfig}					
 					variant="outlined"
 					size="small"
 				>

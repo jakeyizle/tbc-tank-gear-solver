@@ -36,7 +36,7 @@ export default function StatsSummary({ items, baseConfig, solverConfig }: StatsS
 	const survivabilityStats = [
 		{
 			name: "Health",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "Health"}),
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "TotalHealth"}),
 		},
 		{
 			name: "Armor",
