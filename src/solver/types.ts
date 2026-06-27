@@ -79,6 +79,51 @@ export const STAT_NAMES = [
 
 export type StatName = typeof STAT_NAMES[number];
 
+// Human-friendly display labels for stats. Keep in sync with STAT_NAMES.
+export const STAT_LABELS: Record<StatName, string> = {
+	Strength: "Strength",
+	Agility: "Agility",
+	Stamina: "Stamina",
+	Intellect: "Intellect",
+	SpellPower: "Spell Power",
+	HealingPower: "Healing Power",
+	SpellCrit: "Spell Crit",
+	Armor: "Armor",
+	Resilience: "Resilience",
+	Defense: "Defense Rating",
+	AttackPower: "Attack Power",
+	RangedAttackPower: "Ranged Attack Power",
+	SpellHaste: "Spell Haste",
+	MeleeCrit: "Melee Crit",
+	MeleeHit: "Melee Hit",
+	Dodge: "Dodge",
+	MP5: "MP5",
+	Spirit: "Spirit",
+	BlockValue: "Block Value",
+	MeleeHaste: "Melee Haste",
+	SpellHit: "Spell Hit",
+	ShadowResistance: "Shadow Resistance",
+	FireResistance: "Fire Resistance",
+	ShadowSpellPower: "Shadow Spell Power",
+	ArmorPenetration: "Armor Penetration",
+	Parry: "Parry",
+	Block: "Block",
+	ArcaneSpellPower: "Arcane Spell Power",
+	SpellPenetration: "Spell Penetration",
+	ArcaneResistance: "Arcane Resistance",
+	FeralAttackPower: "Feral Attack Power",
+	Expertise: "Expertise",
+	FrostSpellPower: "Frost Spell Power",
+	NatureSpellPower: "Nature Spell Power",
+	FrostResistance: "Frost Resistance",
+	NatureResistance: "Nature Resistance",
+	HolySpellPower: "Holy Spell Power",
+	FireSpellPower: "Fire Spell Power",
+	Health: "Health",
+	Mana: "Mana",
+	Miss: "Miss",
+};
+
 // TODO make item types not dumb
 export type ItemType =
 	| "Head"
