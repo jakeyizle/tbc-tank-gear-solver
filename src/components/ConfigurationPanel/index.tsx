@@ -1,6 +1,8 @@
 import Box from "@mui/material/Box";
+import Divider from "@mui/material/Divider";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
 import { getBuffs } from "#/data/buffs";
 import type { Stat } from "#/solver/types";
 import type { SolverConfiguration } from "#/types/SolverConfig";
@@ -19,6 +21,7 @@ interface ConfigurationPanelProps {
 	addConfig: () => void;
 	deleteConfig: (id: string) => void;
 	renameConfig: (id: string, name: string) => void;
+	moveConfig: (id: string, direction: "up" | "down") => void;
 	updateConstraints: (
 		uncritabilitySetting: number,
 		uncrushabilitySetting: number,
@@ -35,6 +38,7 @@ export default function ConfigurationPanel({
 	addConfig,
 	deleteConfig,
 	renameConfig,
+	moveConfig,
 	updateConstraints,
 	updateOptimizeStats,
 	updateConfig,
@@ -63,10 +67,23 @@ export default function ConfigurationPanel({
 				onAddConfig={addConfig}
 				onDeleteConfig={deleteConfig}
 				onRenameConfig={renameConfig}
+				onMoveConfig={moveConfig}
 			/>
 
 			{activeConfig && (
 				<Stack spacing={2} sx={{ mt: 2 }}>
+					<Divider />
+					<Box>
+						<Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+							Editing set #{configs.findIndex((c) => c.id === activeConfig.id) + 1}
+							{": "}
+							{activeConfig.name}
+						</Typography>
+						<Typography variant="body2" color="text.secondary">
+							These settings apply only to this gear set.
+						</Typography>
+					</Box>
+
 					{/* Constraints */}
 					<ConstraintsSection
 						uncritabilitySetting={activeConfig.uncritabilitySetting}

@@ -37,6 +37,7 @@ function App() {
 		addConfig,
 		deleteConfig,
 		renameConfig,
+		moveConfig,
 		updateConstraints,
 		updateOptimizeStats,
 		updateConfig,
@@ -129,6 +130,7 @@ function App() {
 								addConfig={addConfig}
 								deleteConfig={deleteConfig}
 								renameConfig={renameConfig}
+								moveConfig={moveConfig}
 								updateConstraints={updateConstraints}
 								updateOptimizeStats={updateOptimizeStats}
 								updateConfig={updateConfig}

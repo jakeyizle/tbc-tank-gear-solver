@@ -25,8 +25,9 @@ export default function CharacterSection({
 }: CharacterSectionProps) {
 	return (
 		<Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-			<Typography variant="h6" gutterBottom>
-				Character
+			<Typography variant="h6">Character</Typography>
+			<Typography variant="body2" color="text.secondary" gutterBottom>
+				Applies to every gear set.
 			</Typography>
 			<Grid spacing={1} container>
 				<Grid size={2}>

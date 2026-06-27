@@ -1,6 +1,10 @@
 import AddIcon from "@mui/icons-material/Add";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import LockIcon from "@mui/icons-material/Lock";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
@@ -8,9 +12,9 @@ import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import IconButton from "@mui/material/IconButton";
-import Tab from "@mui/material/Tab";
-import Tabs from "@mui/material/Tabs";
+import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
 import type { SolverConfiguration } from "#/types/SolverConfig";
@@ -22,6 +26,7 @@ interface ConfigManagerProps {
 	onAddConfig: () => void;
 	onDeleteConfig: (id: string) => void;
 	onRenameConfig: (id: string, name: string) => void;
+	onMoveConfig: (id: string, direction: "up" | "down") => void;
 }
 
 export default function ConfigManager({
@@ -31,12 +36,11 @@ export default function ConfigManager({
 	onAddConfig,
 	onDeleteConfig,
 	onRenameConfig,
+	onMoveConfig,
 }: ConfigManagerProps) {
 	const [renameDialogOpen, setRenameDialogOpen] = useState(false);
 	const [renamingId, setRenamingId] = useState<string | null>(null);
 	const [newName, setNewName] = useState("");
-
-	const activeIndex = configs.findIndex((c) => c.id === activeConfigId);
 
 	const handleRenameClick = (id: string, currentName: string) => {
 		setRenamingId(id);
@@ -54,75 +58,136 @@ export default function ConfigManager({
 
 	return (
 		<Box sx={{ mb: 2 }}>
-			<Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-				<Typography variant="h6">Configurations</Typography>
-				<Button
-					startIcon={<AddIcon />}
-					onClick={onAddConfig}					
-					variant="outlined"
-					size="small"
-				>
-					New Config
+			<Box
+				sx={{
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "space-between",
+					gap: 1,
+					mb: 1,
+				}}
+			>
+				<Box>
+					<Typography variant="h6">Gear sets</Typography>
+					<Typography variant="body2" color="text.secondary">
+						Ranked by priority — solved from the top down.
+					</Typography>
+				</Box>
+				<Button startIcon={<AddIcon />} onClick={onAddConfig} variant="outlined" size="small">
+					Add set
 				</Button>
 			</Box>
 
-			<Tabs
-				value={activeIndex === -1 ? 0 : activeIndex}
-				onChange={(_, newValue) => onSelectConfig(configs[newValue]?.id)}
-				variant="scrollable"
-				scrollButtons="auto"
-				sx={{
-					borderBottom: 1,
-					borderColor: "divider",
-					"& .MuiTab-root": {
-						minWidth: 120,
-						textTransform: "none",
-						fontSize: "0.875rem",
-					},
-				}}
+			<Alert
+				severity="info"
+				icon={<LockIcon fontSize="small" />}
+				sx={{ mb: 2, py: 0.5, alignItems: "center" }}
 			>
-				{configs.map((config) => (
-					<Tab
-						key={config.id}
-						label={
-							<Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-								{config.name}
-							</Box>
-						}
-						value={configs.indexOf(config)}
-					/>
-				))}
-			</Tabs>
+				The top set picks each item&apos;s enchants and gems first. Lower sets must
+				reuse those exact choices for any shared item, so rank your most important
+				set first.
+			</Alert>
 
-			{configs.length > 0 && (
-				<Box sx={{ display: "flex", gap: 1, mt: 1 }}>
-					<IconButton
-						size="small"
-						onClick={() => {
-							const config = configs.find((c) => c.id === activeConfigId);
-							if (config) {
-								handleRenameClick(config.id, config.name);
-							}
-						}}
-						title="Rename config"
-					>
-						<EditIcon fontSize="small" />
-					</IconButton>
-					{configs.length > 1 && (
-						<IconButton
-							size="small"
-							onClick={() => onDeleteConfig(activeConfigId)}
-							title="Delete config"
-							color="error"
+			<Stack spacing={1}>
+				{configs.map((config, index) => {
+					const isActive = config.id === activeConfigId;
+					return (
+						<Box
+							key={config.id}
+							onClick={() => onSelectConfig(config.id)}
+							sx={{
+								display: "flex",
+								alignItems: "center",
+								gap: 1,
+								p: 1,
+								borderRadius: 1,
+								cursor: "pointer",
+								border: 1,
+								borderColor: isActive ? "primary.main" : "divider",
+								bgcolor: isActive ? "action.selected" : "background.paper",
+								"&:hover": { borderColor: "primary.light" },
+							}}
 						>
-							<DeleteIcon fontSize="small" />
-						</IconButton>
-					)}
-				</Box>
-			)}
+							<Box
+								sx={{
+									flexShrink: 0,
+									width: 28,
+									height: 28,
+									borderRadius: "50%",
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									fontSize: "0.875rem",
+									fontWeight: 600,
+									bgcolor: isActive ? "primary.main" : "action.disabledBackground",
+									color: isActive ? "primary.contrastText" : "text.secondary",
+								}}
+							>
+								{index + 1}
+							</Box>
+
+							<Typography
+								sx={{
+									flexGrow: 1,
+									fontWeight: isActive ? 600 : 400,
+									overflow: "hidden",
+									textOverflow: "ellipsis",
+									whiteSpace: "nowrap",
+								}}
+							>
+								{config.name}
+							</Typography>
+
+							<Stack direction="row" spacing={0.5} onClick={(e) => e.stopPropagation()}>
+								<Tooltip title="Higher priority">
+									<span>
+										<IconButton
+											size="small"
+											disabled={index === 0}
+											onClick={() => onMoveConfig(config.id, "up")}
+										>
+											<ArrowUpwardIcon fontSize="small" />
+										</IconButton>
+									</span>
+								</Tooltip>
+								<Tooltip title="Lower priority">
+									<span>
+										<IconButton
+											size="small"
+											disabled={index === configs.length - 1}
+											onClick={() => onMoveConfig(config.id, "down")}
+										>
+											<ArrowDownwardIcon fontSize="small" />
+										</IconButton>
+									</span>
+								</Tooltip>
+								<Tooltip title="Rename set">
+									<IconButton
+										size="small"
+										onClick={() => handleRenameClick(config.id, config.name)}
+									>
+										<EditIcon fontSize="small" />
+									</IconButton>
+								</Tooltip>
+								{configs.length > 1 && (
+									<Tooltip title="Delete set">
+										<IconButton
+											size="small"
+											color="error"
+											onClick={() => onDeleteConfig(config.id)}
+										>
+											<DeleteIcon fontSize="small" />
+										</IconButton>
+									</Tooltip>
+								)}
+							</Stack>
+						</Box>
+					);
+				})}
+			</Stack>
 
 			<Dialog open={renameDialogOpen} onClose={() => setRenameDialogOpen(false)}>
-				<DialogTitle>Rename Configuration</DialogTitle>
+				<DialogTitle>Rename gear set</DialogTitle>
 				<DialogContent>
 					<TextField
 						autoFocus
@@ -131,7 +196,7 @@ export default function ConfigManager({
 						fullWidth
 						size="small"
 						sx={{ mt: 1 }}
-						onKeyPress={(e) => {
+						onKeyDown={(e) => {
 							if (e.key === "Enter") handleRenameSave();
 						}}
 					/>

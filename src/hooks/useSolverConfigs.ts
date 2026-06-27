@@ -34,6 +34,18 @@ export function useSolverConfigs() {
 		);
 	};
 
+	const moveConfig = (id: string, direction: "up" | "down") => {
+		setConfigs((prev) => {
+			const index = prev.findIndex((c) => c.id === id);
+			if (index === -1) return prev;
+			const target = direction === "up" ? index - 1 : index + 1;
+			if (target < 0 || target >= prev.length) return prev;
+			const next = [...prev];
+			[next[index], next[target]] = [next[target], next[index]];
+			return next;
+		});
+	};
+
 	const updateConfig = (
 		id: string,
 		updates: Partial<SolverConfiguration>
@@ -66,6 +78,7 @@ export function useSolverConfigs() {
 		addConfig,
 		deleteConfig,
 		renameConfig,
+		moveConfig,
 		updateConfig,
 		updateConstraints,
 		updateOptimizeStats,
