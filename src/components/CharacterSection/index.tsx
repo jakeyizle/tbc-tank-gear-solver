@@ -1,5 +1,5 @@
-import Grid from "@mui/material/Grid";
-import Paper from "@mui/material/Paper";
+import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import type { ModifierSource } from "#/solver/types";
 import ClassSelect from "./ClassSelect";
@@ -24,22 +24,50 @@ export default function CharacterSection({
 	setTalents,
 }: CharacterSectionProps) {
 	return (
-		<Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-			<Typography variant="h6">Character</Typography>
-			<Typography variant="body2" color="text.secondary" gutterBottom>
-				Applies to every gear set.
+		<Box>
+			<Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+				Character
 			</Typography>
-			<Grid spacing={1} container>
-				<Grid size={2}>
-					<ClassSelect value={classValue} onChange={setClassValue} />
-				</Grid>
-				<Grid size={2}>
-					<RaceSelect value={raceValue} onChange={setRaceValue} />
-				</Grid>
-				<Grid size={8}>
+			<Typography
+				variant="caption"
+				color="text.secondary"
+				sx={{ display: "block", mb: 1.5 }}
+			>
+				Who the solver is building gear for.
+			</Typography>
+
+			<Stack spacing={2}>
+				{/* Identity subgroup */}
+				<Box>
+					<Typography
+						variant="overline"
+						color="text.secondary"
+						sx={{ display: "block", lineHeight: 1.5 }}
+					>
+						Identity
+					</Typography>
+					<Stack direction="row" spacing={1}>
+						<Box sx={{ minWidth: 140 }}>
+							<ClassSelect value={classValue} onChange={setClassValue} />
+						</Box>
+						<Box sx={{ minWidth: 140 }}>
+							<RaceSelect value={raceValue} onChange={setRaceValue} />
+						</Box>
+					</Stack>
+				</Box>
+
+				{/* Talents subgroup */}
+				<Box>
+					<Typography
+						variant="overline"
+						color="text.secondary"
+						sx={{ display: "block", lineHeight: 1.5, mb: 0.5 }}
+					>
+						Talents
+					</Typography>
 					<TalentSection talents={talents} setTalents={setTalents} />
-				</Grid>
-			</Grid>
-		</Paper>
+				</Box>
+			</Stack>
+		</Box>
 	);
 }

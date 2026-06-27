@@ -5,6 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import CharacterSection from "#/components/CharacterSection";
 import ConfigurationPanel from "#/components/ConfigurationPanel";
+import GlobalSettingsSection from "#/components/GlobalSettingsSection";
 import ItemInputSection from "#/components/ItemInputSection";
 import ResultsPanel from "#/components/ResultsPanel";
 import SolveButton from "#/components/SolveButton";
@@ -103,21 +104,23 @@ function App() {
 					<Grid container spacing={2}>
 						{/* Fixed Inputs */}
 						<Grid size={12}>
-							<ItemInputSection
-								itemInput={itemInput}
-								setItemInput={setItemInput}
-								areEnchantsGemsLocked={areEnchantsGemsLocked}
-								setAreEnchantsGemsLocked={setAreEnchantsGemsLocked}
-							/>
+							<GlobalSettingsSection>
+								<ItemInputSection
+									itemInput={itemInput}
+									setItemInput={setItemInput}
+									areEnchantsGemsLocked={areEnchantsGemsLocked}
+									setAreEnchantsGemsLocked={setAreEnchantsGemsLocked}
+								/>
 
-							<CharacterSection
-								classValue={classValue}
-								setClassValue={setClassValue}
-								raceValue={raceValue}
-								setRaceValue={setRaceValue}
-								talents={talents}
-								setTalents={setTalents}
-							/>
+								<CharacterSection
+									classValue={classValue}
+									setClassValue={setClassValue}
+									raceValue={raceValue}
+									setRaceValue={setRaceValue}
+									talents={talents}
+									setTalents={setTalents}
+								/>
+							</GlobalSettingsSection>
 						</Grid>
 
 						{/* Configuration Panel */}

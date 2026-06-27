@@ -4,12 +4,12 @@ import Box from "@mui/material/Box";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import FormHelperText from "@mui/material/FormHelperText";
-import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useMemo } from "react";
 import { analyzeItemInput } from "#/helpers.ts/parseItemInput";
+import { SettingsSubgroup } from "#/components/GlobalSettingsSection";
 
 interface ItemInputSectionProps {
 	itemInput: string;
@@ -53,13 +53,10 @@ export default function ItemInputSection({
 		) : null;
 
 	return (
-		<Paper elevation={1} sx={{ p: 2, mb: 2 }}>
-			<Typography variant="overline" color="text.secondary">
-				Step 1
-			</Typography>
-			<Typography variant="h6" gutterBottom>
-				Add your gear pool
-			</Typography>
+		<SettingsSubgroup
+			title="Gear pool"
+			description="The pool of items every gear set draws from."
+		>
 			<Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
 				Export your character with the{" "}
 				<strong>WowSims Exporter</strong> addon and paste the result below. The
@@ -94,6 +91,6 @@ export default function ItemInputSection({
 				Keep the enchants and gems from your export instead of letting the
 				solver optimize them.
 			</FormHelperText>
-		</Paper>
+		</SettingsSubgroup>
 	);
 }
