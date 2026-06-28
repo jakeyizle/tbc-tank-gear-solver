@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { solve } from "../src/solver/index";
-import { getAvoidanceFromItems } from "../src/helpers.ts/getStatFromItem";
+import { getAvoidanceFromItems } from "../src/helpers/getStatFromItem";
 import type { InputItem } from "../src/solver/types";
 
 describe("Solver Integration Tests", () => {

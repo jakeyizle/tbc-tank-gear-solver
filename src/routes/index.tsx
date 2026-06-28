@@ -11,7 +11,7 @@ import ResultsPanel from "#/components/ResultsPanel";
 import SolveButton from "#/components/SolveButton";
 import { getAbilities} from "#/data/abilities";
 import {getTalentsByClass} from "#/data/talents";
-import { parseItemInput } from "#/helpers.ts/parseItemInput";
+import { parseItemInput } from "#/helpers/parseItemInput";
 import { useSolveConfig } from "#/hooks/useSolveConfig";
 import { useSolverConfigs } from "#/hooks/useSolverConfigs";
 import { solveAll } from "#/solver";

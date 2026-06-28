@@ -1,4 +1,4 @@
-import { convertStatToRating } from "#/helpers.ts/convertStat";
+import { convertStatToRating } from "#/helpers/convertStat";
 import type { Stat, StatName } from "#/solver/types";
 import LevelStats from "./level_stats.json";
 

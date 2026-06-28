@@ -1,4 +1,4 @@
-import { convertStatToRating } from "#/helpers.ts/convertStat";
+import { convertStatToRating } from "#/helpers/convertStat";
 import type { ModifierSource } from "../solver/types";
 
 export const getAbilities = (classId: string) => {

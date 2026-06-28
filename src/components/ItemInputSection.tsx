@@ -8,8 +8,8 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useMemo } from "react";
-import { analyzeItemInput } from "#/helpers.ts/parseItemInput";
 import { SettingsSubgroup } from "#/components/GlobalSettingsSection";
+import { analyzeItemInput } from "#/helpers/parseItemInput";
 
 interface ItemInputSectionProps {
 	itemInput: string;

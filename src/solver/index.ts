@@ -1,4 +1,4 @@
-import { calculateStatValue } from "#/helpers.ts/stats";
+import { calculateStatValue } from "#/helpers/stats";
 import type { BaseConfig, SolveResult, SolverConfiguration as UISolverConfiguration } from "#/types/SolverConfig";
 import { getTransformedItems } from "./items";
 import { SolverConfiguration } from "./SolverConfiguration";

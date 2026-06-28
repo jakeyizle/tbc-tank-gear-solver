@@ -1,5 +1,5 @@
 import { getBaseStats } from "#/data/baseStats";
-import { calculateStatValue } from "#/helpers.ts/stats";
+import { calculateStatValue } from "#/helpers/stats";
 import {
 	calculateAvoidanceTarget,
 	calculateUncritabilityTarget,

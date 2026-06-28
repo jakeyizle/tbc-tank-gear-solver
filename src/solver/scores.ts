@@ -1,4 +1,4 @@
-import { calculateStatValue } from "#/helpers.ts/stats"
+import { calculateStatValue } from "#/helpers/stats"
 import type { ModifierSource, Stat } from "./types";
 
 export const calculateAvoidanceScore = (stats: Stat[], modifierSources: ModifierSource[] = []) => {
