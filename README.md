@@ -28,8 +28,6 @@ npm run check    # Biome lint + format
 
 The LP solver runs inside a **Web Worker** (`src/solver/solver.worker.ts`) to avoid blocking the UI thread. The main thread posts `lpItems + targets` to the worker and receives chosen items back.
 
-In tests, GLPK cannot use a Worker, so `solver.ts` has a Vitest-specific code path that imports GLPK directly via an absolute file path.
-
 ---
 
 ## Project Structure

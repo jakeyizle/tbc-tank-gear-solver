@@ -62,7 +62,8 @@ export default function ItemGroupDisplay({ items }: ItemGroupDisplayProps) {
 									key={slot}
 									itemId={item.id}
 									enchantId={item.enchant.effectID}
-									gemIds={item.gems.map((g) => g.id)}
+									enchantName={item.enchant.name}
+									gems={item.gems}
 									slotName={item.type}
 									itemName={item.name}
 								/>
@@ -83,7 +84,8 @@ export default function ItemGroupDisplay({ items }: ItemGroupDisplayProps) {
 									key={slot}
 									itemId={item.id}
 									enchantId={item.enchant.effectID}
-									gemIds={item.gems.map((g) => g.id)}
+									enchantName={item.enchant.name}
+									gems={item.gems}
 									slotName={item.type}
 									itemName={item.name}
 								/>
