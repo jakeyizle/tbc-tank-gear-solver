@@ -69,7 +69,6 @@ const getEnchant = (idOrEffectID: string | undefined): Enchant | undefined => {
 const getGems = (config: SolverConfiguration) => {
 	let gems = Gems as Gem[];
 	gems = gems.filter((gem) => gem.phase === "1");
-	gems = gems.filter((gem) => gem.isUnique !== "true");
 	gems = gems.filter((gem) => gem.stats.length > 0);
 	gems = gems.filter((gem) => config.hasRelevantStats(gem.stats));
 	return gems;
@@ -109,7 +108,9 @@ const createGemCombinations = (gems: Gem[], socketCount: number): Gem[][] => {
 
 		for (let i = start; i < gems.length; i++) {
 			current.push(gems[i]);
-			backtrack(i, current);
+			// a Unique-Equipped gem can't repeat within the same item's combination
+			const nextStart = gems[i].isUnique === "true" ? i + 1 : i;
+			backtrack(nextStart, current);
 			current.pop();
 		}
 	}

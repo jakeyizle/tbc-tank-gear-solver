@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { loadAppState } from "#/helpers/persistence";
 import type { Stat } from "#/solver/types";
 import {
 	createEmptyConfig,
@@ -6,10 +7,14 @@ import {
 } from "#/types/SolverConfig";
 
 export function useSolverConfigs() {
-	const [configs, setConfigs] = useState<SolverConfiguration[]>(() => [
-		createEmptyConfig("default", "Default Config"),
-	]);
-	const [activeConfigId, setActiveConfigId] = useState("default");
+	const _saved = loadAppState();
+
+	const [configs, setConfigs] = useState<SolverConfiguration[]>(() =>
+		_saved?.configs ?? [createEmptyConfig("default", "Default Config")]
+	);
+	const [activeConfigId, setActiveConfigId] = useState<string>(() =>
+		_saved?.activeConfigId ?? "default"
+	);
 
 	const activeConfig = configs.find((c) => c.id === activeConfigId);
 

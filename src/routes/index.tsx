@@ -12,7 +12,8 @@ import SolveButton from "#/components/SolveButton";
 import { getAbilities} from "#/data/abilities";
 import {getTalentsByClass} from "#/data/talents";
 import { parseItemInput } from "#/helpers/parseItemInput";
-import { useSolveConfig } from "#/hooks/useSolveConfig";
+import { loadAppState, saveAppState } from "#/helpers/persistence";
+import { useCharacterConfig } from "#/hooks/useCharacterConfig";
 import { useSolverConfigs } from "#/hooks/useSolverConfigs";
 import { solveAll } from "#/solver";
 import type { ModifierSource } from "#/solver/types";
@@ -21,14 +22,18 @@ export const Route = createFileRoute("/")({ component: App });
 
 
 function App() {
-	const [itemInput, setItemInput] = useState(() => {
-		const saved = localStorage.getItem("itemInput");
-		return saved || "";
+	const _saved = loadAppState();
+
+	const [itemInput, setItemInput] = useState(() => _saved?.itemInput ?? "");
+	const [classValue, setClassValue] = useState(() => _saved?.classValue ?? "2");
+	const [raceValue, setRaceValue] = useState(() => _saved?.raceValue ?? "1");
+	const [talents, setTalents] = useState<ModifierSource[]>(() => {
+		if (_saved?.talents) return _saved.talents;
+		return getTalentsByClass(_saved?.classValue ?? "2").map((talent) => ({ ...talent, rank: talent.maxRank }));
 	});
-	const [classValue, setClassValue] = useState("2");
-	const [raceValue, setRaceValue] = useState("1");
-	const [talents, setTalents] = useState<ModifierSource[]>(getTalentsByClass(classValue).map((talent) => ({ ...talent, rank: talent.maxRank })));
-	const [areEnchantsGemsLocked, setAreEnchantsGemsLocked] = useState(false);
+	const [areEnchantsGemsLocked, setAreEnchantsGemsLocked] = useState(
+		() => _saved?.areEnchantsGemsLocked ?? false
+	);
 
 	const {
 		configs,
@@ -44,13 +49,15 @@ function App() {
 		updateConfig,
 	} = useSolverConfigs();
 
-	const { updateSolveConfig } = useSolveConfig();
+	const { updateCharacterConfig } = useCharacterConfig();
 
 	const [solveResults, setSolveResults] = useState<Map<string, SolveResult>>(
-		new Map()
+		() => _saved?.solveResults?.length ? new Map(_saved.solveResults) : new Map()
 	);
 	const [isSolving, setIsSolving] = useState(false);
-	const [activeResultId, setActiveResultId] = useState<string | null>(null);
+	const [activeResultId, setActiveResultId] = useState<string | null>(
+		() => _saved?.activeResultId ?? null
+	);
 
 	const handleSolveAll = async () => {
 		setIsSolving(true);
@@ -70,14 +77,12 @@ function App() {
 		}
 
 		// Store the solve configuration values in context
-		updateSolveConfig({
+		updateCharacterConfig({
 			classId: classValue,
 			raceId: raceValue,
 			talentSources: talents,
 			abilitySources,
 		});
-
-		localStorage.setItem("itemInput", itemInput);
 
 		try {
 			const solverResults = await solveAll(items, baseConfig, configs);
@@ -91,6 +96,17 @@ function App() {
 			if (firstResultId) {
 				setActiveResultId(firstResultId);
 			}
+			saveAppState({
+				itemInput,
+				classValue,
+				raceValue,
+				talents,
+				areEnchantsGemsLocked,
+				configs,
+				activeConfigId,
+				solveResults: [...newResults.entries()],
+				activeResultId: firstResultId,
+			});
 		} finally {
 			setIsSolving(false);
 		}
