@@ -29,7 +29,9 @@ interface ItemGroupDisplayProps {
 }
 
 const normalizeItems = (items: LPItem[]) => {
+	// biome-ignore lint/suspicious/noExplicitAny: type issues
 	const result: any = {};
+	// biome-ignore lint/suspicious/noExplicitAny: type issues
 	const counters: any = {};
 
 	items.forEach((item) => {
@@ -105,7 +107,7 @@ export default function ItemGroupDisplay({ items }: ItemGroupDisplayProps) {
 								key={slot}
 								itemId={item.id}
 								enchantId={item.enchant.effectID}
-								gemIds={item.gems.map((g) => g.id)}
+								gems={item.gems}
 								slotName={item.type}
 								itemName={item.name}
 							/>

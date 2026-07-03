@@ -104,7 +104,7 @@ export default function StatsEntry({ stats, onChange }: StatsEntryProps) {
 					<TextField
 						type="number"
 						label="Weight"
-						value={entry.value}
+						value={Math.round(entry.value * 100) / 100}
 						onChange={(e) => updateValue(index, e.target.value)}
 						size="small"
 						sx={{ width: 110 }}

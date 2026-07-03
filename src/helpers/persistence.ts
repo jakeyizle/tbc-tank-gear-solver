@@ -15,6 +15,7 @@ export interface PersistedState {
 	activeConfigId: string;
 	solveResults: Array<[string, SolveResult]>;
 	activeResultId: string | null;
+	activeLeftTab?: "character" | "gearSets";
 }
 
 export function saveAppState(state: Omit<PersistedState, "version">): void {

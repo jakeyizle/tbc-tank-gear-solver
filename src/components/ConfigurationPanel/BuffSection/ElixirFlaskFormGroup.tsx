@@ -2,7 +2,6 @@ import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import FormGroup from "@mui/material/FormGroup";
 import FormLabel from "@mui/material/FormLabel";
-import { useState } from "react";
 
 export default function ElixirFlaskFormGroup() {
 	return (

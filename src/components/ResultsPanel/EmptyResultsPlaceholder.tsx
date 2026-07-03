@@ -1,12 +1,29 @@
-import Paper from "@mui/material/Paper";
+import InventoryIcon from "@mui/icons-material/Inventory2Outlined";
+import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 
 export default function EmptyResultsPlaceholder() {
 	return (
-		<Paper elevation={1} sx={{ p: 2 }}>
-			<Typography variant="body2" color="text.secondary" align="center">
-				Run "Solve All" to see results
+		<Box
+			sx={{
+				display: "flex",
+				justifyContent: "center",
+				alignItems: "center",
+				flexDirection: "column",
+				gap: 1,
+				height: "100vh",
+				textAlign: "center",
+				px: 4,
+			}}
+		>
+			<InventoryIcon sx={{ fontSize: 56, color: "text.disabled" }} />
+			<Typography variant="h6" color="text.secondary">
+				No results yet
 			</Typography>
-		</Paper>
+			<Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>
+				Configure your gear sets on the left, then click "Solve All" to see
+				optimized gear here.
+			</Typography>
+		</Box>
 	);
 }

@@ -2,6 +2,7 @@ import FormControl from "@mui/material/FormControl";
 import FormLabel from "@mui/material/FormLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
+import { CLASS_LABELS } from "#/data/classes";
 
 interface ClassSelectProps {
     value: string
@@ -18,9 +19,9 @@ export default function ClassSelect({ value, onChange }: ClassSelectProps) {
 				value={value}
                 onChange={(e) => onChange(e.target.value)}
 			>
-                <MenuItem value={'1'}>Warrior</MenuItem>
-                <MenuItem value={'2'}>Paladin</MenuItem>
-                <MenuItem value={'11'}>Druid</MenuItem>
+                {Object.entries(CLASS_LABELS).map(([id, label]) => (
+                    <MenuItem key={id} value={id}>{label}</MenuItem>
+                ))}
             </Select>
 		</FormControl>
 	);

@@ -1,6 +1,4 @@
 import Box from "@mui/material/Box";
-import Checkbox from "@mui/material/Checkbox";
-import FormControlLabel from "@mui/material/FormControlLabel";
 import FormGroup from "@mui/material/FormGroup";
 import FormLabel from "@mui/material/FormLabel";
 import Stack from "@mui/material/Stack";
@@ -12,15 +10,11 @@ import ElixirFlaskFormGroup from "./ElixirFlaskFormGroup";
 interface BuffsConsumablesSectionProps {
 	buffs: Buff[];
 	onBuffChange: (buffId: string) => void;
-	consumables: {
-		scrollOfAgilityV: boolean;
-	};
 }
 
 export default function BuffSection({
 	buffs,
 	onBuffChange,
-	consumables,
 }: BuffsConsumablesSectionProps) {
 
 	return (

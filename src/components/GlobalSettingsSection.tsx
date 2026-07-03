@@ -1,6 +1,6 @@
+import PublicIcon from "@mui/icons-material/Public";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
-import PublicIcon from "@mui/icons-material/Public";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -25,7 +25,7 @@ export default function GlobalSettingsSection({
 				<Typography variant="h6">Global settings</Typography>
 			</Stack>
 			<Typography variant="body2" color="text.secondary" gutterBottom>
-				Applies to every gear set below.
+				These settings apply to every gear set.
 			</Typography>
 			<Stack
 				divider={<Divider flexItem />}

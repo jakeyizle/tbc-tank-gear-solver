@@ -102,7 +102,6 @@ export default function ConfigurationPanel({
 					{/* Buffs*/}
 					<BuffSection
 						buffs={displayBuffs}
-						consumables={activeConfig.consumables}
 						onBuffChange={handleBuffChange}
 					/>
 				</Stack>

@@ -13,20 +13,6 @@ const config = defineConfig({
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     viteReact(),
   ],
-  test: {
-    environment: 'jsdom',
-    environmentOptions: {
-      jsdom: {
-        resources: 'usable',
-      },
-    },
-    pool: 'threads',
-    poolOptions: {
-      threads: {
-        singleThread: true,
-      },
-    },
-  },
 })
 
 export default config
