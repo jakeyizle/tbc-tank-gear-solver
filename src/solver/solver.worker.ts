@@ -1,5 +1,5 @@
-import { calculateStatValue } from "#/helpers/stats";
 import GLPK, { type GLPK as GLPKType, type LP } from "glpk.js";
+import { calculateStatValue } from "#/helpers/stats";
 import { getTransformedItems } from "./items";
 import { SolverConfiguration } from "./SolverConfiguration";
 import type { InputItem, LPItem, ModifierSource, ProcessedItemType, Stat } from "./types";
@@ -283,7 +283,7 @@ self.onmessage = async (e) => {
 			items: result,
 			modifierSources: config.multiplierModifierSources,
 			baseStats: [],
-			statName: "Avoidance",
+			statName: config.avoidanceStatName,
 			roundDefenseAndResilience: true,
 		});
 		const itemUncrit = calculateStatValue({

@@ -7,6 +7,7 @@ import RadioGroup from "@mui/material/RadioGroup";
 const radioValues = [
 	{ value: 0, label: "None" },
 	{ value: 1, label: "Uncrushable (102.4%)" },
+	{ value: 2, label: "Illidan Shear (101.8%)" },
 ];
 
 interface UncrushableRadioGroupProps {

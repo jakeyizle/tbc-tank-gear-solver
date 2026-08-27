@@ -30,6 +30,10 @@ export default function StatsSummary({ items, baseConfig, solverConfig }: StatsS
 			value: calculateStatValue({items, modifierSources, baseStats, statName: "Avoidance"}),
 		},
 		{
+			name: "Shear Avoidance",
+			value: calculateStatValue({items, modifierSources, baseStats, statName: "ShearAvoidance"}),
+		},
+		{
 			name: "Uncritability",
 			value: calculateStatValue({items, modifierSources, baseStats, statName: "Uncritability"}),
 		},

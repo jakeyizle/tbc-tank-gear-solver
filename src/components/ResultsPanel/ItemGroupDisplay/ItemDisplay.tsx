@@ -1,5 +1,6 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
+import GemToolTips from '#/data/gem-tooltips.json';
 import ItemTooltips from "#/data/item-tooltips.json";
 
 interface DisplayGem {
@@ -94,14 +95,17 @@ export default function ItemDisplay({
 							component="a"
 							href={`https://tbc.wowhead.com/item=${gem.id}`}
 							onClick={(e) => e.preventDefault()}
-							sx={{
-								display: "inline-block",
-								width: 10,
-								height: 10,
-								backgroundColor: GEM_COLORS[gem.color] ?? "#9d9d9d",
-								border: "1px solid rgba(0, 0, 0, 0.4)",
-							}}
-						/>
+						>
+											<Box
+					component="img"
+					src={`https://wow.zamimg.com/images/wow/icons/large/${GemToolTips.find((t) => t.id === gem.id)?.iconName}.jpg`}
+					alt={`Gem ${gem.id}`}
+					sx={{
+						width: 32,
+						height: 32,
+					}}
+				/>
+							</Box>
 					))}
 				</Box>
 			) : null}

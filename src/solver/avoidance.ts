@@ -1,11 +1,16 @@
 
 const BASE_AVOIDANCE_TARGET = 102.4;
-export const calculateAvoidanceTarget = (	
+const ILLIDAN_SHEAR_AVOIDANCE_TARGET = 101.8;
+export const calculateAvoidanceTarget = (
 	uncrushabilitySetting: number,
 	baseAvoidance: number
 ) => {
-	if (uncrushabilitySetting === 0) return 0;	
-	return BASE_AVOIDANCE_TARGET - baseAvoidance;
+	if (uncrushabilitySetting === 0) return 0;
+	const target =
+		uncrushabilitySetting === 2
+			? ILLIDAN_SHEAR_AVOIDANCE_TARGET
+			: BASE_AVOIDANCE_TARGET;
+	return target - baseAvoidance;
 };
 
 export const calculateUncritabilityTarget = (uncritabilitySetting: number, baseUncritability: number) => {

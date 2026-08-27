@@ -202,5 +202,6 @@ export type Buff = ModifierSource & {
 export type DisplayStatName =
 	| StatName
 	| "Avoidance"
+	| "ShearAvoidance"
 	| "Uncritability"
 	| "Effective HP";

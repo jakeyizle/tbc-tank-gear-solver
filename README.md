@@ -58,6 +58,7 @@ Tanks must be **Uncrushable** (combined avoidance at or above a threshold) and/o
 ### Constraints
 
 - **Uncrushable**: `Dodge% + Parry% + Block% + Miss% >= 102.4%`. Hard floor — gear must reach it.
+- **Illidan Shear**: `Dodge% + Parry% + Block% >= 101.8%` (Miss does not count). Mutually exclusive alternative to Uncrushable.
 - **Uncritability**:
   - `setting=1` → 5.4% required (Level 72 mobs / heroic dungeons)
   - `setting=2` → 5.6% required (Level 73 mobs / raid bosses)

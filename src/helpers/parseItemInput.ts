@@ -3,7 +3,8 @@
 //   2. WowSims Exporter JSON: { items: [...] }
 //   3. Legacy comma-separated list of item IDs: 123, 456, ...
 
-import type { InputItem } from "#/solver/types";
+import { groupItemsBySlot, SLOT_ORDER } from "#/solver/itemSlots";
+import type { InputItem, LPItem } from "#/solver/types";
 
 const looksLikeJson = (input: string) => {
 	const trimmed = input.trim();
@@ -36,6 +37,22 @@ export const parseItemInput = (input: string): InputItem[] => {
 			gems: Array.isArray(item.gems) ? item.gems.map((g) => String(g)) : [],
 		}),
 	) as InputItem[];
+};
+
+export const formatItemExport = (items: LPItem[]): string => {
+	const itemMap = groupItemsBySlot(items);
+	const orderedItems = SLOT_ORDER.map((slot) => itemMap[slot]).filter(
+		(item): item is LPItem => item != null,
+	);
+
+	const exportItems = orderedItems.map((item) => ({
+		id: Number(item.id),
+		gems: item.gems.map((g) => Number(g.id)),
+		...(item.enchant.effectID
+			? { enchant: Number(item.enchant.effectID) }
+			: {}),
+	}));
+	return JSON.stringify({ gear: { items: exportItems } });
 };
 
 export type ItemInputAnalysis =

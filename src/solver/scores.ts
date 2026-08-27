@@ -1,8 +1,12 @@
 import { calculateStatValue } from "#/helpers/stats"
 import type { ModifierSource, Stat } from "./types";
 
-export const calculateAvoidanceScore = (stats: Stat[], modifierSources: ModifierSource[] = []) => {
-    const avoidance = calculateStatValue({items: [], modifierSources, statName: "Avoidance", baseStats: stats, roundDefenseAndResilience: false});    
+export const calculateAvoidanceScore = (
+    stats: Stat[],
+    modifierSources: ModifierSource[] = [],
+    statName: "Avoidance" | "ShearAvoidance" = "Avoidance",
+) => {
+    const avoidance = calculateStatValue({items: [], modifierSources, statName, baseStats: stats, roundDefenseAndResilience: false});
     return avoidance;
 }
 
@@ -24,8 +28,13 @@ export const calculateObjectiveScore = (stats: Stat[], objectiveStats: Stat[], m
     return objectiveScore;
 }
 
-export const calculateScores = (stats: Stat[], objectiveStats: Stat[], modifierSources: ModifierSource[] = []) => {
-    const avoidanceScore = calculateAvoidanceScore(stats, modifierSources);
+export const calculateScores = (
+    stats: Stat[],
+    objectiveStats: Stat[],
+    modifierSources: ModifierSource[] = [],
+    avoidanceStatName: "Avoidance" | "ShearAvoidance" = "Avoidance",
+) => {
+    const avoidanceScore = calculateAvoidanceScore(stats, modifierSources, avoidanceStatName);
     const uncritabilityScore = calculateUncritabilityScore(stats, modifierSources);
     const objectiveScore = calculateObjectiveScore(stats, objectiveStats, modifierSources);
     return { avoidanceScore, uncritabilityScore, objectiveScore };

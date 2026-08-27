@@ -19,6 +19,7 @@ export class SolverConfiguration {
 	readonly baseStats: Stat[];
 	readonly flatModifierSources: ModifierSource[];
 	readonly multiplierModifierSources: ModifierSource[];
+	readonly avoidanceStatName: "Avoidance" | "ShearAvoidance";
 
 	// Derived values
 	avoidanceTarget: number;
@@ -38,6 +39,8 @@ export class SolverConfiguration {
 	}) {
 		this.uncrushabilitySetting = options.uncrushabilitySetting;
 		this.uncritabilitySetting = options.uncritabilitySetting;
+		this.avoidanceStatName =
+			options.uncrushabilitySetting === 2 ? "ShearAvoidance" : "Avoidance";
 		this.optimizeStats = options.optimizeStats;
 		this.baseStats = getBaseStats(options.raceId, options.classId);
 		const modifierSources = [
@@ -73,7 +76,7 @@ export class SolverConfiguration {
 			items: [],
 			modifierSources: this.flatModifierSources,
 			baseStats: this.baseStats,
-			statName: "Avoidance",
+			statName: this.avoidanceStatName,
 		});
 		this.avoidanceTarget = calculateAvoidanceTarget(
 			this.uncrushabilitySetting,
@@ -111,7 +114,12 @@ export class SolverConfiguration {
 		uncritabilityScore: number;
 		objectiveScore: number;
 	} {
-		return calculateScores(stats, this.optimizeStats, this.multiplierModifierSources);
+		return calculateScores(
+			stats,
+			this.optimizeStats,
+			this.multiplierModifierSources,
+			this.avoidanceStatName,
+		);
 	}
 
 	stepAvoidanceTarget(step: number) {

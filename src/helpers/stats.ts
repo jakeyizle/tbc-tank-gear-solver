@@ -43,6 +43,13 @@ export const calculateStatValue = ({
 				baseStats,
 				roundDefenseAndResilience,
 			);
+		case "ShearAvoidance":
+			return calculateShearAvoidance(
+				items,
+				modifierSources,
+				baseStats,
+				roundDefenseAndResilience,
+			);
 		case "Uncritability":
 			return calculateUncritability(
 				items,
@@ -409,7 +416,7 @@ const calculateUncritability = (
 	return uncritabilityFromDefense + resilienceSkill;
 };
 
-const calculateAvoidance = (
+const calculateDodgeParryBlock = (
 	items: LPItem[],
 	modifierSources: ModifierSource[],
 	baseStats: Stat[],
@@ -436,13 +443,6 @@ const calculateAvoidance = (
 		baseStats,
 		roundDefenseAndResilience,
 	});
-	const miss = calculateStatValue({
-		items,
-		modifierSources,
-		statName: "Miss",
-		baseStats,
-		roundDefenseAndResilience,
-	});
 
 	const dodge = convertStatToPercentageOrSkill({
 		name: "Dodge",
@@ -460,7 +460,45 @@ const calculateAvoidance = (
 		type: "flat",
 	});
 
-	return dodge + parry + block + miss;
+	return dodge + parry + block;
+};
+
+const calculateAvoidance = (
+	items: LPItem[],
+	modifierSources: ModifierSource[],
+	baseStats: Stat[],
+	roundDefenseAndResilience: boolean,
+): number => {
+	const dodgeParryBlock = calculateDodgeParryBlock(
+		items,
+		modifierSources,
+		baseStats,
+		roundDefenseAndResilience,
+	);
+	const miss = calculateStatValue({
+		items,
+		modifierSources,
+		statName: "Miss",
+		baseStats,
+		roundDefenseAndResilience,
+	});
+
+	return dodgeParryBlock + miss;
+};
+
+// Illidan Shear ignores Miss chance, unlike the standard uncrushable check
+const calculateShearAvoidance = (
+	items: LPItem[],
+	modifierSources: ModifierSource[],
+	baseStats: Stat[],
+	roundDefenseAndResilience: boolean,
+): number => {
+	return calculateDodgeParryBlock(
+		items,
+		modifierSources,
+		baseStats,
+		roundDefenseAndResilience,
+	);
 };
 
 const calculateEffectiveHP = (

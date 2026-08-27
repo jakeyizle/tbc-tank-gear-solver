@@ -1,5 +1,11 @@
+import CheckIcon from "@mui/icons-material/Check";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
+import { useState } from "react";
+import { formatItemExport } from "#/helpers/parseItemInput";
 import type { SolveResult } from "#/types/SolverConfig";
 import EmptyResultsPlaceholder from "./EmptyResultsPlaceholder";
 import ItemGroupDisplay from "./ItemGroupDisplay";
@@ -23,6 +29,14 @@ export default function ResultsPanel({
 	const activeResult = activeResultId
 		? solveResults.get(activeResultId)
 		: null;
+	const [copied, setCopied] = useState(false);
+
+	const handleCopy = () => {
+		if (!activeResult) return;
+		navigator.clipboard.writeText(formatItemExport(activeResult.items));
+		setCopied(true);
+		setTimeout(() => setCopied(false), 1500);
+	};
 
 	if (isLoading) {
 		return <LoadingResultsPlaceholder />;
@@ -44,9 +58,30 @@ export default function ResultsPanel({
 				<>
 					{/* Equipment Slots */}
 					<Paper elevation={1} sx={{ p: 2 }}>
-						<Typography variant="h6" gutterBottom>
-							Equipment
-						</Typography>
+						<Box
+							display="flex"
+							justifyContent="space-between"
+							alignItems="center"
+						>
+							<Typography variant="h6" gutterBottom>
+								Equipment
+							</Typography>
+							<Button
+								size="small"
+								variant="outlined"
+								color={copied ? "success" : "primary"}
+								startIcon={
+									copied ? (
+										<CheckIcon fontSize="small" />
+									) : (
+										<ContentCopyIcon fontSize="small" />
+									)
+								}
+								onClick={handleCopy}
+							>
+								{copied ? "Copied!" : "Export Gear"}
+							</Button>
+						</Box>
 						<ItemGroupDisplay items={activeResult.items} />
 					</Paper>
 
