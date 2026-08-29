@@ -205,6 +205,7 @@ export interface ResolvedDecomposableItem {
 	uniqueId: string;
 	enchant: Enchant | undefined;
 	gems: Gem[];
+	gemSlots: string[];
 }
 
 export const resolveChosenDecomposableItems = (
@@ -221,9 +222,18 @@ export const resolveChosenDecomposableItems = (
 		);
 
 		const gems: Gem[] = [];
+		// positional array, indexed by real socket position on the base item, so a
+		// gem placed in socket 2 while socket 1 is skipped doesn't shift into slot 1
+		const gemSlots: string[] = new Array(item.base.sockets.length).fill("0");
 		for (const socket of item.sockets) {
 			const chosenGem = socket.candidates.find((gem) => varValues[gem.varName] === 1);
-			if (chosenGem) gems.push(chosenGem.gem);
+			if (chosenGem) {
+				gems.push(chosenGem.gem);
+				gemSlots[socket.socketIndex] = chosenGem.gem.id;
+			}
+		}
+		while (gemSlots.length > 0 && gemSlots[gemSlots.length - 1] === "0") {
+			gemSlots.pop();
 		}
 
 		chosen.push({
@@ -231,6 +241,7 @@ export const resolveChosenDecomposableItems = (
 			uniqueId: item.uniqueId,
 			enchant: chosenEnchant?.enchant,
 			gems,
+			gemSlots,
 		});
 	}
 

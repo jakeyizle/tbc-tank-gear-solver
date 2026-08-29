@@ -328,6 +328,7 @@ const runLPModel = async (
 				{
 					...resolved.base,
 					gems: resolved.gems,
+					gemSlots: resolved.gemSlots,
 					enchant: resolved.enchant ?? EMPTY_ENCHANT,
 					uniqueId: resolved.uniqueId,
 					locked: false,

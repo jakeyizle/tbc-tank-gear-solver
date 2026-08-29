@@ -2,6 +2,7 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { getBaseStats } from "#/data/baseStats";
 import { convertStatToPercentageOrSkill } from "#/helpers/convertStat";
+import { buildStatInputs } from "#/helpers/resultStats";
 import { calculateStatValue } from "#/helpers/stats";
 import type { LPItem } from "#/solver/types";
 import type { BaseConfig, SolverConfiguration } from "#/types/SolverConfig";
@@ -11,22 +12,25 @@ interface StatsSummaryProps {
 	items: LPItem[];
 	baseConfig: BaseConfig;
 	solverConfig: SolverConfiguration;
+	includeBuffsConsumables: boolean;
 }
 
 export default function StatsSummary({
-	items,
+	items: rawItems,
 	baseConfig,
 	solverConfig,
+	includeBuffsConsumables,
 }: StatsSummaryProps) {
-	if (!items || items.length === 0) {
+	if (!rawItems || rawItems.length === 0) {
 		return null;
 	}
 	const baseStats = getBaseStats(baseConfig.raceId, baseConfig.classId);
-	const modifierSources = [
-		...baseConfig.abilitySources,
-		...baseConfig.talentSources,
-		...solverConfig.buffs,
-	];
+	const { items, modifierSources } = buildStatInputs(
+		rawItems,
+		baseConfig,
+		solverConfig,
+		includeBuffsConsumables,
+	);
 
 	const stat = (
 		statName: Parameters<typeof calculateStatValue>[0]["statName"],

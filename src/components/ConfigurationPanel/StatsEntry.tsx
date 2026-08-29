@@ -145,7 +145,7 @@ export default function StatsEntry({ stats, onChange }: StatsEntryProps) {
 								type="number"
 								sx={{
 									flexShrink: 0,
-									width: 66,
+									width: 80,
 									"& .MuiOutlinedInput-root": { pr: 0.5 },
 									"& input": {
 										fontFamily: monoFontFamily,

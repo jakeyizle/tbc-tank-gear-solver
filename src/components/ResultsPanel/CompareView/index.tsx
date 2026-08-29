@@ -4,10 +4,15 @@ import Paper from "@mui/material/Paper";
 import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { CONSUMABLE_TYPES } from "#/components/ResultsPanel/ItemGroupDisplay";
 import { getHeadlineStats } from "#/helpers/resultStats";
-import { groupItemsBySlot, SLOT_LABELS, SLOT_ORDER } from "#/solver/itemSlots";
+import {
+	CONSUMABLE_TYPES,
+	groupItemsBySlot,
+	SLOT_LABELS,
+	SLOT_ORDER,
+} from "#/solver/itemSlots";
 import type { SolveResult } from "#/types/SolverConfig";
 import ConsumablesDiffRow from "./ConsumablesDiffRow";
 import DiffRow from "./DiffRow";
@@ -16,6 +21,8 @@ interface CompareViewProps {
 	resultA: SolveResult;
 	resultB: SolveResult;
 	allResults: SolveResult[];
+	includeBuffsConsumables: boolean;
+	buffsConsumablesToggle: ReactNode;
 	onChangeCompareTo: (id: string) => void;
 	onExit: () => void;
 }
@@ -24,6 +31,8 @@ export default function CompareView({
 	resultA,
 	resultB,
 	allResults,
+	includeBuffsConsumables,
+	buffsConsumablesToggle,
 	onChangeCompareTo,
 	onExit,
 }: CompareViewProps) {
@@ -70,8 +79,8 @@ export default function CompareView({
 	const differingCount = differing.length + (consumablesDiff.equal ? 0 : 1);
 	const rows = showAll ? slotDiffs : differing;
 
-	const statsA = getHeadlineStats(resultA);
-	const statsB = getHeadlineStats(resultB);
+	const statsA = getHeadlineStats(resultA, includeBuffsConsumables);
+	const statsB = getHeadlineStats(resultB, includeBuffsConsumables);
 
 	return (
 		<Paper
@@ -126,14 +135,17 @@ export default function CompareView({
 				<Typography variant="body2" color="text.secondary">
 					{differingCount} of {totalRows} slots differ
 				</Typography>
-				<Typography
-					variant="body2"
-					color="primary"
-					sx={{ ml: "auto", cursor: "pointer" }}
-					onClick={onExit}
-				>
-					Exit compare
-				</Typography>
+				<Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1.5 }}>
+					{buffsConsumablesToggle}
+					<Typography
+						variant="body2"
+						color="primary"
+						sx={{ cursor: "pointer" }}
+						onClick={onExit}
+					>
+						Exit compare
+					</Typography>
+				</Box>
 			</Stack>
 
 			<Box

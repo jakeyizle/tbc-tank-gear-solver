@@ -1,7 +1,16 @@
 import { itemMeetsSocketBonus } from "./socketBonus";
-import type { LPItem } from "./types";
+import type { LPItem, ProcessedItemType } from "./types";
 
-export const LEFT_SLOTS: string[] = [
+export const CONSUMABLE_TYPES: ProcessedItemType[] = [
+	"Flask",
+	"GuardianElixir",
+	"BattleElixir",
+];
+
+// Canonical slot ordering used by WowSims-style gear exports - must match the
+// inventory slot order in ExportStructures/EquipmentSpec.lua's itemLayout,
+// since the importer maps items to slots positionally.
+export const SLOT_ORDER: string[] = [
 	"Head",
 	"Neck",
 	"Shoulder",
@@ -9,11 +18,6 @@ export const LEFT_SLOTS: string[] = [
 	"Chest",
 	"Wrist",
 	"Hands",
-	"Weapon",
-	"Shield",
-];
-
-export const RIGHT_SLOTS: string[] = [
 	"Waist",
 	"Legs",
 	"Feet",
@@ -21,11 +25,10 @@ export const RIGHT_SLOTS: string[] = [
 	"Finger2",
 	"Trinket1",
 	"Trinket2",
+	"Weapon",
+	"Shield",
 	"Ranged",
 ];
-
-// Canonical slot ordering used by WowSims-style gear exports.
-export const SLOT_ORDER: string[] = [...LEFT_SLOTS, ...RIGHT_SLOTS];
 
 export const SLOT_LABELS: Record<string, string> = {
 	Head: "Head",

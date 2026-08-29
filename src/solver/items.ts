@@ -19,6 +19,8 @@ import type {
 	StatName,
 } from "./types";
 
+const isEmptyGemSlot = (id: string | undefined) => !id || id === "0";
+
 const createEmptyEnchant = (): Enchant => {
 	return {
 		name: "",
@@ -175,9 +177,21 @@ const getItem = (inputItem: InputItem) => {
 		.filter((gem) => !!gem) as Gem[];
 	const enchant = getEnchant(inputItem.enchant);
 
+	// preserve the user-supplied gem positions ("0"/empty for a skipped socket)
+	// instead of the compacted `gems` list, so re-exporting a locked item keeps
+	// gems aligned to the same sockets they were pasted in for
+	const gemSlots = [...inputItem.gems];
+	while (gemSlots.length > 0 && isEmptyGemSlot(gemSlots[gemSlots.length - 1])) {
+		gemSlots.pop();
+	}
+	for (let i = 0; i < gemSlots.length; i++) {
+		if (isEmptyGemSlot(gemSlots[i])) gemSlots[i] = "0";
+	}
+
 	const item: ItemVariation = {
 		...baseItem,
 		gems,
+		gemSlots,
 		enchant: enchant as Enchant,
 		uniqueId: `${inputItem.id}-0`,
 		locked: !!inputItem.locked,

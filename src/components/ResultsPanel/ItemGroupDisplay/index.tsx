@@ -1,15 +1,14 @@
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
-import { groupItemsBySlot, SLOT_LABELS, SLOT_ORDER } from "#/solver/itemSlots";
-import type { LPItem, ProcessedItemType } from "#/solver/types";
+import {
+	CONSUMABLE_TYPES,
+	groupItemsBySlot,
+	SLOT_LABELS,
+	SLOT_ORDER,
+} from "#/solver/itemSlots";
+import type { LPItem } from "#/solver/types";
 import ConsumablesRow from "./ConsumablesRow";
 import ItemDisplay from "./ItemDisplay";
-
-export const CONSUMABLE_TYPES: ProcessedItemType[] = [
-	"Flask",
-	"GuardianElixir",
-	"BattleElixir",
-];
 
 interface ItemGroupDisplayProps {
 	items: LPItem[];

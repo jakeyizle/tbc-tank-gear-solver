@@ -2,7 +2,9 @@ import CheckIcon from "@mui/icons-material/Check";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import Paper from "@mui/material/Paper";
+import Switch from "@mui/material/Switch";
 import Typography from "@mui/material/Typography";
 import { useMemo, useState } from "react";
 import { formatItemExport } from "#/helpers/parseItemInput";
@@ -34,6 +36,7 @@ export default function ResultsPanel({
 	const [copied, setCopied] = useState(false);
 	const [compareMode, setCompareMode] = useState(false);
 	const [compareToId, setCompareToId] = useState<string | null>(null);
+	const [includeBuffsConsumables, setIncludeBuffsConsumables] = useState(true);
 
 	const resultsArray = useMemo(
 		() => Array.from(solveResults.values()),
@@ -64,6 +67,24 @@ export default function ResultsPanel({
 		return <EmptyResultsPlaceholder />;
 	}
 
+	const buffsConsumablesToggle = (
+		<FormControlLabel
+			sx={{ mr: 0 }}
+			control={
+				<Switch
+					size="small"
+					checked={includeBuffsConsumables}
+					onChange={(e) => setIncludeBuffsConsumables(e.target.checked)}
+				/>
+			}
+			label={
+				<Typography variant="body2" color="text.secondary">
+					Include buffs &amp; consumables
+				</Typography>
+			}
+		/>
+	);
+
 	const compareToResult = compareToId ? solveResults.get(compareToId) : null;
 	if (compareMode && activeResult && compareToResult) {
 		return (
@@ -71,6 +92,8 @@ export default function ResultsPanel({
 				resultA={activeResult}
 				resultB={compareToResult}
 				allResults={resultsArray}
+				includeBuffsConsumables={includeBuffsConsumables}
+				buffsConsumablesToggle={buffsConsumablesToggle}
 				onChangeCompareTo={setCompareToId}
 				onExit={() => setCompareMode(false)}
 			/>
@@ -97,7 +120,8 @@ export default function ResultsPanel({
 				<Paper elevation={1} sx={{ p: 2 }}>
 					<Box display="flex" alignItems="center" gap={1.5} sx={{ mb: 1.5 }}>
 						<Typography variant="h6">Equipment</Typography>
-						<Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
+						<Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1 }}>
+							{buffsConsumablesToggle}
 							{nextResult && (
 								<Button
 									size="small"
@@ -150,6 +174,7 @@ export default function ResultsPanel({
 								items={activeResult.items}
 								baseConfig={activeResult.baseConfig}
 								solverConfig={activeResult.solverConfig}
+								includeBuffsConsumables={includeBuffsConsumables}
 							/>
 						</Box>
 					</Box>

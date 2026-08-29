@@ -53,11 +53,11 @@ export const formatItemExport = (items: LPItem[]): string => {
 	);
 
 	const exportItems = orderedItems.map((item) => ({
-		id: Number(item.id),
-		gems: item.gems.map((g) => Number(g.id)),
 		...(item.enchant.effectID
 			? { enchant: Number(item.enchant.effectID) }
 			: {}),
+		gems: item.gemSlots.map((id) => Number(id)),
+		id: Number(item.id),
 	}));
 	return JSON.stringify({ gear: { items: exportItems } });
 };

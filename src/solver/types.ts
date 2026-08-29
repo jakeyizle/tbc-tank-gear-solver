@@ -12,6 +12,10 @@ export interface Item {
 export interface ItemVariation extends Item {
 	enchant: Enchant;
 	gems: Gem[];
+	// gem ids in socket-position order, "0" for an empty socket that precedes a
+	// filled one, trailing empty sockets dropped - matches the positional array
+	// WowSims-style exports expect (see ExportStructures/ItemSpec.lua)
+	gemSlots: string[];
 	uniqueId: string;
 	locked: boolean;
 }

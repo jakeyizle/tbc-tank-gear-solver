@@ -19,6 +19,7 @@ export const getConsumableLPItems = (
 			socketBonus: [],
 			enchant: { name: "", id: "", effectID: "", type: "Ranged", stats: [] },
 			gems: [],
+			gemSlots: [],
 			uniqueId: consumable.id,
 			locked: false,
 			avoidanceScore: scores.avoidanceScore,
