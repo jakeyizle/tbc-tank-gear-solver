@@ -1,9 +1,9 @@
 import type { LPItem } from "./types";
 
-type SocketColor = 'Red' | 'Blue' | 'Yellow';
-type GemColor = 'Red' | 'Blue' | 'Yellow' | 'Purple' | 'Green' | 'Orange';
+export type SocketColor = 'Red' | 'Blue' | 'Yellow';
+export type GemColor = 'Red' | 'Blue' | 'Yellow' | 'Purple' | 'Green' | 'Orange';
 
-const gemColorMatches: Record<SocketColor, GemColor[]> = {
+export const gemColorMatches: Record<SocketColor, GemColor[]> = {
   Red: ['Red', 'Purple', 'Orange'],
   Blue: ['Blue', 'Purple', 'Green'],
   Yellow: ['Yellow', 'Green', 'Orange'],

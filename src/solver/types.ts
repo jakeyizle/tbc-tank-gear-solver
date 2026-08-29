@@ -24,6 +24,46 @@ export interface LPItem extends Omit<ItemVariation, "type"> {
     resistanceScores: Partial<Record<StatName, number>>;
 }
 
+export interface ScoreSet {
+	avoidanceScore: number;
+	objectiveScore: number;
+	uncritabilityScore: number;
+	resistanceScores: Partial<Record<StatName, number>>;
+}
+
+export type ScoreAxis = "avoidanceScore" | "objectiveScore" | "uncritabilityScore";
+
+export interface EnchantCandidate {
+	enchant: Enchant;
+	varName: string;
+	scores: ScoreSet;
+}
+
+export interface GemCandidate {
+	gem: Gem;
+	varName: string;
+	scores: ScoreSet;
+}
+
+export interface SocketCandidates {
+	socketIndex: number;
+	color: Socket["color"];
+	candidates: GemCandidate[];
+}
+
+// an unlocked, non-consumable item decomposed into first-class (item, enchant) and
+// (item, socket, gem) binary-variable candidates instead of a pre-baked variant list
+export interface DecomposableItem {
+	base: Item;
+	uniqueId: string;
+	processedType: ProcessedItemType;
+	itemScores: ScoreSet;
+	enchantCandidates: EnchantCandidate[];
+	sockets: SocketCandidates[];
+	bonusVarName?: string;
+	bonusScores?: ScoreSet;
+}
+
 export interface ResistanceFloor {
 	stat: StatName;
 	value: number;

@@ -21,6 +21,8 @@ export class SolverConfiguration {
 	readonly flatModifierSources: ModifierSource[];
 	readonly multiplierModifierSources: ModifierSource[];
 	readonly avoidanceStatName: "Avoidance" | "ShearAvoidance";
+	readonly excludeUniqueGems: boolean;
+	readonly phase: number;
 
 	// Derived values
 	avoidanceTarget: number;
@@ -40,9 +42,13 @@ export class SolverConfiguration {
 		abilitySources: ModifierSource[];
 		raceId: string;
 		classId: string;
+		excludeUniqueGems: boolean;
+		phase: number;
 	}) {
 		this.uncrushabilitySetting = options.uncrushabilitySetting;
 		this.uncritabilitySetting = options.uncritabilitySetting;
+		this.excludeUniqueGems = options.excludeUniqueGems;
+		this.phase = options.phase;
 		this.resistanceFloors = options.resistanceFloors ?? [];
 		this.avoidanceStatName =
 			options.uncrushabilitySetting === 2 ? "ShearAvoidance" : "Avoidance";

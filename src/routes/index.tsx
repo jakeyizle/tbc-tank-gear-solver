@@ -15,6 +15,7 @@ import { loadAppState, saveAppState } from "#/helpers/persistence";
 import { useCharacterConfig } from "#/hooks/useCharacterConfig";
 import { useSolverConfigs } from "#/hooks/useSolverConfigs";
 import { solveAll } from "#/solver";
+import type { SolveAllProgress } from "#/solver";
 import type { ModifierSource } from "#/solver/types";
 import type { SolveResult } from "#/types/SolverConfig";
 export const Route = createFileRoute("/")({ component: App });
@@ -33,6 +34,10 @@ function App() {
 	const [areEnchantsGemsLocked, setAreEnchantsGemsLocked] = useState(
 		() => _saved?.areEnchantsGemsLocked ?? false
 	);
+	const [excludeUniqueGems, setExcludeUniqueGems] = useState(
+		() => _saved?.excludeUniqueGems ?? false
+	);
+	const [phase, setPhase] = useState(() => _saved?.phase ?? 3);
 
 	const {
 		configs,
@@ -54,13 +59,19 @@ function App() {
 	const [solveResults, setSolveResults] = useState<Map<string, SolveResult>>(
 		() => _saved?.solveResults?.length ? new Map(_saved.solveResults) : new Map()
 	);
-	const [isSolving, setIsSolving] = useState(false);
+	const [solveProgress, setSolveProgress] = useState<SolveAllProgress | null>(null);
+	const isSolving = solveProgress !== null;
 	const [activeResultId, setActiveResultId] = useState<string | null>(
 		() => _saved?.activeResultId ?? null
 	);
 
 	const handleSolveAll = async () => {
-		setIsSolving(true);
+		setSolveProgress({
+			configIndex: 0,
+			totalConfigs: configs.length,
+			configName: configs[0]?.name ?? "",
+			innerFraction: 0,
+		});
 		const newResults = new Map<string, SolveResult>();
 		let firstResultId: string | null = null;
 
@@ -72,6 +83,8 @@ function App() {
 			raceId: raceValue,
 			classId: classValue,
 			areEnchantsGemsLocked,
+			excludeUniqueGems,
+			phase,
 			talentSources: talents,
 			abilitySources,
 		}
@@ -85,7 +98,7 @@ function App() {
 		});
 
 		try {
-			const solverResults = await solveAll(items, baseConfig, configs);
+			const solverResults = await solveAll(items, baseConfig, configs, setSolveProgress);
 			for (const result of solverResults) {
 				newResults.set(result.id, result);
 				if (!firstResultId) {
@@ -102,13 +115,15 @@ function App() {
 				raceValue,
 				talents,
 				areEnchantsGemsLocked,
+				excludeUniqueGems,
+				phase,
 				configs,
 				activeConfigId,
 				solveResults: [...newResults.entries()],
 				activeResultId: firstResultId,
 			});
 		} finally {
-			setIsSolving(false);
+			setSolveProgress(null);
 		}
 	};
 
@@ -131,6 +146,10 @@ function App() {
 						setItemInput={setItemInput}
 						areEnchantsGemsLocked={areEnchantsGemsLocked}
 						setAreEnchantsGemsLocked={setAreEnchantsGemsLocked}
+						excludeUniqueGems={excludeUniqueGems}
+						setExcludeUniqueGems={setExcludeUniqueGems}
+						phase={phase}
+						setPhase={setPhase}
 					/>
 
 					<ConfigurationPanel
@@ -153,6 +172,7 @@ function App() {
 							onSolve={handleSolveAll}
 							isSolving={isSolving}
 							setCount={configs.length}
+							solveProgress={solveProgress}
 						/>
 					</Box>
 				</Stack>
@@ -166,6 +186,7 @@ function App() {
 						activeResultId={activeResultId}
 						setActiveResultId={setActiveResultId}
 						isLoading={isSolving}
+						solveProgress={solveProgress}
 					/>
 				</Stack>
 			</Grid>

@@ -11,6 +11,8 @@ export interface PersistedState {
 	raceValue: string;
 	talents: ModifierSource[];
 	areEnchantsGemsLocked: boolean;
+	excludeUniqueGems: boolean;
+	phase: number;
 	configs: SolverConfiguration[];
 	activeConfigId: string;
 	solveResults: Array<[string, SolveResult]>;

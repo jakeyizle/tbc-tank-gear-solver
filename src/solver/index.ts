@@ -7,6 +7,8 @@ interface SolveOptions {
 	optimizeStats: Stat[];
 	resistanceFloors: ResistanceFloor[];
 	areEnchantsGemsLocked: boolean;
+	excludeUniqueGems: boolean;
+	phase: number;
 	raceId: string;
 	classId: string;
 	talentSources: ModifierSource[];
@@ -15,9 +17,14 @@ interface SolveOptions {
 	enabledConsumableIds: string[];
 }
 
+type WorkerMessage =
+	| { type: "progress"; iteration: number; maxIterations: number }
+	| { type: "result"; items: LPItem[] };
+
 export const solve = async (
 	items: InputItem[],
 	options: SolveOptions,
+	onProgress?: (fraction: number) => void,
 ): Promise<LPItem[]> => {
 	return new Promise((resolve, reject) => {
 		const worker = new Worker(new URL("./solver.worker.ts", import.meta.url), {
@@ -25,9 +32,15 @@ export const solve = async (
 		});
 
 		worker.onmessage = (e) => {
+			const data = e.data as WorkerMessage;
+			if (data.type === "progress") {
+				onProgress?.(data.iteration / data.maxIterations);
+				return;
+			}
+
 			console.log("worker result");
 			worker.terminate();
-			resolve(e.data as LPItem[]);
+			resolve(data.items);
 		};
 
 		worker.onerror = (e) => {
@@ -40,10 +53,21 @@ export const solve = async (
 	});
 };
 
+export interface SolveAllProgress {
+	configIndex: number;
+	totalConfigs: number;
+	configName: string;
+	innerFraction: number;
+}
+
 export const solveAll = async (
 	items: InputItem[],
 	baseConfig: BaseConfig,
 	solverConfigs: UISolverConfiguration[],
+	onProgress?: (progress: SolveAllProgress) => void,
+	// overridable so this orchestration (in particular, the cross-config item-locking behavior)
+	// can be tested without a real Worker - defaults to the real worker-based solve for prod use
+	solveFn: typeof solve = solve,
 ): Promise<SolveResult[]> => {
 	// the idea here is to solve in order
 	// the items that are selected are locked, and no variants for those items will be generated for the next configs
@@ -52,11 +76,29 @@ export const solveAll = async (
 		return { ...item, locked: baseConfig.areEnchantsGemsLocked };
 	});
 
-	for (const solverConfig of solverConfigs) {
-		const items = await solve(currentInputItems, {
-			...baseConfig,
-			...solverConfig,
+	const totalConfigs = solverConfigs.length;
+	for (const [configIndex, solverConfig] of solverConfigs.entries()) {
+		onProgress?.({
+			configIndex,
+			totalConfigs,
+			configName: solverConfig.name,
+			innerFraction: 0,
 		});
+
+		const items = await solveFn(
+			currentInputItems,
+			{
+				...baseConfig,
+				...solverConfig,
+			},
+			(innerFraction) =>
+				onProgress?.({
+					configIndex,
+					totalConfigs,
+					configName: solverConfig.name,
+					innerFraction,
+				}),
+		);
 		solverResults.push({
 			items,
 			id: solverConfig.id,

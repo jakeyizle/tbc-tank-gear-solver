@@ -13,6 +13,14 @@ const config = defineConfig({
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     viteReact(),
   ],
+  test: {
+    // glpk.js's default export uses a browser Web Worker; solveConfig.ts is shared with the real
+    // worker (which needs that build) and with vitest (plain Node, no Worker global) - swap in
+    // glpk.js's Node-native synchronous build for tests only, same API shape, prod build untouched.
+    alias: {
+      'glpk.js': 'glpk.js/node',
+    },
+  },
 })
 
 export default config

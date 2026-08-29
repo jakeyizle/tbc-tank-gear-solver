@@ -6,6 +6,7 @@ import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import { useMemo, useState } from "react";
 import { formatItemExport } from "#/helpers/parseItemInput";
+import type { SolveAllProgress } from "#/solver";
 import type { SolveResult } from "#/types/SolverConfig";
 import CompareView from "./CompareView";
 import EmptyResultsPlaceholder from "./EmptyResultsPlaceholder";
@@ -19,6 +20,7 @@ interface ResultsPanelProps {
 	activeResultId: string | null;
 	setActiveResultId: (id: string) => void;
 	isLoading: boolean;
+	solveProgress?: SolveAllProgress | null;
 }
 
 export default function ResultsPanel({
@@ -26,6 +28,7 @@ export default function ResultsPanel({
 	activeResultId,
 	setActiveResultId,
 	isLoading,
+	solveProgress,
 }: ResultsPanelProps) {
 	const activeResult = activeResultId ? solveResults.get(activeResultId) : null;
 	const [copied, setCopied] = useState(false);
@@ -54,7 +57,7 @@ export default function ResultsPanel({
 	};
 
 	if (isLoading) {
-		return <LoadingResultsPlaceholder />;
+		return <LoadingResultsPlaceholder solveProgress={solveProgress ?? null} />;
 	}
 
 	if (solveResults.size === 0) {

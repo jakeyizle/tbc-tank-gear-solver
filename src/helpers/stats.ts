@@ -36,6 +36,10 @@ export const calculateStatValue = ({
 			return calculateMana(items, modifierSources, baseStats);
 		case "Armor":
 			return calculateArmor(items, modifierSources, baseStats);
+		case "BlockValue":
+			return calculateBlockValue(items, modifierSources, baseStats);
+		case "SpellCrit":
+			return calculateSpellCrit(items, modifierSources, baseStats);
 		case "Avoidance":
 			return calculateAvoidance(
 				items,
@@ -239,6 +243,33 @@ const calculateArmor = (
 	const agility = calculateStatValue({items, modifierSources, statName: "Agility", baseStats});
 	const armorFromAgility = agility * 2;
 	return Math.floor(armor + armorFromAgility);
+};
+
+const calculateBlockValue = (
+	items: LPItem[],
+	modifierSources: ModifierSource[],
+	baseStats: Stat[],
+): number => {
+	const blockValue = sumStatValue(items, modifierSources, "BlockValue", baseStats);
+	const strength = calculateStatValue({items, modifierSources, statName: "Strength", baseStats});
+	const blockValueFromStrength = strength / 20;
+	return blockValue + blockValueFromStrength;
+};
+
+const calculateSpellCrit = (
+	items: LPItem[],
+	modifierSources: ModifierSource[],
+	baseStats: Stat[],
+): number => {
+	const spellCrit = sumStatValue(items, modifierSources, "SpellCrit", baseStats);
+	const intellect = calculateStatValue({items, modifierSources, statName: "Intellect", baseStats});
+	const spellCritPercentFromIntellect = intellect / 79.4;
+	const spellCritRatingFromIntellect = convertStatToRating({
+		name: "SpellCrit",
+		value: spellCritPercentFromIntellect,
+		type: "flat",
+	});
+	return spellCrit + spellCritRatingFromIntellect;
 };
 
 const calculateDodge = (

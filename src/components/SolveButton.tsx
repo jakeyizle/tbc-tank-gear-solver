@@ -1,12 +1,23 @@
 import Button from "@mui/material/Button";
+import type { SolveAllProgress } from "#/solver";
 
 interface SolveButtonProps {
 	onSolve: () => void;
 	isSolving: boolean;
 	setCount: number;
+	solveProgress?: SolveAllProgress | null;
 }
 
-export default function SolveButton({ onSolve, isSolving, setCount }: SolveButtonProps) {
+export default function SolveButton({
+	onSolve,
+	isSolving,
+	setCount,
+	solveProgress,
+}: SolveButtonProps) {
+	const label = solveProgress
+		? `Solving set ${solveProgress.configIndex + 1} of ${solveProgress.totalConfigs}…`
+		: "Solving…";
+
 	return (
 		<Button
 			variant="contained"
@@ -15,9 +26,7 @@ export default function SolveButton({ onSolve, isSolving, setCount }: SolveButto
 			onClick={onSolve}
 			disabled={isSolving || setCount === 0}
 		>
-			{isSolving
-				? "Solving…"
-				: `Solve all ${setCount} ${setCount === 1 ? "set" : "sets"}`}
+			{isSolving ? label : `Solve all ${setCount} ${setCount === 1 ? "set" : "sets"}`}
 		</Button>
 	);
 }

@@ -9,7 +9,7 @@ import { STAT_LABELS, STAT_NAMES, type Stat, type StatName } from "#/solver/type
 import { monoFontFamily } from "#/theme";
 
 const FILTERED_STAT_NAMES: StatName[] = STAT_NAMES.filter((stat) => {
-	return ['Stamina', 'Agility', 'SpellPower', 'SpellCrit', 'Armor', 'Strength', 'Resilience', 'Defense', 'MeleeHit', 'Dodge', 'BlockValue', 'SpellHit', 'Parry', 'Block', 'Expertise', 'Health'].includes(stat);
+	return ['SpellPower', 'SpellCrit', 'Armor', 'Resilience', 'Defense', 'MeleeHit', 'Dodge', 'BlockValue', 'SpellHit', 'Parry', 'Block', 'Expertise', 'Health'].includes(stat);
 }).sort((a, b) => STAT_LABELS[a].localeCompare(STAT_LABELS[b]));
 
 interface StatsEntryProps {

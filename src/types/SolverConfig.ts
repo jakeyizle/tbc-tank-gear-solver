@@ -24,6 +24,8 @@ export interface SolveResult {
 
 export interface BaseConfig {
 	areEnchantsGemsLocked: boolean;
+	excludeUniqueGems: boolean;
+	phase: number;
 	raceId: string;
 	classId: string;
 	abilitySources: ModifierSource[];
@@ -37,22 +39,6 @@ export function createEmptyConfig(id: string, name: string): SolverConfiguration
 		uncritabilitySetting: 2,
 		uncrushabilitySetting: 1,
 		optimizeStats: [
-			{ name: "Health", value: 0.1, type: "flat" },
-			{ name: "Agility", value: 0.387, type: "flat" },
-			{ name: "Strength", value: 0.237, type: "flat" },
-			{ name: "Intellect", value: 0.017, type: "flat" },
-			{ name: "Armor", value: 0.044, type: "flat" },
-			{ name: "Defense", value: 0.448, type: "flat" },
-			{ name: "Dodge", value: 0.219, type: "flat" },
-			{ name: "Parry", value: 0.215, type: "flat" },
-			{ name: "Block", value: 0.403, type: "flat" },
-			{ name: "BlockValue", value: 0.324, type: "flat" },
-			{ name: "MeleeHit", value: 0.524, type: "flat" },
-			{ name: "Expertise", value: 1.155, type: "flat" },
-			{ name: "SpellHit", value: 0.713, type: "flat" },
-			{ name: "SpellCrit", value: 0.057, type: "flat" },
-			{ name: "SpellPower", value: 0.775, type: "flat" },
-
 		],
 		resistanceFloors: [],
 		abilities: [],

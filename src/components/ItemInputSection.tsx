@@ -4,7 +4,9 @@ import LockIcon from "@mui/icons-material/Lock";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
+import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
@@ -12,11 +14,34 @@ import Typography from "@mui/material/Typography";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { analyzeItemInput } from "#/helpers/parseItemInput";
 
+const PHASE_OPTIONS = [1, 2, 3, 4, 5];
+
 interface ItemInputSectionProps {
 	itemInput: string;
 	setItemInput: (value: string) => void;
 	areEnchantsGemsLocked: boolean;
 	setAreEnchantsGemsLocked: (value: boolean) => void;
+	excludeUniqueGems: boolean;
+	setExcludeUniqueGems: (value: boolean) => void;
+	phase: number;
+	setPhase: (value: number) => void;
+}
+
+function PhaseSelect({ phase, setPhase }: { phase: number; setPhase: (value: number) => void }) {
+	return (
+		<Select
+			size="small"
+			value={phase}
+			onChange={(e) => setPhase(Number(e.target.value))}
+			sx={{ minWidth: 88 }}
+		>
+			{PHASE_OPTIONS.map((option) => (
+				<MenuItem key={option} value={option}>
+					Phase {option}
+				</MenuItem>
+			))}
+		</Select>
+	);
 }
 
 const formatUnknownIdsMessage = (analysis: {
@@ -50,6 +75,10 @@ export default function ItemInputSection({
 	setItemInput,
 	areEnchantsGemsLocked,
 	setAreEnchantsGemsLocked,
+	excludeUniqueGems,
+	setExcludeUniqueGems,
+	phase,
+	setPhase,
 }: ItemInputSectionProps) {
 	const analysis = useMemo(() => analyzeItemInput(itemInput), [itemInput]);
 	const isValid = analysis.status === "valid" || analysis.status === "warning";
@@ -136,6 +165,22 @@ export default function ItemInputSection({
 				</Stack>
 
 				<Stack direction="row" spacing={1} alignItems="center" sx={{ ml: "auto" }}>
+					<PhaseSelect phase={phase} setPhase={setPhase} />
+					<FormControlLabel
+						sx={{ mr: 0 }}
+						control={
+							<Switch
+								size="small"
+								checked={!excludeUniqueGems}
+								onChange={(e) => setExcludeUniqueGems(!e.target.checked)}
+							/>
+						}
+						label={
+							<Typography variant="body2" color="text.secondary">
+								Unique gems
+							</Typography>
+						}
+					/>
 					<FormControlLabel
 						sx={{ mr: 0 }}
 						control={
@@ -256,21 +301,37 @@ export default function ItemInputSection({
 							</Stack>
 						) : null}
 					</Box>
-					<FormControlLabel
-						control={
-							<Switch
-								size="small"
-								checked={areEnchantsGemsLocked}
-								onChange={(e) => setAreEnchantsGemsLocked(e.target.checked)}
-							/>
-						}
-						label={
-							<Stack direction="row" spacing={0.5} alignItems="center">
-								<LockIcon fontSize="inherit" />
-								<Typography variant="body2">Lock enchants and gems</Typography>
-							</Stack>
-						}
-					/>
+					<Stack direction="row" spacing={2} alignItems="center" useFlexGap sx={{ flexWrap: "wrap" }}>
+						<FormControlLabel
+							control={
+								<Switch
+									size="small"
+									checked={areEnchantsGemsLocked}
+									onChange={(e) => setAreEnchantsGemsLocked(e.target.checked)}
+								/>
+							}
+							label={
+								<Stack direction="row" spacing={0.5} alignItems="center">
+									<LockIcon fontSize="inherit" />
+									<Typography variant="body2">Lock enchants and gems</Typography>
+								</Stack>
+							}
+						/>
+						<FormControlLabel
+							control={
+								<Switch
+									size="small"
+									checked={!excludeUniqueGems}
+									onChange={(e) => setExcludeUniqueGems(!e.target.checked)}
+								/>
+							}
+							label={<Typography variant="body2">Unique gems</Typography>}
+						/>
+						<Stack direction="row" spacing={1} alignItems="center">
+							<Typography variant="body2">Phase</Typography>
+							<PhaseSelect phase={phase} setPhase={setPhase} />
+						</Stack>
+					</Stack>
 				</>
 			)}
 		</Paper>

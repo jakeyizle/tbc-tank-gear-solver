@@ -5,13 +5,17 @@ import { overrideItem } from "./itemOverride";
 import type { SolverConfiguration } from "./SolverConfiguration";
 import { gemsSatisfySocketBonus } from "./socketBonus";
 import type {
+	DecomposableItem,
 	Enchant,
+	EnchantCandidate,
 	Gem,
+	GemCandidate,
 	InputItem,
 	Item,
 	ItemVariation,
 	LPItem,
 	ProcessedItemType,
+	SocketCandidates,
 	StatName,
 } from "./types";
 
@@ -25,16 +29,96 @@ const createEmptyEnchant = (): Enchant => {
 	};
 };
 
-export const getTransformedItems = (
+// Partitions input items into two groups for the MIP model:
+// - fixedItems: locked items (already have chosen gems/enchant) and consumables - fully
+//   scored single-variant LPItems, unchanged from the pre-decomposition approach
+// - decomposableItems: unlocked items broken into first-class (item, enchant) and
+//   (item, socket, gem) candidates, scored individually, for the solver to combine
+export const prepareItemCandidates = (
 	inputItems: InputItem[],
 	config: SolverConfiguration,
-) => {
+): { fixedItems: LPItem[]; decomposableItems: DecomposableItem[] } => {
 	const items = inputItems
 		.map((item) => getItem(item))
-		.filter((item) => !!item);
-	const itemVariations = createItemVariations(items, config);
-	const lpItems = itemVariations.map((item) => transformItem(item, config));
-	return lpItems;
+		.filter((item): item is ItemVariation => !!item);
+
+	const enchants = getEnchants(config);
+	const gems = getGems(config);
+	const filteredGems = gems.filter((gem) => gem.color !== "Meta");
+	const metaGems = gems.filter((gem) => gem.color === "Meta");
+
+	const enchantScoreCache = new Map<string, ReturnType<SolverConfiguration["calculateScoresForStats"]>>();
+	const getEnchantScores = (enchant: Enchant) => {
+		let scores = enchantScoreCache.get(enchant.id);
+		if (!scores) {
+			scores = config.calculateScoresForStats(enchant.stats);
+			enchantScoreCache.set(enchant.id, scores);
+		}
+		return scores;
+	};
+
+	const gemScoreCache = new Map<string, ReturnType<SolverConfiguration["calculateScoresForStats"]>>();
+	const getGemScores = (gem: Gem) => {
+		let scores = gemScoreCache.get(gem.id);
+		if (!scores) {
+			scores = config.calculateScoresForStats(gem.stats);
+			gemScoreCache.set(gem.id, scores);
+		}
+		return scores;
+	};
+
+	const fixedItems: LPItem[] = [];
+	const decomposableItems: DecomposableItem[] = [];
+
+	items.forEach((item, inputIndex) => {
+		// key uniqueId off the input row's position, not the base item id, so two different
+		// input rows that happen to offer the same base item (e.g. a ring in both Finger
+		// candidate slots) never collide on the same LP variable name
+		const uniqueId = `${item.id}-${inputIndex}`;
+
+		// "locking" enchants and gems means that if an item already has an enchant or any
+		// gems we will not create any new variations - score it directly, same as before
+		if (item.locked && (item.gems.length > 0 || item.enchant.effectID !== "")) {
+			fixedItems.push(transformItem({ ...item, uniqueId }, config));
+			return;
+		}
+
+		const itemEnchants = getEnchantsForItem(item, enchants);
+		const enchantCandidates: EnchantCandidate[] = itemEnchants.map((enchant) => ({
+			enchant,
+			varName: `e_${uniqueId}_${enchant.id}`,
+			scores: getEnchantScores(enchant),
+		}));
+
+		const sockets: SocketCandidates[] = [];
+		item.sockets.forEach((socket, socketIndex) => {
+			const pool = socket.color === "Meta" ? metaGems : filteredGems;
+			if (pool.length === 0) return;
+			const candidates: GemCandidate[] = pool.map((gem) => ({
+				gem,
+				varName: `g_${uniqueId}_${socketIndex}_${gem.id}`,
+				scores: getGemScores(gem),
+			}));
+			sockets.push({ socketIndex, color: socket.color, candidates });
+		});
+
+		const hasBonus =
+			item.socketBonus.length > 0 &&
+			sockets.some((socket) => socket.color !== "Meta");
+
+		decomposableItems.push({
+			base: item,
+			uniqueId,
+			processedType: getProcessedType(item),
+			itemScores: config.calculateScoresForStats(item.stats),
+			enchantCandidates,
+			sockets,
+			bonusVarName: hasBonus ? `b_${uniqueId}` : undefined,
+			bonusScores: hasBonus ? config.calculateScoresForStats(item.socketBonus) : undefined,
+		});
+	});
+
+	return { fixedItems, decomposableItems };
 };
 
 const getEnchants = (config: SolverConfiguration) => {
@@ -69,7 +153,10 @@ const getEnchant = (idOrEffectID: string | undefined): Enchant | undefined => {
 
 const getGems = (config: SolverConfiguration) => {
 	let gems = Gems as Gem[];
-	gems = gems.filter((gem) => gem.phase === "1");
+	gems = gems.filter((gem) => Number(gem.phase) <= config.phase);
+	if (config.excludeUniqueGems) {
+		gems = gems.filter((gem) => gem.isUnique !== "true");
+	}
 	gems = gems.filter((gem) => gem.stats.length > 0);
 	gems = gems.filter((gem) => config.hasRelevantStats(gem.stats));
 	return gems;
@@ -96,28 +183,6 @@ const getItem = (inputItem: InputItem) => {
 		locked: !!inputItem.locked,
 	};
 	return item;
-};
-
-const createGemCombinations = (gems: Gem[], socketCount: number): Gem[][] => {
-	const result: Gem[][] = [];
-
-	function backtrack(start: number, current: Gem[]) {
-		if (current.length === socketCount) {
-			result.push([...current]);
-			return;
-		}
-
-		for (let i = start; i < gems.length; i++) {
-			current.push(gems[i]);
-			// a Unique-Equipped gem can't repeat within the same item's combination
-			const nextStart = gems[i].isUnique === "true" ? i + 1 : i;
-			backtrack(nextStart, current);
-			current.pop();
-		}
-	}
-
-	backtrack(0, []);
-	return result;
 };
 
 const getEnchantsForItem = (item: Item, enchants: Enchant[]) => {
@@ -150,81 +215,6 @@ const getEnchantsForItem = (item: Item, enchants: Enchant[]) => {
 	return enchants.filter((enchant) => enchant.type === item.type);
 };
 
-const createItemVariations = (
-	items: ItemVariation[],
-	config: SolverConfiguration,
-) => {
-	const enchants = getEnchants(config);
-	const gems = getGems(config);
-	const filteredGems = gems.filter((gem) => gem.color !== "Meta");
-	const metaGems = gems.filter((gem) => gem.color === "Meta");
-
-	const itemVariations: ItemVariation[] = [];
-	for (const item of items) {
-		// "locking" enchants and gems means that if an item already has an enchant or any gems
-		// we will not create any new variations
-		if (item.locked && (item.gems.length > 0 || item.enchant.effectID !== "")) {
-			itemVariations.push(item);
-			continue;
-		}
-		let index = 0;
-		let itemEnchants = getEnchantsForItem(item, enchants);
-		let socketLength = item.sockets.length;
-		const hasMetaSocket = item.sockets.some(
-			(socket) => socket.color === "Meta",
-		);
-
-		if (hasMetaSocket) {
-			socketLength -= 1;
-		}
-		let itemGemCombinations = createGemCombinations(filteredGems, socketLength);
-
-		if (hasMetaSocket) {			
-			itemGemCombinations = itemGemCombinations.flatMap((gemCombination) =>
-				metaGems.map((metaGem) => [...gemCombination, metaGem]),
-			);
-		}
-
-		if (itemEnchants.length === 0) {
-			itemEnchants = [
-				{
-					id: "",
-					name: "",
-					stats: [],
-					effectID: "",
-					type: "Trinket",
-				},
-			];
-		}
-
-		if (itemGemCombinations.length === 0) {
-			itemGemCombinations = [
-				[
-					{
-						id: "",
-						name: "",
-						stats: [],
-						color: "Meta",
-						phase: "1",
-					},
-				],
-			];
-		}
-		for (const enchant of itemEnchants) {
-			for (const gemCombination of itemGemCombinations) {
-				itemVariations.push({
-					...item,
-					enchant: enchant,
-					gems: gemCombination,
-					uniqueId: `${item.id}-${index}`,
-				});
-				index++;
-			}
-		}
-	}
-	return itemVariations;
-};
-
 const EMPTY_SCORES = {
 	avoidanceScore: 0,
 	objectiveScore: 0,
@@ -243,7 +233,14 @@ const sumResistanceScores = (
 	return result;
 };
 
-const transformItem = (
+export const getProcessedType = (item: Item): ProcessedItemType => {
+	if (item.type === "Weapon" && item.weaponType === "Shield") {
+		return "Shield";
+	}
+	return item.type;
+};
+
+export const transformItem = (
 	item: ItemVariation,
 	config: SolverConfiguration,
 ): LPItem => {
@@ -299,16 +296,9 @@ const transformItem = (
 		socketBonusScores.resistanceScores,
 	].reduce(sumResistanceScores, {});
 
-	let processedType: ProcessedItemType = item.type;
-	if (item.type === "Weapon") {
-		if (item.weaponType === "Shield") {
-			processedType = "Shield";
-		}
-	}
-
 	return {
 		...item,
-		type: processedType,
+		type: getProcessedType(item),
 		avoidanceScore,
 		objectiveScore,
 		uncritabilityScore,
