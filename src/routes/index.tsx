@@ -1,14 +1,10 @@
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
-import Tab from "@mui/material/Tab";
-import Tabs from "@mui/material/Tabs";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import CharacterSection from "#/components/CharacterSection";
 import ConfigurationPanel from "#/components/ConfigurationPanel";
-import GlobalSettingsSection from "#/components/GlobalSettingsSection";
-import GlobalSettingsSummary from "#/components/GlobalSettingsSummary";
 import ItemInputSection from "#/components/ItemInputSection";
 import ResultsPanel from "#/components/ResultsPanel";
 import SolveButton from "#/components/SolveButton";
@@ -37,21 +33,19 @@ function App() {
 	const [areEnchantsGemsLocked, setAreEnchantsGemsLocked] = useState(
 		() => _saved?.areEnchantsGemsLocked ?? false
 	);
-	const [activeLeftTab, setActiveLeftTab] = useState<"character" | "gearSets">(
-		() => _saved?.activeLeftTab ?? "character"
-	);
 
 	const {
 		configs,
-		activeConfig,
 		activeConfigId,
 		setActiveConfigId,
 		addConfig,
 		deleteConfig,
 		renameConfig,
-		moveConfig,
+		duplicateConfig,
+		reorderConfig,
 		updateConstraints,
 		updateOptimizeStats,
+		updateResistanceFloors,
 		updateConfig,
 	} = useSolverConfigs();
 
@@ -69,11 +63,11 @@ function App() {
 		setIsSolving(true);
 		const newResults = new Map<string, SolveResult>();
 		let firstResultId: string | null = null;
-		
-		const abilitySources = getAbilities(classValue);		
-		
+
+		const abilitySources = getAbilities(classValue);
+
 		const items = parseItemInput(itemInput);
-		
+
 		const baseConfig = {
 			raceId: raceValue,
 			classId: classValue,
@@ -112,7 +106,6 @@ function App() {
 				activeConfigId,
 				solveResults: [...newResults.entries()],
 				activeResultId: firstResultId,
-				activeLeftTab,
 			});
 		} finally {
 			setIsSolving(false);
@@ -123,69 +116,46 @@ function App() {
 		<Grid container spacing={2}>
 			{/* Left Panel - Input Section */}
 			<Grid size={6}>
-				<Box sx={{ p: 2 }}>
-					<Tabs
-						value={activeLeftTab}
-						onChange={(_, newValue) => setActiveLeftTab(newValue)}
-						sx={{
-							borderBottom: 1,
-							borderColor: "divider",
-							mb: 2,
-							"& .MuiTab-root": { textTransform: "none" },
-						}}
-					>
-						<Tab label="Gear Pool & Character" value="character" />
-						<Tab label="Gear Sets" value="gearSets" />
-					</Tabs>
+				<Stack spacing={1.5} sx={{ p: 2 }}>
+					<CharacterSection
+						classValue={classValue}
+						setClassValue={setClassValue}
+						raceValue={raceValue}
+						setRaceValue={setRaceValue}
+						talents={talents}
+						setTalents={setTalents}
+					/>
 
-					{activeLeftTab === "character" && (
-						<GlobalSettingsSection>
-							<ItemInputSection
-								itemInput={itemInput}
-								setItemInput={setItemInput}
-								areEnchantsGemsLocked={areEnchantsGemsLocked}
-								setAreEnchantsGemsLocked={setAreEnchantsGemsLocked}
-							/>
+					<ItemInputSection
+						itemInput={itemInput}
+						setItemInput={setItemInput}
+						areEnchantsGemsLocked={areEnchantsGemsLocked}
+						setAreEnchantsGemsLocked={setAreEnchantsGemsLocked}
+					/>
 
-							<CharacterSection
-								classValue={classValue}
-								setClassValue={setClassValue}
-								raceValue={raceValue}
-								setRaceValue={setRaceValue}
-								talents={talents}
-								setTalents={setTalents}
-							/>
-						</GlobalSettingsSection>
-					)}
+					<ConfigurationPanel
+						configs={configs}
+						activeConfigId={activeConfigId}
+						setActiveConfigId={setActiveConfigId}
+						addConfig={addConfig}
+						deleteConfig={deleteConfig}
+						renameConfig={renameConfig}
+						duplicateConfig={duplicateConfig}
+						reorderConfig={reorderConfig}
+						updateConstraints={updateConstraints}
+						updateOptimizeStats={updateOptimizeStats}
+						updateResistanceFloors={updateResistanceFloors}
+						updateConfig={updateConfig}
+					/>
 
-					{activeLeftTab === "gearSets" && (
-						<>
-							<GlobalSettingsSummary
-								classValue={classValue}
-								raceValue={raceValue}
-								itemInput={itemInput}
-								areEnchantsGemsLocked={areEnchantsGemsLocked}
-							/>
-							<ConfigurationPanel
-								configs={configs}
-								activeConfig={activeConfig}
-								activeConfigId={activeConfigId}
-								setActiveConfigId={setActiveConfigId}
-								addConfig={addConfig}
-								deleteConfig={deleteConfig}
-								renameConfig={renameConfig}
-								moveConfig={moveConfig}
-								updateConstraints={updateConstraints}
-								updateOptimizeStats={updateOptimizeStats}
-								updateConfig={updateConfig}
-							/>
-						</>
-					)}
-
-					<Box sx={{ mt: 2 }}>
-						<SolveButton onSolve={handleSolveAll} isSolving={isSolving} />
+					<Box>
+						<SolveButton
+							onSolve={handleSolveAll}
+							isSolving={isSolving}
+							setCount={configs.length}
+						/>
 					</Box>
-				</Box>
+				</Stack>
 			</Grid>
 
 			{/* Right Panel - Results Section */}

@@ -1,4 +1,4 @@
-import { gemsSatisfySocketBonus } from "#/solver/socketBonus";
+import { itemMeetsSocketBonus } from "#/solver/socketBonus";
 import type {
 	Buff,
 	DisplayStatName,
@@ -118,19 +118,7 @@ const sumStatValue = (
 		.flatMap((x) => x.stats)
 		.filter((x) => x.name === statName);
 	const socketStats = items
-		.flatMap((item) => {
-			const nonMetaGems = item.gems
-				.map((g) => g.color)
-				.filter((g) => g !== "Meta");
-			const nonMetaSockets = item.sockets
-				.map((s) => s.color)
-				.filter((s) => s !== "Meta");
-			const hasSocketBonus = gemsSatisfySocketBonus(
-				nonMetaSockets,
-				nonMetaGems,
-			);
-			return hasSocketBonus ? item.socketBonus : [];
-		})
+		.flatMap((item) => (itemMeetsSocketBonus(item) ? item.socketBonus : []))
 		.filter((x) => x.name === statName);
 
 	const modifierSourceStats = modifierSources

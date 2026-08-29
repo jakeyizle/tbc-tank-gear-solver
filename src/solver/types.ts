@@ -21,6 +21,12 @@ export interface LPItem extends Omit<ItemVariation, "type"> {
 	avoidanceScore: number;
 	objectiveScore: number;
     uncritabilityScore: number;
+    resistanceScores: Partial<Record<StatName, number>>;
+}
+
+export interface ResistanceFloor {
+	stat: StatName;
+	value: number;
 }
 
 export interface Stat {
@@ -78,6 +84,14 @@ export const STAT_NAMES = [
 ] as const;
 
 export type StatName = typeof STAT_NAMES[number];
+
+export const RESISTANCE_STAT_NAMES: StatName[] = [
+	"ArcaneResistance",
+	"FireResistance",
+	"FrostResistance",
+	"NatureResistance",
+	"ShadowResistance",
+];
 
 // Human-friendly display labels for stats. Keep in sync with STAT_NAMES.
 export const STAT_LABELS: Record<StatName, string> = {
@@ -156,7 +170,22 @@ export type ProcessedItemType =
 	| "Trinket"
 	| "Weapon"
 	| "Ranged"
-	| "Shield";
+	| "Shield"
+	| "Flask"
+	| "BattleElixir"
+	| "GuardianElixir";
+
+export type ConsumableType = "Flask" | "BattleElixir" | "GuardianElixir";
+
+export interface ConsumableItem {
+	id: string;
+	name: string;
+	type: ConsumableType;
+	stats: Stat[];
+	// numeric wowhead item id, e.g. 22861 for https://www.wowhead.com/tbc/item=22861/flask-of-blinding-light
+	// placeholder 0 until filled in via a separate data pass
+	wowheadId: number;
+}
 
 type HandType = "TwoHand" | "OneHand" | "OffHand" | "MainHand";
 
@@ -167,6 +196,8 @@ export interface Enchant {
 	type: ItemType;
 	enchantType?: "Shield" | "TwoHand";
 	stats: Stat[];
+	// when "true", `id` is a spell id (wowhead.com/spell=<id>) rather than an item id (wowhead.com/item=<id>)
+	isSpellID?: string;
 }
 
 export interface Gem {

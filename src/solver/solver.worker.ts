@@ -1,20 +1,32 @@
 import GLPK, { type GLPK as GLPKType, type LP } from "glpk.js";
 import { calculateStatValue } from "#/helpers/stats";
+import { getConsumableLPItems } from "./consumables";
 import { getTransformedItems } from "./items";
 import { SolverConfiguration } from "./SolverConfiguration";
-import type { InputItem, LPItem, ModifierSource, ProcessedItemType, Stat } from "./types";
+import type {
+	InputItem,
+	LPItem,
+	ModifierSource,
+	ProcessedItemType,
+	ResistanceFloor,
+	Stat,
+} from "./types";
 
 interface SolveOptions {
 	uncrushabilitySetting: number;
 	uncritabilitySetting: number;
 	optimizeStats: Stat[];
+	resistanceFloors: ResistanceFloor[];
 	areEnchantsGemsLocked: boolean;
 	raceId: string;
 	classId: string;
 	talentSources: ModifierSource[];
 	buffs: ModifierSource[];
 	abilitySources: ModifierSource[];
+	enabledConsumableIds: string[];
 }
+
+const OPTIONAL_TYPES: ProcessedItemType[] = ["Flask", "BattleElixir", "GuardianElixir"];
 
 function typeBoundNumber(type: ProcessedItemType) {
 	return type === "Finger" || type === "Trinket" ? 2 : 1;
@@ -120,24 +132,81 @@ const makeUncritableConstraint = (
 	};
 };
 
+const makeResistanceConstraint = (
+	lpItems: LPItem[],
+	stat: ResistanceFloor["stat"],
+	target: number,
+	glpk: GLPKType,
+) => {
+	return {
+		name: `resistance_${stat}`,
+		vars: lpItems.map((item) => ({
+			name: item.uniqueId,
+			coef: item.resistanceScores[stat] ?? 0,
+		})),
+		bnds: {
+			type: glpk.GLP_LO,
+			lb: target,
+			ub: Number.POSITIVE_INFINITY,
+		},
+	};
+};
+
 // each slot can have 1 (or 2 for finger/trinket) items
+// flasks/elixirs are optional (0 or up to the bound), unlike mandatory gear slots
 const makeSlotConstraint = (
 	itemsByType: Record<ProcessedItemType, LPItem[]>,
 	glpk: GLPKType,
 ) => {
-	return Object.entries(itemsByType).map(([type, items]) => ({
-		name: `type_${type}`,
-		vars: items.map((item) => ({
-			name: item.uniqueId,
-			coef: 1,
-		})),
-		// TODO: fix type cast
-		bnds: {
-			type: glpk.GLP_FX,
-			lb: typeBoundNumber(type as ProcessedItemType),
-			ub: typeBoundNumber(type as ProcessedItemType),
-		},
+	return Object.entries(itemsByType).map(([type, items]) => {
+		const bound = typeBoundNumber(type as ProcessedItemType);
+		const isOptional = OPTIONAL_TYPES.includes(type as ProcessedItemType);
+		return {
+			name: `type_${type}`,
+			vars: items.map((item) => ({
+				name: item.uniqueId,
+				coef: 1,
+			})),
+			// TODO: fix type cast
+			bnds: isOptional
+				? { type: glpk.GLP_UP, lb: 0, ub: bound }
+				: { type: glpk.GLP_FX, lb: bound, ub: bound },
+		};
+	});
+};
+
+// a flask replaces both elixirs, so a flask can't be combined with either elixir type
+const makeConsumableExclusionConstraint = (
+	itemsByType: Record<ProcessedItemType, LPItem[]>,
+	glpk: GLPKType,
+): SubjectTo[] => {
+	const flaskVars = (itemsByType.Flask ?? []).map((item) => ({
+		name: item.uniqueId,
+		coef: 1,
 	}));
+	if (flaskVars.length === 0) return [];
+
+	const guardianVars = (itemsByType.GuardianElixir ?? []).map((item) => ({
+		name: item.uniqueId,
+		coef: 1,
+	}));
+	const battleVars = (itemsByType.BattleElixir ?? []).map((item) => ({
+		name: item.uniqueId,
+		coef: 1,
+	}));
+
+	return [
+		{
+			name: "flask_vs_guardian_elixir",
+			vars: [...flaskVars, ...guardianVars],
+			bnds: { type: glpk.GLP_UP, lb: 0, ub: 1 },
+		},
+		{
+			name: "flask_vs_battle_elixir",
+			vars: [...flaskVars, ...battleVars],
+			bnds: { type: glpk.GLP_UP, lb: 0, ub: 1 },
+		},
+	];
 };
 
 // each item base can only be used once - otherwise multiple rings will be used
@@ -176,6 +245,7 @@ const runLPModel = async (
 	lpItems: LPItem[],
 	avoidanceTarget: number,
 	uncritabilityTarget: number,
+	resistanceTargets: { stat: ResistanceFloor["stat"]; target: number }[],
 ) => {
 	const glpk = await GLPK();
 	const itemsByType = groupItemsByType(lpItems);
@@ -194,11 +264,16 @@ const runLPModel = async (
 	const baseItemConstraint = makeBaseItemConstaint(itemsByItemId, glpk);
 	const gemCoefsByGemId = groupUniqueGemCoefsByGemId(lpItems);
 	const uniqueGemConstraint = makeUniqueGemConstraint(gemCoefsByGemId, glpk);
+	const consumableExclusionConstraint = makeConsumableExclusionConstraint(
+		itemsByType,
+		glpk,
+	);
 
 	const constraints: SubjectTo[] = [
 		...slotConstraint,
 		...baseItemConstraint,
 		...uniqueGemConstraint,
+		...consumableExclusionConstraint,
 	];
 
 	if (avoidanceTarget > 0) {
@@ -219,6 +294,11 @@ const runLPModel = async (
 		constraints.push(uncritableConstraint);
 	}
 
+	for (const { stat, target } of resistanceTargets) {
+		if (target <= 0) continue;
+		constraints.push(makeResistanceConstraint(lpItems, stat, target, glpk));
+	}
+
 	const avoidanceModel = createModel(objective, constraints, lpItems);
 
 	let result = await glpk.solve(avoidanceModel, solveOptions(glpk));
@@ -237,7 +317,12 @@ const runLPModel = async (
 		};
 		const bestAvoidanceTryModel = createModel(
 			avoidanceObjective,
-			[...slotConstraint, ...baseItemConstraint, ...uniqueGemConstraint],
+			[
+				...slotConstraint,
+				...baseItemConstraint,
+				...uniqueGemConstraint,
+				...consumableExclusionConstraint,
+			],
 			lpItems,
 		);
 		result = await glpk.solve(bestAvoidanceTryModel, solveOptions(glpk));
@@ -261,6 +346,9 @@ self.onmessage = async (e) => {
 
 	const config = new SolverConfiguration(options);
 	const lpItems = getTransformedItems(items, config);
+	if (options.enabledConsumableIds.length > 0) {
+		lpItems.push(...getConsumableLPItems(config, options.enabledConsumableIds));
+	}
 	console.log(`avoidance target: ${config.avoidanceTarget}`);
 	console.log(`uncritability target: ${config.uncritabilityTarget}`);
 	console.log(`items: ${lpItems.length}`);
@@ -277,6 +365,7 @@ self.onmessage = async (e) => {
 			lpItems,
 			config.avoidanceTarget,
 			config.uncritabilityTarget,
+			config.resistanceTargets,
 		);
 
 		const itemAvoidance = calculateStatValue({

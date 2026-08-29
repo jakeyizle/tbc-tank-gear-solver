@@ -2,17 +2,22 @@ import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import { useState } from "react";
-import type { Buff } from "#/solver/types";
-import BuffInput from "./BuffInput";
+import type { ConsumableItem } from "#/solver/types";
+import ConsumableInput from "./ConsumableInput";
 
-interface BuffsSectionProps {
-	buffs: Buff[];
-	onBuffChange: (buffId: string) => void;
+type DisplayConsumable = ConsumableItem & { checked: boolean };
+
+interface ConsumablesSectionProps {
+	consumables: DisplayConsumable[];
+	onConsumableChange: (consumableId: string) => void;
 }
 
-export default function BuffSection({ buffs, onBuffChange }: BuffsSectionProps) {
+export default function ConsumablesSection({
+	consumables,
+	onConsumableChange,
+}: ConsumablesSectionProps) {
 	const [expanded, setExpanded] = useState(false);
-	const checkedBuffs = buffs.filter((b) => b.checked);
+	const checkedConsumables = consumables.filter((c) => c.checked);
 
 	return (
 		<Box
@@ -36,17 +41,17 @@ export default function BuffSection({ buffs, onBuffChange }: BuffsSectionProps) 
 					flexShrink: 0,
 				}}
 			>
-				Buffs
+				Consumables
 			</Box>
 
 			{expanded ? (
 				<Stack sx={{ flex: 1 }}>
-					{buffs.map((buff) => (
-						<BuffInput
-							key={buff.id}
-							name={buff.name}
-							isChecked={buff.checked}
-							onChange={() => onBuffChange(buff.id)}
+					{consumables.map((consumable) => (
+						<ConsumableInput
+							key={consumable.id}
+							name={consumable.name}
+							isChecked={consumable.checked}
+							onChange={() => onConsumableChange(consumable.id)}
 						/>
 					))}
 					<Chip
@@ -58,24 +63,26 @@ export default function BuffSection({ buffs, onBuffChange }: BuffsSectionProps) 
 				</Stack>
 			) : (
 				<Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ flex: 1 }}>
-					{checkedBuffs.map((buff) => (
+					{checkedConsumables.map((consumable) => (
 						<Chip
-							key={buff.id}
-							label={buff.name}
+							key={consumable.id}
+							label={consumable.name}
 							size="small"
 							onClick={() => setExpanded(true)}
 							sx={{
-								bgcolor: "rgba(201,154,84,0.16)",
-								border: "1px solid rgba(201,154,84,0.4)",
-								color: "secondary.light",
+								bgcolor: "rgba(126,163,189,0.16)",
+								border: "1px solid rgba(126,163,189,0.4)",
+								color: "primary.light",
 							}}
 						/>
 					))}
 					<Chip
 						label={
-							checkedBuffs.length === buffs.length
-								? "Edit buffs"
-								: `+ ${buffs.length - checkedBuffs.length} more`
+							checkedConsumables.length === consumables.length
+								? "Edit consumables"
+								: checkedConsumables.length === 0
+									? "None enabled — edit"
+									: `+ ${consumables.length - checkedConsumables.length} more`
 						}
 						size="small"
 						variant="outlined"

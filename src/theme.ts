@@ -1,5 +1,7 @@
 import { createTheme } from "@mui/material/styles";
 
+export const monoFontFamily = '"Roboto Mono", ui-monospace, monospace';
+
 export const theme = createTheme({
 	palette: {
 		mode: "dark",
@@ -14,7 +16,7 @@ export const theme = createTheme({
 			dark: "#a97d3c",
 		},
 		background: {
-			default: "#14181c",
+			default: "#0f1216",
 			paper: "#1e242a",
 		},
 		divider: "rgba(255, 255, 255, 0.12)",

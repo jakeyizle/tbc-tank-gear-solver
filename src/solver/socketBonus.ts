@@ -1,3 +1,5 @@
+import type { LPItem } from "./types";
+
 type SocketColor = 'Red' | 'Blue' | 'Yellow';
 type GemColor = 'Red' | 'Blue' | 'Yellow' | 'Purple' | 'Green' | 'Orange';
 
@@ -53,4 +55,11 @@ export function gemsSatisfySocketBonus(sockets: SocketColor[], gems: GemColor[])
   }
 
   return combos.some(canMatch);
+}
+
+export function itemMeetsSocketBonus(item: LPItem): boolean {
+  if (item.socketBonus.length === 0) return false;
+  const nonMetaGems = item.gems.map((g) => g.color).filter((c) => c !== "Meta") as GemColor[];
+  const nonMetaSockets = item.sockets.map((s) => s.color).filter((c) => c !== "Meta") as SocketColor[];
+  return gemsSatisfySocketBonus(nonMetaSockets, nonMetaGems);
 }

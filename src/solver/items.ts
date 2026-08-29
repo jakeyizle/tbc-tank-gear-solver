@@ -12,6 +12,7 @@ import type {
 	ItemVariation,
 	LPItem,
 	ProcessedItemType,
+	StatName,
 } from "./types";
 
 const createEmptyEnchant = (): Enchant => {
@@ -224,6 +225,24 @@ const createItemVariations = (
 	return itemVariations;
 };
 
+const EMPTY_SCORES = {
+	avoidanceScore: 0,
+	objectiveScore: 0,
+	uncritabilityScore: 0,
+	resistanceScores: {} as Partial<Record<StatName, number>>,
+};
+
+const sumResistanceScores = (
+	a: Partial<Record<StatName, number>>,
+	b: Partial<Record<StatName, number>>,
+): Partial<Record<StatName, number>> => {
+	const result: Partial<Record<StatName, number>> = { ...a };
+	for (const [stat, value] of Object.entries(b) as [StatName, number][]) {
+		result[stat] = (result[stat] ?? 0) + value;
+	}
+	return result;
+};
+
 const transformItem = (
 	item: ItemVariation,
 	config: SolverConfiguration,
@@ -232,7 +251,7 @@ const transformItem = (
 	const enchantScores =
 		item.enchant.stats.length > 0
 			? config.calculateScoresForStats(item.enchant.stats)
-			: { avoidanceScore: 0, objectiveScore: 0, uncritabilityScore: 0 };
+			: EMPTY_SCORES;
 
 	const gemScores = item.gems.reduce(
 		(acc, gem) => {
@@ -241,9 +260,13 @@ const transformItem = (
 				avoidanceScore: acc.avoidanceScore + scores.avoidanceScore,
 				objectiveScore: acc.objectiveScore + scores.objectiveScore,
 				uncritabilityScore: acc.uncritabilityScore + scores.uncritabilityScore,
+				resistanceScores: sumResistanceScores(
+					acc.resistanceScores,
+					scores.resistanceScores,
+				),
 			};
 		},
-		{ avoidanceScore: 0, objectiveScore: 0, uncritabilityScore: 0 },
+		EMPTY_SCORES,
 	);
 
 	const nonMetaSockets = item.sockets
@@ -252,7 +275,7 @@ const transformItem = (
 	const nonMetaGems = item.gems.map((g) => g.color).filter((g) => g !== "Meta");
 	const socketBonusScores = gemsSatisfySocketBonus(nonMetaSockets, nonMetaGems)
 		? config.calculateScoresForStats(item.socketBonus)
-		: { avoidanceScore: 0, objectiveScore: 0, uncritabilityScore: 0 };
+		: EMPTY_SCORES;
 
 	const avoidanceScore =
 		itemScores.avoidanceScore +
@@ -269,6 +292,12 @@ const transformItem = (
 		enchantScores.uncritabilityScore +
 		gemScores.uncritabilityScore +
 		socketBonusScores.uncritabilityScore;
+	const resistanceScores = [
+		itemScores.resistanceScores,
+		enchantScores.resistanceScores,
+		gemScores.resistanceScores,
+		socketBonusScores.resistanceScores,
+	].reduce(sumResistanceScores, {});
 
 	let processedType: ProcessedItemType = item.type;
 	if (item.type === "Weapon") {
@@ -283,5 +312,6 @@ const transformItem = (
 		avoidanceScore,
 		objectiveScore,
 		uncritabilityScore,
+		resistanceScores,
 	};
 };

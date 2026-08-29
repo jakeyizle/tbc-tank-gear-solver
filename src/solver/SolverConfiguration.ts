@@ -5,7 +5,7 @@ import {
 	calculateUncritabilityTarget,
 } from "./avoidance";
 import { calculateScores } from "./scores";
-import type { ModifierSource, Stat } from "./types";
+import type { ModifierSource, ResistanceFloor, Stat } from "./types";
 
 /**
  * Centralized configuration object that encapsulates all solver settings
@@ -16,6 +16,7 @@ export class SolverConfiguration {
 	readonly uncrushabilitySetting: number;
 	readonly uncritabilitySetting: number;
 	readonly optimizeStats: Stat[];
+	readonly resistanceFloors: ResistanceFloor[];
 	readonly baseStats: Stat[];
 	readonly flatModifierSources: ModifierSource[];
 	readonly multiplierModifierSources: ModifierSource[];
@@ -26,11 +27,14 @@ export class SolverConfiguration {
 	uncritabilityTarget: number;
 	readonly baseAvoidance: number;
 	readonly baseUncritability: number;
+	// resistance floors converted to LP targets (floor minus what base stats/talents/buffs already provide)
+	readonly resistanceTargets: { stat: ResistanceFloor["stat"]; target: number }[];
 
 	constructor(options: {
 		uncrushabilitySetting: number;
 		uncritabilitySetting: number;
 		optimizeStats: Stat[];
+		resistanceFloors?: ResistanceFloor[];
 		talentSources: ModifierSource[];
 		buffs: ModifierSource[];
 		abilitySources: ModifierSource[];
@@ -39,6 +43,7 @@ export class SolverConfiguration {
 	}) {
 		this.uncrushabilitySetting = options.uncrushabilitySetting;
 		this.uncritabilitySetting = options.uncritabilitySetting;
+		this.resistanceFloors = options.resistanceFloors ?? [];
 		this.avoidanceStatName =
 			options.uncrushabilitySetting === 2 ? "ShearAvoidance" : "Avoidance";
 		this.optimizeStats = options.optimizeStats;
@@ -93,6 +98,16 @@ export class SolverConfiguration {
 			this.uncritabilitySetting,
 			this.baseUncritability,
 		);
+
+		this.resistanceTargets = this.resistanceFloors.map((floor) => {
+			const baseResistance = calculateStatValue({
+				items: [],
+				modifierSources: this.flatModifierSources,
+				baseStats: this.baseStats,
+				statName: floor.stat,
+			});
+			return { stat: floor.stat, target: floor.value - baseResistance };
+		});
 	}
 
 	hasRelevantStats(stats: Stat[]): boolean {
@@ -103,9 +118,15 @@ export class SolverConfiguration {
 		const hasRelevantUncritability =
 			this.uncritabilitySetting > 0 && scores.uncritabilityScore > 0;
 		const hasRelevantObjective = scores.objectiveScore > 0;
+		const hasRelevantResistance = Object.values(scores.resistanceScores).some(
+			(value) => (value ?? 0) > 0,
+		);
 
 		return (
-			hasRelevantAvoidance || hasRelevantUncritability || hasRelevantObjective
+			hasRelevantAvoidance ||
+			hasRelevantUncritability ||
+			hasRelevantObjective ||
+			hasRelevantResistance
 		);
 	}
 
@@ -113,12 +134,14 @@ export class SolverConfiguration {
 		avoidanceScore: number;
 		uncritabilityScore: number;
 		objectiveScore: number;
+		resistanceScores: Partial<Record<ResistanceFloor["stat"], number>>;
 	} {
 		return calculateScores(
 			stats,
 			this.optimizeStats,
 			this.multiplierModifierSources,
 			this.avoidanceStatName,
+			this.resistanceFloors.map((floor) => floor.stat),
 		);
 	}
 

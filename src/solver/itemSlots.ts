@@ -1,3 +1,4 @@
+import { itemMeetsSocketBonus } from "./socketBonus";
 import type { LPItem } from "./types";
 
 export const LEFT_SLOTS: string[] = [
@@ -8,6 +9,8 @@ export const LEFT_SLOTS: string[] = [
 	"Chest",
 	"Wrist",
 	"Hands",
+	"Weapon",
+	"Shield",
 ];
 
 export const RIGHT_SLOTS: string[] = [
@@ -18,16 +21,55 @@ export const RIGHT_SLOTS: string[] = [
 	"Finger2",
 	"Trinket1",
 	"Trinket2",
+	"Ranged",
 ];
-
-export const BOTTOM_SLOTS: string[] = ["Weapon", "Shield", "Ranged"];
 
 // Canonical slot ordering used by WowSims-style gear exports.
-export const SLOT_ORDER: string[] = [
-	...LEFT_SLOTS,
-	...RIGHT_SLOTS,
-	...BOTTOM_SLOTS,
-];
+export const SLOT_ORDER: string[] = [...LEFT_SLOTS, ...RIGHT_SLOTS];
+
+export const SLOT_LABELS: Record<string, string> = {
+	Head: "Head",
+	Neck: "Neck",
+	Shoulder: "Shoulder",
+	Back: "Back",
+	Chest: "Chest",
+	Wrist: "Wrist",
+	Hands: "Hands",
+	Waist: "Waist",
+	Legs: "Legs",
+	Feet: "Feet",
+	Finger1: "Ring 1",
+	Finger2: "Ring 2",
+	Trinket1: "Trinket 1",
+	Trinket2: "Trinket 2",
+	Weapon: "Main Hand",
+	Shield: "Off Hand",
+	Ranged: "Ranged",
+};
+
+export interface EquipmentSummary {
+	filledSlots: number;
+	totalSlots: number;
+	gemCount: number;
+	socketBonusesMet: number;
+}
+
+export const summarizeEquipment = (items: LPItem[]): EquipmentSummary => {
+	let gemCount = 0;
+	let socketBonusesMet = 0;
+
+	for (const item of items) {
+		gemCount += item.gems.length;
+		if (itemMeetsSocketBonus(item)) socketBonusesMet++;
+	}
+
+	return {
+		filledSlots: items.length,
+		totalSlots: SLOT_ORDER.length,
+		gemCount,
+		socketBonusesMet,
+	};
+};
 
 export const groupItemsBySlot = (
 	items: LPItem[],

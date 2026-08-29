@@ -1,7 +1,4 @@
 import Box from "@mui/material/Box";
-import Grid from "@mui/material/Grid";
-import Paper from "@mui/material/Paper";
-import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { getBaseStats } from "#/data/baseStats";
 import { convertStatToPercentageOrSkill } from "#/helpers/convertStat";
@@ -16,167 +13,188 @@ interface StatsSummaryProps {
 	solverConfig: SolverConfiguration;
 }
 
-export default function StatsSummary({ items, baseConfig, solverConfig }: StatsSummaryProps) {
-
+export default function StatsSummary({
+	items,
+	baseConfig,
+	solverConfig,
+}: StatsSummaryProps) {
 	if (!items || items.length === 0) {
 		return null;
 	}
 	const baseStats = getBaseStats(baseConfig.raceId, baseConfig.classId);
-	const modifierSources = [...baseConfig.abilitySources, ...baseConfig.talentSources, ...solverConfig.buffs];
-
-	const headlineStats = [
-		{
-			name: "Avoidance",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "Avoidance"}),
-		},
-		{
-			name: "Shear Avoidance",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "ShearAvoidance"}),
-		},
-		{
-			name: "Uncritability",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "Uncritability"}),
-		},
+	const modifierSources = [
+		...baseConfig.abilitySources,
+		...baseConfig.talentSources,
+		...solverConfig.buffs,
 	];
 
-	const survivabilityStats = [
+	const stat = (
+		statName: Parameters<typeof calculateStatValue>[0]["statName"],
+	) => calculateStatValue({ items, modifierSources, baseStats, statName });
+
+	const headlineStats = [
+		{ name: "Avoidance", value: stat("Avoidance") },
+		{ name: "Shear", value: stat("ShearAvoidance") },
+		{ name: "Uncrit", value: stat("Uncritability") },
+	];
+
+	const defenseRating = stat("Defense");
+	const dodgeRating = stat("Dodge");
+	const parryRating = stat("Parry");
+	const blockRating = stat("Block");
+	const resilienceRating = calculateStatValue({
+		items,
+		modifierSources,
+		baseStats,
+		statName: "Resilience",
+		roundDefenseAndResilience: true,
+	});
+	const spellHitRating = stat("SpellHit");
+	const spellCritRating = stat("SpellCrit");
+
+	const mitigationStats = [
+		{ name: "Health", value: stat("TotalHealth") },
+		{ name: "Armor", value: stat("Armor") },
+		{ name: "Effective HP", value: Math.trunc(stat("Effective HP")) },
 		{
-			name: "Health",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "TotalHealth"}),
+			name: "Defense",
+			value:
+				350 +
+				convertStatToPercentageOrSkill(
+					{ name: "Defense", value: defenseRating, type: "flat" },
+					true,
+				),
+			rating: defenseRating,
 		},
 		{
-			name: "Armor",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "Armor"}),
+			name: "Dodge",
+			value: convertStatToPercentageOrSkill(
+				{ name: "Dodge", value: dodgeRating, type: "flat" },
+				true,
+			),
+			unit: "%" as const,
+			rating: dodgeRating,
 		},
 		{
-			name: "Effective HP",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "Effective HP"}),
+			name: "Parry",
+			value: convertStatToPercentageOrSkill(
+				{ name: "Parry", value: parryRating, type: "flat" },
+				true,
+			),
+			unit: "%" as const,
+			rating: parryRating,
+		},
+		{
+			name: "Block",
+			value: convertStatToPercentageOrSkill(
+				{ name: "Block", value: blockRating, type: "flat" },
+				true,
+			),
+			unit: "%" as const,
+			rating: blockRating,
+		},
+		{ name: "Miss", value: stat("Miss"), unit: "%" as const },
+		{
+			name: "Resilience",
+			value: convertStatToPercentageOrSkill(
+				{ name: "Resilience", value: resilienceRating, type: "flat" },
+				true,
+			),
+			unit: "%" as const,
+			rating: resilienceRating,
 		},
 	];
 
 	const threatStats = [
-		{
-			name: "Spell Power",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "SpellPower"}),
-		},
+		{ name: "Spell Power", value: stat("SpellPower") },
 		{
 			name: "Spell Hit",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "SpellHit"}),
+			value: convertStatToPercentageOrSkill({
+				name: "SpellHit",
+				value: spellHitRating,
+				type: "flat",
+			}),
+			unit: "%" as const,
+			rating: spellHitRating,
 		},
 		{
 			name: "Spell Crit",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "SpellCrit"}),
+			value: convertStatToPercentageOrSkill({
+				name: "SpellCrit",
+				value: spellCritRating,
+				type: "flat",
+			}),
+			unit: "%" as const,
+			rating: spellCritRating,
 		},
-		{
-			name: "Mana",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "Mana"}),
-		},
+		{ name: "Mana", value: stat("Mana") },
 	];
 
-	const mitigationStats = [
-		{
-			name: "Defense",
-			value: 350 + convertStatToPercentageOrSkill({name: "Defense", value: calculateStatValue({items, modifierSources, baseStats, statName: "Defense"}), type: "flat"}, true),
-		},
-		{
-			name: "Dodge",
-			value: convertStatToPercentageOrSkill({name: "Dodge", value: calculateStatValue({items, modifierSources, baseStats, statName: "Dodge"}), type: "flat"}, true),
-			unit: "%" as const,
-		},
-		{
-			name: "Parry",
-			value: convertStatToPercentageOrSkill({name: "Parry", value: calculateStatValue({items, modifierSources, baseStats, statName: "Parry"}), type: "flat"}, true),
-			unit: "%" as const,
-		},
-		{
-			name: "Block",
-			value: convertStatToPercentageOrSkill({name: "Block", value: calculateStatValue({items, modifierSources, baseStats, statName: "Block"}), type: "flat"}, true),
-			unit: "%" as const,
-		},
-		{
-			name: "Miss",
-			value: convertStatToPercentageOrSkill({name: "Miss", value: calculateStatValue({items, modifierSources, baseStats, statName: "Miss"}), type: "flat"}, true),
-			unit: "%" as const,
-		},
-		{
-			name: "Resilience",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "Resilience", roundDefenseAndResilience: true}),
-		},
-	];
-
+	const staminaValue = stat("Stamina");
+	const intellectValue = stat("Intellect");
 	const baseStatRows = [
-		{
-			name: "Strength",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "Strength"}),
-		},
-		{
-			name: "Agility",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "Agility"}),
-		},
-		{
-			name: "Stamina",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "Stamina"}),
-		},
-		{
-			name: "Intellect",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "Intellect"}),
-		},
-		{
-			name: "Spirit",
-			value: calculateStatValue({items, modifierSources, baseStats, statName: "Spirit"}),
-		},
-	];
-
-	const columns = [
-		{ header: "Survivability", stats: survivabilityStats },
-		{ header: "Threat", stats: threatStats },
-		{ header: "Mitigation", stats: mitigationStats },
-		{ header: "Base Stats", stats: baseStatRows },
+		{ name: "Strength", value: stat("Strength") },
+		{ name: "Agility", value: stat("Agility") },
+		{ name: "Stamina", value: staminaValue },
+		{ name: "Intellect", value: intellectValue },
+		{ name: "Spirit", value: stat("Spirit") },
 	];
 
 	return (
-		<Paper elevation={1} sx={{ p: 2 }}>
-			<Typography variant="h6" gutterBottom>
-				Stats Summary
-			</Typography>
-
-			<Stack
-				direction="row"
-				spacing={4}
+		<Box
+			sx={{
+				display: "flex",
+				flexDirection: "column",
+				gap: 2,
+				p: 1.75,
+				borderRadius: 1,
+				bgcolor: "action.hover",
+			}}
+		>
+			<Box
 				sx={{
-					mb: 3,
-					p: 2,
+					display: "grid",
+					gridTemplateColumns: `repeat(${headlineStats.length}, 1fr)`,
+					gap: 1,
 					borderRadius: 1,
-					bgcolor: "action.hover",
+					bgcolor: "background.paper",
+					border: 1,
+					borderColor: "divider",
+					p: 1.25,
 				}}
 			>
-				{headlineStats.map((stat) => (
-					<Box key={stat.name}>
-						<Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.5 }}>
-							{stat.name}
+				{headlineStats.map((s) => (
+					<Box key={s.name} sx={{ minWidth: 0 }}>
+						<Typography
+							variant="overline"
+							color="text.secondary"
+							sx={{ lineHeight: 1.5, whiteSpace: "nowrap" }}
+						>
+							{s.name}
 						</Typography>
-						<Typography variant="h5" color="primary.light" fontWeight={700}>
-							{stat.value.toFixed(stat.value % 1 === 0 ? 0 : 2)}
+						<Typography
+							variant="h5"
+							color="primary.light"
+							fontWeight={700}
+							sx={{ whiteSpace: "nowrap" }}
+						>
+							{s.value.toLocaleString(undefined, {
+								minimumFractionDigits: s.value % 1 === 0 ? 0 : 2,
+								maximumFractionDigits: s.value % 1 === 0 ? 0 : 2,
+							})}
 						</Typography>
 					</Box>
 				))}
-			</Stack>
+			</Box>
 
-			<Grid container spacing={2}>
-				{columns.map((column, index) => (
-					<Grid
-						key={column.header}
-						size={{ xs: 12, sm: 6, md: 3 }}
-						sx={{
-							borderRight: index < columns.length - 1 ? { md: 1 } : 0,
-							borderColor: "divider",
-							pr: { md: 2 },
-						}}
-					>
-						<StatsGroup header={column.header} stats={column.stats} />
-					</Grid>
-				))}
-			</Grid>
-		</Paper>
+			<StatsGroup header="Mitigation" stats={mitigationStats} showRating />
+			<StatsGroup header="Threat" stats={threatStats} showRating />
+			<StatsGroup
+				header="Base Stats"
+				stats={baseStatRows}
+				defaultExpanded={false}
+				collapsedSummary={`${Math.round(staminaValue).toLocaleString()} sta · ${Math.round(intellectValue).toLocaleString()} int`}
+			/>
+		</Box>
 	);
 }

@@ -1,16 +1,18 @@
 import type { BaseConfig, SolveResult, SolverConfiguration as UISolverConfiguration } from "#/types/SolverConfig";
-import type { InputItem, LPItem, ModifierSource, Stat } from "./types";
+import type { InputItem, LPItem, ModifierSource, ResistanceFloor, Stat } from "./types";
 
 interface SolveOptions {
 	uncrushabilitySetting: number;
 	uncritabilitySetting: number;
 	optimizeStats: Stat[];
+	resistanceFloors: ResistanceFloor[];
 	areEnchantsGemsLocked: boolean;
 	raceId: string;
 	classId: string;
 	talentSources: ModifierSource[];
 	buffs: ModifierSource[];
 	abilitySources: ModifierSource[];
+	enabledConsumableIds: string[];
 }
 
 export const solve = async (

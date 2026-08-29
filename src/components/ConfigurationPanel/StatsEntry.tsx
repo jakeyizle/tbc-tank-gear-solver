@@ -1,13 +1,16 @@
-import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
+import CloseIcon from "@mui/icons-material/Close";
+import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
-import MenuItem from "@mui/material/MenuItem";
 import TextField from "@mui/material/TextField";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import { useState } from "react";
 import { STAT_LABELS, STAT_NAMES, type Stat, type StatName } from "#/solver/types";
+import { monoFontFamily } from "#/theme";
+
+const FILTERED_STAT_NAMES: StatName[] = STAT_NAMES.filter((stat) => {
+	return ['Stamina', 'Agility', 'SpellPower', 'SpellCrit', 'Armor', 'Strength', 'Resilience', 'Defense', 'MeleeHit', 'Dodge', 'BlockValue', 'SpellHit', 'Parry', 'Block', 'Expertise', 'Health'].includes(stat);
+}).sort((a, b) => STAT_LABELS[a].localeCompare(STAT_LABELS[b]));
 
 interface StatsEntryProps {
 	stats: Stat[];
@@ -15,119 +18,159 @@ interface StatsEntryProps {
 }
 
 export default function StatsEntry({ stats, onChange }: StatsEntryProps) {
-	const availableStats = (currentIndex: number) => {
-		const selectedStats = stats
-			.map((s, i) => (i !== currentIndex ? s.name : null))
-			.filter(Boolean);
+	const [addingStat, setAddingStat] = useState(false);
+	// raw in-progress text for fields being edited, keyed by stat name.
+	// keeping this separate from `stats` means the list doesn't reorder (and
+	// the input isn't reformatted) until the field is committed on blur.
+	const [drafts, setDrafts] = useState<Partial<Record<StatName, string>>>({});
 
-		return STAT_NAMES.filter((stat) => !selectedStats.includes(stat));
+	const usedStats = new Set(stats.map((s) => s.name));
+	const availableStats = FILTERED_STAT_NAMES.filter((stat) => !usedStats.has(stat));
+
+	const editValue = (name: StatName, newValue: string) => {
+		setDrafts((prev) => ({ ...prev, [name]: newValue }));
 	};
 
-	const updateStat = (index: number, newStat: StatName) => {
-		const newStats = stats.map((entry, i) => {
-			if (i === index) {
-				const stat = STAT_NAMES.find((name) => name === newStat);
-				if (stat) {
-					return { name: stat, value: entry.value, type: "flat" } as Stat;
-				}
-			}
-			return entry;
+	const commitValue = (name: StatName, rawValue: string) => {
+		const parsed = Number(rawValue);
+		const value = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+		onChange(
+			stats.map((entry) => (entry.name === name ? { ...entry, value } : entry)),
+		);
+		setDrafts((prev) => {
+			const next = { ...prev };
+			delete next[name];
+			return next;
 		});
-		onChange(newStats);
 	};
 
-	const updateValue = (index: number, newValue: string) => {
-		// only allow positive numbers
-		if (newValue.length > 0 && Number(newValue) < 0) return;
-		const newStats = stats.map((entry, i) => {
-			if (i === index) {
-				return { ...entry, value: Number(newValue) };
-			}
-			return entry;
-		});
-		onChange(newStats);
+	const removeStat = (name: StatName) => {
+		onChange(stats.filter((entry) => entry.name !== name));
 	};
 
-	const removeStat = (index: number) => {
-		const newStats = stats.filter((_, i) => i !== index);
-		onChange(newStats);
+	const addStat = (name: StatName) => {
+		onChange([...stats, { name, value: 0, type: "flat" }]);
+		setAddingStat(false);
 	};
 
-	const handleAddStat = () => {
-		const usedStats = new Set(stats.map((s) => s.name));
-		const nextAvailable = STAT_NAMES.find((stat) => !usedStats.has(stat));
-		if (!nextAvailable) return;
-
-		const newStats = [
-			...stats,
-			{ name: nextAvailable, value: 0, type: "flat" },
-		] as Stat[];
-		onChange(newStats);
-	};
-
-	const allStatsUsed = stats.length >= STAT_NAMES.length;
+	const sortedStats = [...stats].sort((a, b) => b.value - a.value);
 
 	return (
-		<Box display="flex" flexDirection="column" gap={1.5}>
-			<Box>
-				<Typography variant="h6">Optimize stats</Typography>
-				<Typography variant="body2" color="text.secondary">
-					Add the stats you care about and give each a weight. Higher weights are
-					prioritized when ranking gear.
+		<Box display="flex" flexDirection="column" gap={0.75}>
+			<Box display="flex" alignItems="center" gap={1.25}>
+				<Box
+					component="span"
+					sx={{
+						font: "500 11px/1 Roboto, sans-serif",
+						letterSpacing: "0.08em",
+						textTransform: "uppercase",
+						color: "text.secondary",
+					}}
+				>
+					Stat weights
+				</Box>
+				<Typography variant="caption" color="text.disabled">
+					relative value per point
 				</Typography>
+				{!addingStat && (
+					<Typography
+						variant="caption"
+						color="primary"
+						sx={{ ml: "auto", cursor: "pointer" }}
+						onClick={() => setAddingStat(true)}
+					>
+						+ Add stat
+					</Typography>
+				)}
 			</Box>
 
-			{stats.length === 0 && (
+			{addingStat && (
+				<Autocomplete
+					autoFocus
+					size="small"
+					openOnFocus
+					options={availableStats}
+					getOptionLabel={(stat) => STAT_LABELS[stat]}
+					onChange={(_, value) => value && addStat(value)}
+					onBlur={() => setAddingStat(false)}
+					renderInput={(params) => (
+						<TextField {...params} placeholder="Search stats…" autoFocus />
+					)}
+					sx={{ maxWidth: 260 }}
+				/>
+			)}
+
+			{stats.length === 0 && !addingStat && (
 				<Typography variant="body2" color="text.secondary" fontStyle="italic">
 					No stats added yet. Add at least one stat to tell the solver what to
 					optimize for.
 				</Typography>
 			)}
 
-			{stats.map((entry, index) => (
-				<Box key={entry.name} display="flex" gap={1} alignItems="center">
-					<TextField
-						select
-						label="Stat"
-						value={entry.name}
-						onChange={(e) => updateStat(index, e.target.value as StatName)}
-						size="small"
-						sx={{ flex: 1, minWidth: 180 }}
-					>
-						{availableStats(index).map((stat) => (
-							<MenuItem key={stat} value={stat}>
-								{STAT_LABELS[stat]}
-							</MenuItem>
-						))}
-					</TextField>
-
-					<TextField
-						type="number"
-						label="Weight"
-						value={Math.round(entry.value * 100) / 100}
-						onChange={(e) => updateValue(index, e.target.value)}
-						size="small"
-						sx={{ width: 110 }}
-						slotProps={{ htmlInput: { min: 0, step: 0.5 } }}
-					/>
-
-					<Tooltip title="Remove stat">
-						<IconButton onClick={() => removeStat(index)} size="small">
-							<DeleteIcon fontSize="small" />
-						</IconButton>
-					</Tooltip>
+			{sortedStats.length > 0 && (
+				<Box
+					sx={{
+						display: "grid",
+						gridTemplateColumns: {
+							xs: "1fr",
+							sm: "repeat(2, 1fr)",
+							md: "repeat(3, 1fr)",
+						},
+						gap: "2px 20px",
+					}}
+				>
+					{sortedStats.map((entry) => (
+						<Box
+							key={entry.name}
+							sx={{
+								display: "flex",
+								alignItems: "center",
+								gap: 1,
+								py: 0.375,
+								"&:hover .stat-delete": { opacity: 1 },
+							}}
+						>
+							<Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
+								{STAT_LABELS[entry.name]}
+							</Typography>
+							<TextField
+								value={drafts[entry.name] ?? entry.value.toFixed(2)}
+								onFocus={(e) => e.target.select()}
+								onChange={(e) => editValue(entry.name, e.target.value)}
+								onBlur={(e) => commitValue(entry.name, e.target.value)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") e.currentTarget.blur();
+								}}
+								size="small"
+								type="number"
+								sx={{
+									flexShrink: 0,
+									width: 66,
+									"& .MuiOutlinedInput-root": { pr: 0.5 },
+									"& input": {
+										fontFamily: monoFontFamily,
+										fontSize: 13,
+										textAlign: "right",
+										py: 0.5,
+										px: 0.75,
+									},
+								}}
+								slotProps={{
+									htmlInput: { min: 0, step: 0.01 },
+								}}
+							/>
+							<IconButton
+								className="stat-delete"
+								size="small"
+								onClick={() => removeStat(entry.name)}
+								sx={{ opacity: 0, transition: "opacity 0.1s", flexShrink: 0 }}
+							>
+								<CloseIcon fontSize="inherit" />
+							</IconButton>
+						</Box>
+					))}
 				</Box>
-			))}
-
-			<Button
-				variant="outlined"
-				startIcon={<AddIcon />}
-				onClick={handleAddStat}
-				disabled={allStatsUsed}
-				sx={{ alignSelf: "flex-start" }}
-			>
-				Add stat
-			</Button>
+			)}
 		</Box>
 	);
 }

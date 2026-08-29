@@ -1,16 +1,25 @@
 import { useState } from "react";
+import { CONSUMABLES } from "#/data/consumables";
 import { loadAppState } from "#/helpers/persistence";
-import type { Stat } from "#/solver/types";
+import type { ResistanceFloor, Stat } from "#/solver/types";
 import {
 	createEmptyConfig,
 	type SolverConfiguration,
 } from "#/types/SolverConfig";
 
+const ALL_CONSUMABLE_IDS = CONSUMABLES.map((consumable) => consumable.id);
+
 export function useSolverConfigs() {
 	const _saved = loadAppState();
 
 	const [configs, setConfigs] = useState<SolverConfiguration[]>(() =>
-		_saved?.configs ?? [createEmptyConfig("default", "Default Config")]
+		(_saved?.configs ?? [createEmptyConfig("default", "Default Config")]).map(
+			(c) => ({
+				...c,
+				resistanceFloors: c.resistanceFloors ?? [],
+				enabledConsumableIds: c.enabledConsumableIds ?? ALL_CONSUMABLE_IDS,
+			}),
+		)
 	);
 	const [activeConfigId, setActiveConfigId] = useState<string>(() =>
 		_saved?.activeConfigId ?? "default"
@@ -39,16 +48,33 @@ export function useSolverConfigs() {
 		);
 	};
 
-	const moveConfig = (id: string, direction: "up" | "down") => {
+	const reorderConfig = (draggedId: string, targetId: string) => {
+		setConfigs((prev) => {
+			const fromIndex = prev.findIndex((c) => c.id === draggedId);
+			const toIndex = prev.findIndex((c) => c.id === targetId);
+			if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return prev;
+			const next = [...prev];
+			const [moved] = next.splice(fromIndex, 1);
+			next.splice(toIndex, 0, moved);
+			return next;
+		});
+	};
+
+	const duplicateConfig = (id: string) => {
+		const newId = `config_${Date.now()}`;
 		setConfigs((prev) => {
 			const index = prev.findIndex((c) => c.id === id);
 			if (index === -1) return prev;
-			const target = direction === "up" ? index - 1 : index + 1;
-			if (target < 0 || target >= prev.length) return prev;
+			const copy: SolverConfiguration = {
+				...prev[index],
+				id: newId,
+				name: `${prev[index].name} copy`,
+			};
 			const next = [...prev];
-			[next[index], next[target]] = [next[target], next[index]];
+			next.splice(index + 1, 0, copy);
 			return next;
 		});
+		setActiveConfigId(newId);
 	};
 
 	const updateConfig = (
@@ -75,6 +101,12 @@ export function useSolverConfigs() {
 		}
 	};
 
+	const updateResistanceFloors = (resistanceFloors: ResistanceFloor[]) => {
+		if (activeConfig) {
+			updateConfig(activeConfig.id, { resistanceFloors });
+		}
+	};
+
 	return {
 		configs,
 		activeConfig,
@@ -83,9 +115,11 @@ export function useSolverConfigs() {
 		addConfig,
 		deleteConfig,
 		renameConfig,
-		moveConfig,
+		reorderConfig,
+		duplicateConfig,
 		updateConfig,
 		updateConstraints,
 		updateOptimizeStats,
+		updateResistanceFloors,
 	};
 }

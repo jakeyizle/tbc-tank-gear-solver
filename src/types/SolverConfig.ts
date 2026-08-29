@@ -1,19 +1,17 @@
 import { getBuffs } from "#/data/buffs";
-import type { Buff, LPItem, ModifierSource, Stat } from "#/solver/types";
+import { CONSUMABLES } from "#/data/consumables";
+import type { Buff, LPItem, ModifierSource, ResistanceFloor, Stat } from "#/solver/types";
 export interface SolverConfiguration {
 	id: string;
 	name: string;
 	uncritabilitySetting: number;
 	uncrushabilitySetting: number;
 	optimizeStats: Stat[];
+	resistanceFloors: ResistanceFloor[];
 	abilities: ModifierSource[];
 	talents: ModifierSource[];
 	buffs: Buff[];
-	consumables: {
-		scrollOfAgilityV: boolean;
-		elixir: string;
-		flask: string;
-	};
+	enabledConsumableIds: string[];
 }
 
 export interface SolveResult {
@@ -56,13 +54,10 @@ export function createEmptyConfig(id: string, name: string): SolverConfiguration
 			{ name: "SpellPower", value: 0.775, type: "flat" },
 
 		],
+		resistanceFloors: [],
 		abilities: [],
 		talents: [],
 		buffs: getBuffs(),
-		consumables: {
-			scrollOfAgilityV: false,
-			elixir: "",
-			flask: "",
-		},
+		enabledConsumableIds: CONSUMABLES.map((consumable) => consumable.id),
 	};
 }

@@ -30,11 +30,7 @@ export default function ResultsTabs({
 			}}
 		>
 			{Array.from(solveResults.values()).map((result) => (
-				<Tab
-					key={result.id}
-					label={result.name}
-					value={result.id}
-				/>
+				<Tab key={result.id} label={result.name} value={result.id} />
 			))}
 		</Tabs>
 	);
