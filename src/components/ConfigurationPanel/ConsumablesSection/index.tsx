@@ -1,7 +1,6 @@
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
 import type { ConsumableItem } from "#/solver/types";
 
 type DisplayConsumable = ConsumableItem & { checked: boolean };
@@ -38,7 +37,6 @@ export default function ConsumablesSection({
 				}}
 			>
 				Consumables
-				
 			</Box>
 
 			<Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ flex: 1 }}>

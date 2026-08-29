@@ -19,6 +19,24 @@ interface ItemInputSectionProps {
 	setAreEnchantsGemsLocked: (value: boolean) => void;
 }
 
+const formatUnknownIdsMessage = (analysis: {
+	unknownItemIds: string[];
+	unknownGemIds: string[];
+	unknownEnchantIds: string[];
+}) => {
+	const clauses = [];
+	if (analysis.unknownItemIds.length) {
+		clauses.push(`Unknown item IDs: ${analysis.unknownItemIds.join(", ")}.`);
+	}
+	if (analysis.unknownGemIds.length) {
+		clauses.push(`Unknown gem IDs: ${analysis.unknownGemIds.join(", ")}.`);
+	}
+	if (analysis.unknownEnchantIds.length) {
+		clauses.push(`Unknown enchant IDs: ${analysis.unknownEnchantIds.join(", ")}.`);
+	}
+	return clauses.join(" ");
+};
+
 const PLACEHOLDER = `Paste your WowSims Exporter output here, e.g.
 
 {"items":[{"id":28825,"enchant":2673,"gems":[24033]}, ...]}
@@ -34,7 +52,7 @@ export default function ItemInputSection({
 	setAreEnchantsGemsLocked,
 }: ItemInputSectionProps) {
 	const analysis = useMemo(() => analyzeItemInput(itemInput), [itemInput]);
-	const isValid = analysis.status === "valid";
+	const isValid = analysis.status === "valid" || analysis.status === "warning";
 
 	const [textareaOpen, setTextareaOpen] = useState(() => itemInput.trim().length > 0);
 	const [manualEdit, setManualEdit] = useState(false);
@@ -90,13 +108,31 @@ export default function ItemInputSection({
 							width: 7,
 							height: 7,
 							borderRadius: "50%",
-							bgcolor: "success.main",
+							bgcolor:
+								analysis.status === "warning" ? "warning.main" : "success.main",
 						}}
 					/>
-					<Typography variant="body2" color="success.main">
-						{analysis.status === "valid" &&
-							`${analysis.count} ${analysis.count === 1 ? "item" : "items"}${analysis.format === "json" ? " · WowSims export" : ""}`}
-					</Typography>
+					{analysis.status === "warning" ? (
+						<Typography variant="body2" color="warning.main">
+							{analysis.count} {analysis.count === 1 ? "item" : "items"}
+							{" · "}
+							{analysis.unknownItemIds.length +
+								analysis.unknownGemIds.length +
+								analysis.unknownEnchantIds.length}{" "}
+							unknown ID
+							{analysis.unknownItemIds.length +
+								analysis.unknownGemIds.length +
+								analysis.unknownEnchantIds.length ===
+							1
+								? ""
+								: "s"}
+						</Typography>
+					) : (
+						<Typography variant="body2" color="success.main">
+							{analysis.status === "valid" &&
+								`${analysis.count} ${analysis.count === 1 ? "item" : "items"}${analysis.format === "json" ? " · WowSims export" : ""}`}
+						</Typography>
+					)}
 				</Stack>
 
 				<Stack direction="row" spacing={1} alignItems="center" sx={{ ml: "auto" }}>
@@ -121,7 +157,7 @@ export default function ItemInputSection({
 						sx={{ cursor: "pointer" }}
 						onClick={() => setManualEdit(true)}
 					>
-						Replace
+						Edit Gear Pool
 					</Typography>
 				</Stack>
 			</Paper>
@@ -202,6 +238,13 @@ export default function ItemInputSection({
 								<Typography variant="caption" color="success.main">
 									{analysis.count} {analysis.count === 1 ? "item" : "items"} recognized
 									{analysis.format === "json" ? " from WowSims export" : ""}
+								</Typography>
+							</Stack>
+						) : analysis.status === "warning" ? (
+							<Stack direction="row" spacing={0.5} alignItems="center">
+								<ErrorOutlineIcon color="warning" fontSize="small" />
+								<Typography variant="caption" color="warning.main">
+									{formatUnknownIdsMessage(analysis)}
 								</Typography>
 							</Stack>
 						) : analysis.status === "error" ? (

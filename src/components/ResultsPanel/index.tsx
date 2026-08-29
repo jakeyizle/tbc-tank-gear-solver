@@ -6,7 +6,6 @@ import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import { useMemo, useState } from "react";
 import { formatItemExport } from "#/helpers/parseItemInput";
-import { summarizeEquipment } from "#/solver/itemSlots";
 import type { SolveResult } from "#/types/SolverConfig";
 import CompareView from "./CompareView";
 import EmptyResultsPlaceholder from "./EmptyResultsPlaceholder";
@@ -102,7 +101,7 @@ export default function ResultsPanel({
 									variant="outlined"
 									onClick={handleEnterCompare}
 								>
-									Compare to {nextResult.name}
+									Compare to other results
 								</Button>
 							)}
 							<Button

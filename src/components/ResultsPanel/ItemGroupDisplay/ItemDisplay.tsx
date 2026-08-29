@@ -2,7 +2,6 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import GemToolTips from "#/data/gem-tooltips.json";
 import ItemTooltips from "#/data/item-tooltips.json";
-import { itemMeetsSocketBonus } from "#/solver/socketBonus";
 import type { LPItem } from "#/solver/types";
 
 const GEM_COLORS: Record<string, string> = {
