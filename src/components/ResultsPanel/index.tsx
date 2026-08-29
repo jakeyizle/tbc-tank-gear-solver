@@ -75,7 +75,6 @@ export default function ResultsPanel({
 		);
 	}
 
-	const summary = activeResult ? summarizeEquipment(activeResult.items) : null;
 	const nextResult =
 		activeResult && resultsArray.length > 1
 			? resultsArray[

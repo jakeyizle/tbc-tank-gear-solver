@@ -1,9 +1,8 @@
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
-import { useState } from "react";
+import Typography from "@mui/material/Typography";
 import type { ConsumableItem } from "#/solver/types";
-import ConsumableInput from "./ConsumableInput";
 
 type DisplayConsumable = ConsumableItem & { checked: boolean };
 
@@ -16,9 +15,6 @@ export default function ConsumablesSection({
 	consumables,
 	onConsumableChange,
 }: ConsumablesSectionProps) {
-	const [expanded, setExpanded] = useState(false);
-	const checkedConsumables = consumables.filter((c) => c.checked);
-
 	return (
 		<Box
 			sx={{
@@ -42,55 +38,32 @@ export default function ConsumablesSection({
 				}}
 			>
 				Consumables
+				
 			</Box>
 
-			{expanded ? (
-				<Stack sx={{ flex: 1 }}>
-					{consumables.map((consumable) => (
-						<ConsumableInput
-							key={consumable.id}
-							name={consumable.name}
-							isChecked={consumable.checked}
-							onChange={() => onConsumableChange(consumable.id)}
-						/>
-					))}
+			<Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ flex: 1 }}>
+				{consumables.map((consumable) => (
 					<Chip
-						label="Done"
+						key={consumable.id}
+						label={consumable.checked ? `✓ ${consumable.name}` : consumable.name}
 						size="small"
-						onClick={() => setExpanded(false)}
-						sx={{ alignSelf: "flex-start", mt: 0.5 }}
+						onClick={() => onConsumableChange(consumable.id)}
+						sx={consumable.checked
+							? {
+									bgcolor: "rgba(126,163,189,0.2)",
+									border: "1px solid rgba(126,163,189,0.6)",
+									color: "primary.light",
+									fontWeight: 500,
+								}
+							: {
+									bgcolor: "transparent",
+									border: "1px solid rgba(255,255,255,0.14)",
+									color: "rgba(255,255,255,0.4)",
+									textDecoration: "line-through",
+								}}
 					/>
-				</Stack>
-			) : (
-				<Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ flex: 1 }}>
-					{checkedConsumables.map((consumable) => (
-						<Chip
-							key={consumable.id}
-							label={consumable.name}
-							size="small"
-							onClick={() => setExpanded(true)}
-							sx={{
-								bgcolor: "rgba(126,163,189,0.16)",
-								border: "1px solid rgba(126,163,189,0.4)",
-								color: "primary.light",
-							}}
-						/>
-					))}
-					<Chip
-						label={
-							checkedConsumables.length === consumables.length
-								? "Edit consumables"
-								: checkedConsumables.length === 0
-									? "None enabled — edit"
-									: `+ ${consumables.length - checkedConsumables.length} more`
-						}
-						size="small"
-						variant="outlined"
-						onClick={() => setExpanded(true)}
-						sx={{ borderStyle: "dashed" }}
-					/>
-				</Stack>
-			)}
+				))}
+			</Stack>
 		</Box>
 	);
 }

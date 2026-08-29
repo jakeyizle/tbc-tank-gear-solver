@@ -9,9 +9,9 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import type { DragEvent } from "react";
+import type { DragEvent, ReactNode } from "react";
 import { useState } from "react";
-import { STAT_LABELS, type Buff, type ConsumableItem, type ResistanceFloor, type Stat } from "#/solver/types";
+import { type Buff, type ConsumableItem, type ResistanceFloor, STAT_LABELS, type Stat } from "#/solver/types";
 import { monoFontFamily } from "#/theme";
 import type { SolverConfiguration } from "#/types/SolverConfig";
 import BuffSection from "./BuffSection";
@@ -47,6 +47,34 @@ interface ConfigCardProps {
 	onBuffChange: (buffId: string) => void;
 	onConsumableChange: (consumableId: string) => void;
 	onDropReorder: (draggedId: string) => void;
+}
+
+interface ConfigBandProps {
+	accent: string;
+	titleColor?: string;
+	tint: string;
+	title: string;
+	description: string;
+	children: ReactNode;
+}
+
+function ConfigBand({ accent, titleColor, tint, title, description, children }: ConfigBandProps) {
+	return (
+		<Box sx={{ display: "flex", borderTop: 1, borderColor: "divider" }}>
+			<Box sx={{ width: 3, flexShrink: 0, bgcolor: accent }} />
+			<Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 1.5, p: 2, bgcolor: tint }}>
+				<Box sx={{ display: "flex", alignItems: "baseline", gap: 1.25, flexWrap: "wrap" }}>
+					<Typography sx={{ fontSize: 14, fontWeight: 700, color: titleColor ?? accent }}>
+						{title}
+					</Typography>
+					<Typography variant="caption" color="text.secondary">
+						{description}
+					</Typography>
+				</Box>
+				{children}
+			</Box>
+		</Box>
+	);
 }
 
 function statsSummary(stats: Stat[]): string {
@@ -294,21 +322,43 @@ export default function ConfigCard({
 				</Stack>
 			</Box>
 
-			<Stack spacing={2} sx={{ p: 2 }}>
-				<ConstraintsSection
-					uncritabilitySetting={config.uncritabilitySetting}
-					uncrushabilitySetting={config.uncrushabilitySetting}
-					resistanceFloors={config.resistanceFloors}
-					onUpdateConstraints={onUpdateConstraints}
-					onUpdateResistanceFloors={onUpdateResistanceFloors}
-				/>
-				<StatsEntry stats={config.optimizeStats} onChange={onUpdateOptimizeStats} />
-				<BuffSection buffs={displayBuffs} onBuffChange={onBuffChange} />
-				<ConsumablesSection
-					consumables={displayConsumables}
-					onConsumableChange={onConsumableChange}
-				/>
-			</Stack>
+			<Box display="flex" flexDirection="column">
+				<ConfigBand
+					accent="#7ea3bd"
+					tint="rgba(126,163,189,0.06)"
+					title="Optimizations"
+					description="solver will optimize for these stats and select consumables"
+				>
+					<StatsEntry stats={config.optimizeStats} onChange={onUpdateOptimizeStats} />
+					<ConsumablesSection
+						consumables={displayConsumables}
+						onConsumableChange={onConsumableChange}
+					/>
+				</ConfigBand>
+				<ConfigBand
+					accent="#d08a86"
+					tint="rgba(208,138,134,0.05)"
+					title="Constraints"
+					description="hard limits — a set that misses any of these is thrown out"
+				>
+					<ConstraintsSection
+						uncritabilitySetting={config.uncritabilitySetting}
+						uncrushabilitySetting={config.uncrushabilitySetting}
+						resistanceFloors={config.resistanceFloors}
+						onUpdateConstraints={onUpdateConstraints}
+						onUpdateResistanceFloors={onUpdateResistanceFloors}
+					/>
+				</ConfigBand>
+				<ConfigBand
+					accent="rgba(255,255,255,0.3)"
+					titleColor="rgba(255,255,255,0.85)"
+					tint="rgba(255,255,255,0.025)"
+					title="Assumptions"
+					description="added stats, not solved for"
+				>
+					<BuffSection buffs={displayBuffs} onBuffChange={onBuffChange} />
+				</ConfigBand>
+			</Box>
 		</Box>
 	);
 }

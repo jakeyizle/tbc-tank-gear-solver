@@ -7,8 +7,8 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import {
 	RESISTANCE_STAT_NAMES,
-	STAT_LABELS,
 	type ResistanceFloor,
+	STAT_LABELS,
 	type StatName,
 } from "#/solver/types";
 import { monoFontFamily } from "#/theme";
@@ -57,9 +57,7 @@ export default function ResistanceFloors({ floors, onChange }: ResistanceFloorsP
 				>
 					Resistance floors
 				</Box>
-				<Typography variant="caption" color="text.disabled">
-					optional — solver must reach each value
-				</Typography>
+
 				{availableStats.length > 0 && (
 					<Typography
 						variant="caption"

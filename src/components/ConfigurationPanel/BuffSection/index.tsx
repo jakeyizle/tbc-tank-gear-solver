@@ -1,9 +1,7 @@
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
-import { useState } from "react";
 import type { Buff } from "#/solver/types";
-import BuffInput from "./BuffInput";
 
 interface BuffsSectionProps {
 	buffs: Buff[];
@@ -11,18 +9,12 @@ interface BuffsSectionProps {
 }
 
 export default function BuffSection({ buffs, onBuffChange }: BuffsSectionProps) {
-	const [expanded, setExpanded] = useState(false);
-	const checkedBuffs = buffs.filter((b) => b.checked);
-
 	return (
 		<Box
 			sx={{
 				display: "flex",
 				alignItems: "flex-start",
 				gap: 1.25,
-				pt: 1.5,
-				borderTop: 1,
-				borderColor: "divider",
 			}}
 		>
 			<Box
@@ -39,51 +31,29 @@ export default function BuffSection({ buffs, onBuffChange }: BuffsSectionProps) 
 				Buffs
 			</Box>
 
-			{expanded ? (
-				<Stack sx={{ flex: 1 }}>
-					{buffs.map((buff) => (
-						<BuffInput
-							key={buff.id}
-							name={buff.name}
-							isChecked={buff.checked}
-							onChange={() => onBuffChange(buff.id)}
-						/>
-					))}
+			<Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ flex: 1 }}>
+				{buffs.map((buff) => (
 					<Chip
-						label="Done"
+						key={buff.id}
+						label={buff.checked ? `✓ ${buff.name}` : buff.name}
 						size="small"
-						onClick={() => setExpanded(false)}
-						sx={{ alignSelf: "flex-start", mt: 0.5 }}
+						onClick={() => onBuffChange(buff.id)}
+						sx={buff.checked
+							? {
+									bgcolor: "rgba(201,154,84,0.2)",
+									border: "1px solid rgba(201,154,84,0.6)",
+									color: "secondary.light",
+									fontWeight: 500,
+								}
+							: {
+									bgcolor: "transparent",
+									border: "1px solid rgba(255,255,255,0.14)",
+									color: "rgba(255,255,255,0.4)",
+									textDecoration: "line-through",
+								}}
 					/>
-				</Stack>
-			) : (
-				<Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ flex: 1 }}>
-					{checkedBuffs.map((buff) => (
-						<Chip
-							key={buff.id}
-							label={buff.name}
-							size="small"
-							onClick={() => setExpanded(true)}
-							sx={{
-								bgcolor: "rgba(201,154,84,0.16)",
-								border: "1px solid rgba(201,154,84,0.4)",
-								color: "secondary.light",
-							}}
-						/>
-					))}
-					<Chip
-						label={
-							checkedBuffs.length === buffs.length
-								? "Edit buffs"
-								: `+ ${buffs.length - checkedBuffs.length} more`
-						}
-						size="small"
-						variant="outlined"
-						onClick={() => setExpanded(true)}
-						sx={{ borderStyle: "dashed" }}
-					/>
-				</Stack>
-			)}
+				))}
+			</Stack>
 		</Box>
 	);
 }
