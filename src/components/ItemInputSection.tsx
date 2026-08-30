@@ -4,6 +4,7 @@ import LockIcon from "@mui/icons-material/Lock";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import Link from "@mui/material/Link";
 import MenuItem from "@mui/material/MenuItem";
 import Paper from "@mui/material/Paper";
 import Select from "@mui/material/Select";
@@ -248,8 +249,15 @@ export default function ItemInputSection({
 						color="text.secondary"
 						sx={{ maxWidth: 380 }}
 					>
-						Or a comma-separated list of item IDs. Export with the WowSims
-						Exporter addon.
+						Or a comma-separated list of item IDs. Export with the{" "}
+						<Link
+							href="https://www.curseforge.com/wow/addons/wowsimsexporter"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							WowSims Exporter
+						</Link>{" "}
+						addon.
 					</Typography>
 					<Stack direction="row" spacing={1} sx={{ mt: 0.75 }}>
 						<Button variant="contained" onClick={handlePasteFromClipboard}>

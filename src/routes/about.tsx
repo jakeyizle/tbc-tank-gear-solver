@@ -31,8 +31,8 @@ function About() {
           </Typography>
           <Box component="ul" sx={{ m: 0, pl: 3 }}>
             <Typography component="li">
-              Only Protection Paladin (Human) is supported — other classes
-              and races have no data yet.
+              Only Protection Paladin is supported — other classes have no
+              data yet.
             </Typography>
             <Typography component="li">
               Item, enchant, and gem data is scoped to TBC phases; you choose

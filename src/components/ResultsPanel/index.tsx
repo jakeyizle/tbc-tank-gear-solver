@@ -144,7 +144,7 @@ export default function ResultsPanel({
 								}
 								onClick={handleCopy}
 							>
-								{copied ? "Copied!" : "Export Gear"}
+								{copied ? "Copied!" : "Export Gear (for Sixty Upgrades)"}
 							</Button>
 						</Box>
 					</Box>
