@@ -1,5 +1,7 @@
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
+import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -10,7 +12,7 @@ import ResultsPanel from "#/components/ResultsPanel";
 import SolveButton from "#/components/SolveButton";
 import { getAbilities} from "#/data/abilities";
 import {getTalentsByClass} from "#/data/talents";
-import { parseItemInput } from "#/helpers/parseItemInput";
+import { analyzeItemInput, parseItemInput } from "#/helpers/parseItemInput";
 import { loadAppState, saveAppState } from "#/helpers/persistence";
 import { useCharacterConfig } from "#/hooks/useCharacterConfig";
 import { useSolverConfigs } from "#/hooks/useSolverConfigs";
@@ -64,40 +66,53 @@ function App() {
 	const [activeResultId, setActiveResultId] = useState<string | null>(
 		() => _saved?.activeResultId ?? null
 	);
+	const [solveError, setSolveError] = useState<string | null>(null);
 
 	const handleSolveAll = async () => {
-		setSolveProgress({
-			configIndex: 0,
-			totalConfigs: configs.length,
-			configName: configs[0]?.name ?? "",
-			innerFraction: 0,
-		});
-		const newResults = new Map<string, SolveResult>();
-		let firstResultId: string | null = null;
+		setSolveError(null);
 
-		const abilitySources = getAbilities(classValue);
-
-		const items = parseItemInput(itemInput);
-
-		const baseConfig = {
-			raceId: raceValue,
-			classId: classValue,
-			areEnchantsGemsLocked,
-			excludeUniqueGems,
-			phase,
-			talentSources: talents,
-			abilitySources,
+		const analysis = analyzeItemInput(itemInput);
+		if (analysis.status === "empty" || analysis.status === "error") {
+			setSolveError(
+				analysis.status === "empty"
+					? "Paste a gear pool before solving."
+					: analysis.message
+			);
+			return;
 		}
 
-		// Store the solve configuration values in context
-		updateCharacterConfig({
-			classId: classValue,
-			raceId: raceValue,
-			talentSources: talents,
-			abilitySources,
-		});
-
 		try {
+			setSolveProgress({
+				configIndex: 0,
+				totalConfigs: configs.length,
+				configName: configs[0]?.name ?? "",
+				innerFraction: 0,
+			});
+			const newResults = new Map<string, SolveResult>();
+			let firstResultId: string | null = null;
+
+			const abilitySources = getAbilities(classValue);
+
+			const items = parseItemInput(itemInput);
+
+			const baseConfig = {
+				raceId: raceValue,
+				classId: classValue,
+				areEnchantsGemsLocked,
+				excludeUniqueGems,
+				phase,
+				talentSources: talents,
+				abilitySources,
+			}
+
+			// Store the solve configuration values in context
+			updateCharacterConfig({
+				classId: classValue,
+				raceId: raceValue,
+				talentSources: talents,
+				abilitySources,
+			});
+
 			const solverResults = await solveAll(items, baseConfig, configs, setSolveProgress);
 			for (const result of solverResults) {
 				newResults.set(result.id, result);
@@ -122,12 +137,19 @@ function App() {
 				solveResults: [...newResults.entries()],
 				activeResultId: firstResultId,
 			});
+		} catch (error) {
+			setSolveError(
+				error instanceof Error
+					? error.message
+					: "Something went wrong while solving. Please check your input and try again."
+			);
 		} finally {
 			setSolveProgress(null);
 		}
 	};
 
 	return (
+		<>
 		<Grid container spacing={2}>
 			{/* Left Panel - Input Section */}
 			<Grid size={6}>
@@ -191,5 +213,20 @@ function App() {
 				</Stack>
 			</Grid>
 		</Grid>
+
+		<Snackbar
+			open={!!solveError}
+			autoHideDuration={8000}
+			onClose={() => setSolveError(null)}
+		>
+			<Alert
+				severity="error"
+				onClose={() => setSolveError(null)}
+				sx={{ width: "100%" }}
+			>
+				{solveError}
+			</Alert>
+		</Snackbar>
+		</>
 	);
 }

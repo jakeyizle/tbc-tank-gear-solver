@@ -9,6 +9,8 @@ import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
 import '@fontsource/roboto-mono/400.css';
 import '@fontsource/roboto-mono/500.css';
+import { ErrorBoundary } from '#/components/ErrorBoundary';
+import Header from '#/components/layout/Header';
 import { CharacterConfigProvider } from '#/contexts/CharacterConfigContext';
 import { theme } from '#/theme';
 
@@ -21,18 +23,23 @@ function RootComponent() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <CharacterConfigProvider>
-        <Outlet />
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'TanStack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
+        <Header />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
+        {import.meta.env.DEV && (
+          <TanStackDevtools
+            config={{
+              position: 'bottom-right',
+            }}
+            plugins={[
+              {
+                name: 'TanStack Router',
+                render: <TanStackRouterDevtoolsPanel />,
+              },
+            ]}
+          />
+        )}
       </CharacterConfigProvider>
     </ThemeProvider>
   )
