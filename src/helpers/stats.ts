@@ -24,7 +24,7 @@ export const calculateStatValue = ({
 	items: LPItem[];
 	modifierSources: ModifierSource[];
 	baseStats: Stat[];
-	statName: DisplayStatName | "TotalHealth";
+	statName: DisplayStatName | "TotalHealth" | "TotalMana";
 	roundDefenseAndResilience?: boolean;
 }): number => {
 	switch (statName) {
@@ -32,6 +32,8 @@ export const calculateStatValue = ({
 			return calculateTotalHealth(items, modifierSources, baseStats);
 		case "Health":
 			return calculateHealth(items, modifierSources, baseStats);
+		case "TotalMana":
+			return calculateTotalMana(items, modifierSources, baseStats);
 		case "Mana":
 			return calculateMana(items, modifierSources, baseStats);
 		case "Armor":
@@ -176,63 +178,72 @@ const sumMultiplierStats = (stats: Stat[]): number => {
 	return values.reduce((acc, val) => acc * val, 1);
 };
 
-const calculateHealthFromStamina = (stamina: number): number => {
-	// derived empirically - first 20 stam provides 1 hp each and stam is rounded down
-	const staminaRounded = Math.floor(stamina);
-	return (staminaRounded - 20) * 10 + 20;
+// The first 20 points of a stat contribute 1:1 to their derived resource, everything
+// above that contributes at the given rate (matches mangos-tbc's GetHealthBonusFromStamina/
+// GetManaBonusFromIntellect). Total Stamina/Intellect is always well above 20 for a real
+// character, so this clamp only matters when computing the character's true total resource.
+const calculateResourceFromStatWithClamp = (statValue: number, ratePastClamp: number): number => {
+	const rounded = Math.floor(statValue);
+	const clamped = Math.min(rounded, 20);
+	const pastClamp = rounded - clamped;
+	return clamped + pastClamp * ratePastClamp;
 };
 
-// the difference between health and total health
-// is that total health must use a more complicated stam -> hp formula
+// Shared shape behind Health/Stamina and Mana/Intellect: a flat resource stat plus a
+// derived amount from a driving stat, either clamped (the character's true total, used
+// for TotalHealth/TotalMana) or linear (per-item scoring - see below).
+const calculateResource = (
+	items: LPItem[],
+	modifierSources: ModifierSource[],
+	baseStats: Stat[],
+	resourceStatName: "Health" | "Mana",
+	drivingStatName: "Stamina" | "Intellect",
+	ratePastClamp: number,
+	clamped: boolean,
+): number => {
+	const resource = sumStatValue(items, modifierSources, resourceStatName, baseStats);
+	const drivingStat = calculateStatValue({
+		items,
+		modifierSources,
+		statName: drivingStatName,
+		baseStats,
+	});
+	const resourceFromDrivingStat = clamped
+		? calculateResourceFromStatWithClamp(drivingStat, ratePastClamp)
+		: drivingStat * ratePastClamp;
+	return resource + resourceFromDrivingStat;
+};
+
+// calculateTotalHealth/calculateTotalMana are the true totals shown to the user (and used
+// for EHP): they apply the 20-point clamp above once, against the character's full
+// Stamina/Intellect. calculateHealth/calculateMana are the unclamped linear versions used
+// when scoring an individual item's Stamina/Intellect contribution - since a character's
+// base Stamina/Intellect always exceeds 20 already, any an item adds is necessarily past
+// the clamp and always worth the flat per-point rate, so the linear (unclamped) formula is
+// what the solver's per-item scoring needs.
 const calculateTotalHealth = (
 	items: LPItem[],
 	modifierSources: ModifierSource[],
 	baseStats: Stat[],
-): number => {
-	// TODO: base health numbers are wrong - they are too high
-	const health = sumStatValue(items, modifierSources, "Health", baseStats);
-	const stamina = calculateStatValue({
-		items,
-		modifierSources,
-		statName: "Stamina",
-		baseStats,
-	});
-	const healthFromStamina = calculateHealthFromStamina(stamina);
-	return health + healthFromStamina;
-};
+): number => calculateResource(items, modifierSources, baseStats, "Health", "Stamina", 10, true);
+
 const calculateHealth = (
 	items: LPItem[],
 	modifierSources: ModifierSource[],
 	baseStats: Stat[],
-): number => {
-	// TODO: base health numbers are wrong - they are too high
-	const health = sumStatValue(items, modifierSources, "Health", baseStats);
-	const stamina = calculateStatValue({
-		items,
-		modifierSources,
-		statName: "Stamina",
-		baseStats,
-	});
-	const healthFromStamina = stamina * 10;
-	return health + healthFromStamina;
-};
+): number => calculateResource(items, modifierSources, baseStats, "Health", "Stamina", 10, false);
+
+const calculateTotalMana = (
+	items: LPItem[],
+	modifierSources: ModifierSource[],
+	baseStats: Stat[],
+): number => calculateResource(items, modifierSources, baseStats, "Mana", "Intellect", 15, true);
 
 const calculateMana = (
 	items: LPItem[],
 	modifierSources: ModifierSource[],
 	baseStats: Stat[],
-): number => {
-	// TODO: base mana numbers are wrong - they are too high
-	const mana = sumStatValue(items, modifierSources, "Mana", baseStats);
-	const intellect = calculateStatValue({
-		items,
-		modifierSources,
-		statName: "Intellect",
-		baseStats,
-	});
-	const manaFromIntellect = intellect * 15;
-	return mana + manaFromIntellect;
-};
+): number => calculateResource(items, modifierSources, baseStats, "Mana", "Intellect", 15, false);
 
 const calculateArmor = (
 	items: LPItem[],

@@ -4,6 +4,7 @@ import Button from '@mui/material/Button'
 import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
 import { Link } from '@tanstack/react-router'
+import { APP_NAME } from '#/constants'
 
 export default function Header() {
   return (
@@ -19,7 +20,7 @@ export default function Header() {
             fontWeight: 700,
           }}
         >
-          TBC Prot Paladin Gear Solver
+          {APP_NAME}
         </Typography>
 
         <Box sx={{ flexGrow: 1 }} />

@@ -2,7 +2,9 @@ import { convertStatToRating } from "#/helpers/convertStat";
 import type { Stat, StatName } from "#/solver/types";
 import LevelStats from "./level_stats.json";
 
-// TODO: base dodge varies by race/class
+// Flat, race-independent baseline; per-race variance comes from Agility
+// (see calculateDodge in helpers/stats.ts, which converts each race's
+// base Agility from level_stats.json into additional dodge).
 const BASE_DODGE_AVOIDANCE_CHANCE = 0.65;
 const BASE_PARRY_AVOIDANCE_CHANCE = 5;
 const BASE_MISS_AVOIDANCE_CHANCE = 5;

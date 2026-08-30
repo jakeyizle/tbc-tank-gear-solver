@@ -159,8 +159,8 @@
 		"race": "3",
 		"class": "2",
 		"stats": [
-			{ "name": "Health", "value": 4429 },
-			{ "name": "Mana", "value": 3916 },
+			{ "name": "Health", "value": 3377 },
+			{ "name": "Mana", "value": 2953 },
 			{ "name": "Strength", "value": 128 },
 			{ "name": "Agility", "value": 73 },
 			{ "name": "Stamina", "value": 123 },
@@ -523,8 +523,8 @@
 		"race": "10",
 		"class": "2",
 		"stats": [
-			{ "name": "Health", "value": 4379 },
-			{ "name": "Mana", "value": 3977 },
+			{ "name": "Health", "value": 3377 },
+			{ "name": "Mana", "value": 2953 },
 			{ "name": "Strength", "value": 123 },
 			{ "name": "Agility", "value": 79 },
 			{ "name": "Stamina", "value": 119 },
@@ -614,8 +614,8 @@
 		"race": "11",
 		"class": "2",
 		"stats": [
-			{ "name": "Health", "value": 4389 },
-			{ "name": "Mana", "value": 3932 },
+			{ "name": "Health", "value": 3377 },
+			{ "name": "Mana", "value": 2953 },
 			{ "name": "Strength", "value": 127 },
 			{ "name": "Agility", "value": 74 },
 			{ "name": "Stamina", "value": 119 },

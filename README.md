@@ -216,11 +216,9 @@ The item input text is persisted to `localStorage`. All other UI state resets on
 
 ## Known Issues & Intentional Limitations
 
-- **Only Paladin (classId `"2"`) / Human (raceId `"1"`) supported.** Other classes/races have no data.
-- **Base Health/Mana values are wrong** (too high) — `level_stats.json` data needs correction.
+- **Only Paladin (classId `"2"`) supported**, for the four TBC-valid races: Human, Dwarf, Draenei, and Blood Elf. Other classes/races have no data.
 - **Some enchants missing** — e.g. block rating enchant for shields.
 - **Armor DR formula** uses hardcoded level 73 attacker constant (`10557.5`). Differs against level 72 mobs.
-- **Base dodge hardcoded** at 0.65% — varies by race/class in reality.
 - **`optimizeStats` uses `Stat[]` type** but semantically represents weighted objectives, not stat values. Known type design issue.
 - **`StatConverter`** mixes rating↔percent conversions with stat-to-derived-stat conversions (e.g. Agility→Dodge). Needs refactoring.
 - **Elixirs/Flasks** UI placeholder exists but is not implemented.

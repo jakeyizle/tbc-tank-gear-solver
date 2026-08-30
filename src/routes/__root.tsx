@@ -10,6 +10,7 @@ import '@fontsource/roboto/700.css';
 import '@fontsource/roboto-mono/400.css';
 import '@fontsource/roboto-mono/500.css';
 import { ErrorBoundary } from '#/components/ErrorBoundary';
+import Footer from '#/components/layout/Footer';
 import Header from '#/components/layout/Header';
 import { CharacterConfigProvider } from '#/contexts/CharacterConfigContext';
 import { theme } from '#/theme';
@@ -27,6 +28,7 @@ function RootComponent() {
         <ErrorBoundary>
           <Outlet />
         </ErrorBoundary>
+        <Footer />
         {import.meta.env.DEV && (
           <TanStackDevtools
             config={{

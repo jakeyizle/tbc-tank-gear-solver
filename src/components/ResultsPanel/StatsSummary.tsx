@@ -131,7 +131,7 @@ export default function StatsSummary({
 			unit: "%" as const,
 			rating: spellCritRating,
 		},
-		{ name: "Mana", value: stat("Mana") },
+		{ name: "Mana", value: stat("TotalMana") },
 	];
 
 	const staminaValue = stat("Stamina");
