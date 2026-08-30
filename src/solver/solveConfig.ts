@@ -223,6 +223,22 @@ const solveOptions = (glpk: GLPKType) => ({
 	mipgap: 0.0,
 });
 
+const describeConstraints = (config: SolverConfiguration): string => {
+	const parts: string[] = [];
+	if (config.avoidanceTarget > 0) {
+		parts.push(`${config.avoidanceStatName} target ${config.avoidanceTarget.toFixed(2)}`);
+	}
+	if (config.uncritabilityTarget > 0) {
+		parts.push(`Uncritability target ${config.uncritabilityTarget.toFixed(2)}`);
+	}
+	for (const { stat, target } of config.resistanceTargets) {
+		if (target > 0) {
+			parts.push(`${stat} resistance target ${target.toFixed(2)}`);
+		}
+	}
+	return parts.length > 0 ? parts.join(", ") : "the configured constraints";
+};
+
 const EMPTY_ENCHANT: Enchant = { name: "", id: "", effectID: "", type: "Ranged", stats: [] };
 
 const runLPModel = async (
@@ -294,29 +310,11 @@ const runLPModel = async (
 
 	const model = createModel(objective, constraints, binaries);
 
-	let result = await glpk.solve(model, solveOptions(glpk));
+	const result = await glpk.solve(model, solveOptions(glpk));
 	if (result.result.status !== glpk.GLP_OPT) {
-		console.error(
-			"GLPK failed to find an optimal solution, trying to find best result...",
+		throw new Error(
+			`No gear combination satisfies: ${describeConstraints(config)}.`,
 		);
-
-		const avoidanceObjective = {
-			direction: glpk.GLP_MAX,
-			name: "obj",
-			vars: buildScoreVars(fixedItems, decomposableItems, "avoidanceScore"),
-		};
-		const bestAvoidanceTryModel = createModel(
-			avoidanceObjective,
-			[
-				...slotConstraint,
-				...baseItemConstraint,
-				...uniqueGemConstraint,
-				...consumableExclusionConstraint,
-				...linkingConstraints,
-			],
-			binaries,
-		);
-		result = await glpk.solve(bestAvoidanceTryModel, solveOptions(glpk));
 	}
 
 	const varValues = result.result.vars as Record<string, number>;

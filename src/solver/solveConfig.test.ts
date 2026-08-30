@@ -242,4 +242,60 @@ describe("solveConfig", () => {
 		const highPhase = await solveConfig(testItemPool, baseOptions({ optimizeStats, phase: 5 }));
 		expect(highPhase.some((item) => item.gems.some((gem) => gem.id === phase5Gem))).toBe(true);
 	}, 60000);
+
+	it("scenario 10: throws a descriptive error instead of returning a bogus result when no gear combination can satisfy the constraints", async () => {
+		// no item/gem/enchant in the fixture pool comes anywhere close to this much Shadow
+		// Resistance, so the resistance constraint makes the LP model infeasible
+		const options = baseOptions({
+			resistanceFloors: [{ stat: "ShadowResistance", value: 100000 }],
+		});
+
+		await expect(solveConfig(testItemPool, options)).rejects.toThrow(
+			/ShadowResistance resistance target/,
+		);
+	}, 30000);
+
+	it("scenario 11: solveAll fails the whole batch, naming the offending config, when one of several configs is infeasible", async () => {
+		const solvableConfig = {
+			id: "config-1",
+			name: "Solvable Config",
+			uncritabilitySetting: 0,
+			uncrushabilitySetting: 0,
+			optimizeStats: OBJECTIVE_STATS,
+			resistanceFloors: [],
+			abilities: [],
+			talents: [],
+			buffs: [],
+			enabledConsumableIds: [],
+		};
+		// same fixture pool can't come close to this much Shadow Resistance - see scenario 10
+		const unsolvableConfig = {
+			...solvableConfig,
+			id: "config-2",
+			name: "Unsolvable Config",
+			resistanceFloors: [{ stat: "ShadowResistance" as const, value: 100000 }],
+		};
+		const baseConfig = {
+			areEnchantsGemsLocked: false,
+			excludeUniqueGems: false,
+			phase: 3,
+			raceId: TEST_RACE_ID,
+			classId: TEST_CLASS_ID,
+			abilitySources: [],
+			talentSources: [],
+		};
+
+		const solveFnForTest: typeof solve = (items, options, onProgress) =>
+			solveConfig(items, options, onProgress && ((p) => onProgress(p.iteration / p.maxIterations)));
+
+		await expect(
+			solveAll(
+				testItemPool,
+				baseConfig,
+				[solvableConfig, unsolvableConfig],
+				undefined,
+				solveFnForTest,
+			),
+		).rejects.toThrow(/Unsolvable Config.*ShadowResistance resistance target/s);
+	}, 60000);
 });

@@ -7,9 +7,15 @@ self.onmessage = async (e) => {
 		options: SolveOptions;
 	};
 
-	const result = await solveConfig(items, options, (progress) =>
-		postMessage({ type: "progress", ...progress }),
-	);
-
-	postMessage({ type: "result", items: result });
+	try {
+		const result = await solveConfig(items, options, (progress) =>
+			postMessage({ type: "progress", ...progress }),
+		);
+		postMessage({ type: "result", items: result });
+	} catch (error) {
+		postMessage({
+			type: "error",
+			message: error instanceof Error ? error.message : String(error),
+		});
+	}
 };

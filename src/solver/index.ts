@@ -19,7 +19,8 @@ interface SolveOptions {
 
 type WorkerMessage =
 	| { type: "progress"; iteration: number; maxIterations: number }
-	| { type: "result"; items: LPItem[] };
+	| { type: "result"; items: LPItem[] }
+	| { type: "error"; message: string };
 
 export const solve = async (
 	items: InputItem[],
@@ -35,6 +36,12 @@ export const solve = async (
 			const data = e.data as WorkerMessage;
 			if (data.type === "progress") {
 				onProgress?.(data.iteration / data.maxIterations);
+				return;
+			}
+
+			if (data.type === "error") {
+				worker.terminate();
+				reject(new Error(data.message));
 				return;
 			}
 
@@ -85,20 +92,26 @@ export const solveAll = async (
 			innerFraction: 0,
 		});
 
-		const items = await solveFn(
-			currentInputItems,
-			{
-				...baseConfig,
-				...solverConfig,
-			},
-			(innerFraction) =>
-				onProgress?.({
-					configIndex,
-					totalConfigs,
-					configName: solverConfig.name,
-					innerFraction,
-				}),
-		);
+		let items: LPItem[];
+		try {
+			items = await solveFn(
+				currentInputItems,
+				{
+					...baseConfig,
+					...solverConfig,
+				},
+				(innerFraction) =>
+					onProgress?.({
+						configIndex,
+						totalConfigs,
+						configName: solverConfig.name,
+						innerFraction,
+					}),
+			);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			throw new Error(`"${solverConfig.name}": ${message}`);
+		}
 		solverResults.push({
 			items,
 			id: solverConfig.id,

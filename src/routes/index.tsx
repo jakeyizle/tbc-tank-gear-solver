@@ -1,7 +1,5 @@
-import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
-import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -68,12 +66,34 @@ function App() {
 	);
 	const [solveError, setSolveError] = useState<string | null>(null);
 
+	// a failed/invalid solve leaves no valid result set, so clear it from both state and
+	// localStorage - otherwise reloading the page (or the next render) would silently resurrect
+	// a stale prior solution with no indication it doesn't correspond to the current inputs
+	const handleSolveFailure = (message: string) => {
+		setSolveResults(new Map());
+		setActiveResultId(null);
+		setSolveError(message);
+		saveAppState({
+			itemInput,
+			classValue,
+			raceValue,
+			talents,
+			areEnchantsGemsLocked,
+			excludeUniqueGems,
+			phase,
+			configs,
+			activeConfigId,
+			solveResults: [],
+			activeResultId: null,
+		});
+	};
+
 	const handleSolveAll = async () => {
 		setSolveError(null);
 
 		const analysis = analyzeItemInput(itemInput);
 		if (analysis.status === "empty" || analysis.status === "error") {
-			setSolveError(
+			handleSolveFailure(
 				analysis.status === "empty"
 					? "Paste a gear pool before solving."
 					: analysis.message
@@ -138,7 +158,7 @@ function App() {
 				activeResultId: firstResultId,
 			});
 		} catch (error) {
-			setSolveError(
+			handleSolveFailure(
 				error instanceof Error
 					? error.message
 					: "Something went wrong while solving. Please check your input and try again."
@@ -149,7 +169,6 @@ function App() {
 	};
 
 	return (
-		<>
 		<Grid container spacing={2}>
 			{/* Left Panel - Input Section */}
 			<Grid size={6}>
@@ -209,24 +228,10 @@ function App() {
 						setActiveResultId={setActiveResultId}
 						isLoading={isSolving}
 						solveProgress={solveProgress}
+						solveError={solveError}
 					/>
 				</Stack>
 			</Grid>
 		</Grid>
-
-		<Snackbar
-			open={!!solveError}
-			autoHideDuration={8000}
-			onClose={() => setSolveError(null)}
-		>
-			<Alert
-				severity="error"
-				onClose={() => setSolveError(null)}
-				sx={{ width: "100%" }}
-			>
-				{solveError}
-			</Alert>
-		</Snackbar>
-		</>
 	);
 }

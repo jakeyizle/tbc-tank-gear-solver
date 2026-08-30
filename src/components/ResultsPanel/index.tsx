@@ -12,6 +12,7 @@ import type { SolveAllProgress } from "#/solver";
 import type { SolveResult } from "#/types/SolverConfig";
 import CompareView from "./CompareView";
 import EmptyResultsPlaceholder from "./EmptyResultsPlaceholder";
+import ErrorResultsPlaceholder from "./ErrorResultsPlaceholder";
 import ItemGroupDisplay from "./ItemGroupDisplay";
 import LoadingResultsPlaceholder from "./LoadingResultsPlaceHolder";
 import ResultsTabs from "./ResultsTabs";
@@ -23,6 +24,7 @@ interface ResultsPanelProps {
 	setActiveResultId: (id: string) => void;
 	isLoading: boolean;
 	solveProgress?: SolveAllProgress | null;
+	solveError?: string | null;
 }
 
 export default function ResultsPanel({
@@ -31,6 +33,7 @@ export default function ResultsPanel({
 	setActiveResultId,
 	isLoading,
 	solveProgress,
+	solveError,
 }: ResultsPanelProps) {
 	const activeResult = activeResultId ? solveResults.get(activeResultId) : null;
 	const [copied, setCopied] = useState(false);
@@ -61,6 +64,10 @@ export default function ResultsPanel({
 
 	if (isLoading) {
 		return <LoadingResultsPlaceholder solveProgress={solveProgress ?? null} />;
+	}
+
+	if (solveError) {
+		return <ErrorResultsPlaceholder message={solveError} />;
 	}
 
 	if (solveResults.size === 0) {
