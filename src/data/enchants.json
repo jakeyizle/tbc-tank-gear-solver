@@ -706,5 +706,214 @@
 		"effectID": "2724",
 		"type": "Ranged",
 		"stats": []
+	},
+	{
+		"name": "Enchant Cloak - Greater Fire Resistance",
+		"id": "25081",
+		"effectID": "2619",
+		"type": "Back",
+		"stats": [{ "name": "FireResistance", "value": 15 }],
+		"isSpellID": "true"
+	},
+	{
+		"name": "Enchant Cloak - Greater Nature Resistance",
+		"id": "25082",
+		"effectID": "2620",
+		"type": "Back",
+		"stats": [{ "name": "NatureResistance", "value": 15 }],
+		"isSpellID": "true"
+	},
+	{
+		"name": "Enchant Cloak - Greater Arcane Resistance",
+		"id": "34005",
+		"effectID": "1257",
+		"type": "Back",
+		"stats": [{ "name": "ArcaneResistance", "value": 15 }],
+		"isSpellID": "true"
+	},
+	{
+		"name": "Enchant Cloak - Major Armor",
+		"id": "27961",
+		"effectID": "2662",
+		"type": "Back",
+		"stats": [{ "name": "Armor", "value": 120 }],
+		"isSpellID": "true"
+	},
+	{
+		"name": "Enchant Shield - Shield Block",
+		"id": "27946",
+		"effectID": "2655",
+		"type": "Weapon",
+		"enchantType": "Shield",
+		"stats": [{ "name": "Block", "value": 15 }],
+		"isSpellID": "true"
+	},
+	{
+		"name": "Enchant Shield - Tough Shield",
+		"id": "27944",
+		"effectID": "2653",
+		"type": "Weapon",
+		"enchantType": "Shield",
+		"stats": [{ "name": "BlockValue", "value": 18 }],
+		"isSpellID": "true"
+	},
+	{
+		"name": "Enchant Weapon - Potency",
+		"id": "27972",
+		"effectID": "2668",
+		"type": "Weapon",
+		"stats": [{ "name": "Strength", "value": 20 }],
+		"isSpellID": "true"
+	},
+	{
+		"name": "Enchant Weapon - Spellsurge",
+		"id": "28003",
+		"effectID": "2674",
+		"type": "Weapon",
+		"stats": [],
+		"isSpellID": "true"
+	},
+	{
+		"name": "Enchant Weapon - Battlemaster",
+		"id": "28004",
+		"effectID": "2675",
+		"type": "Weapon",
+		"stats": [],
+		"isSpellID": "true"
+	},
+	{
+		"name": "Enchant Weapon - Major Healing",
+		"id": "34010",
+		"effectID": "2343",
+		"type": "Weapon",
+		"stats": [
+			{ "name": "HealingPower", "value": 81 },
+			{ "name": "SpellPower", "value": 27 }
+		],
+		"isSpellID": "true"
+	},
+	{
+		"name": "Adamantite Weapon Chain",
+		"id": "33185",
+		"effectID": "3223",
+		"type": "Weapon",
+		"stats": [{ "name": "Parry", "value": 15 }]
+	},
+	{
+		"name": "Enchant Gloves - Major Healing",
+		"id": "33999",
+		"effectID": "2322",
+		"type": "Hands",
+		"stats": [
+			{ "name": "HealingPower", "value": 35 },
+			{ "name": "SpellPower", "value": 12 }
+		],
+		"isSpellID": "true"
+	},
+	{
+		"name": "Enchant Gloves - Blasting",
+		"id": "33993",
+		"effectID": "2934",
+		"type": "Hands",
+		"stats": [{ "name": "SpellCrit", "value": 10 }],
+		"isSpellID": "true"
+	},
+	{
+		"name": "Enchant Bracer - Superior Healing",
+		"id": "27911",
+		"effectID": "2617",
+		"type": "Wrist",
+		"stats": [
+			{ "name": "HealingPower", "value": 30 },
+			{ "name": "SpellPower", "value": 10 }
+		],
+		"isSpellID": "true"
+	},
+	{
+		"name": "Enchant Bracer - Restore Mana Prime",
+		"id": "27913",
+		"effectID": "2679",
+		"type": "Wrist",
+		"stats": [{ "name": "MP5", "value": 6 }],
+		"isSpellID": "true"
+	},
+	{
+		"name": "Enchant Ring - Healing Power",
+		"id": "27926",
+		"effectID": "2930",
+		"type": "Finger",
+		"stats": [
+			{ "name": "HealingPower", "value": 20 },
+			{ "name": "SpellPower", "value": 7 }
+		],
+		"isSpellID": "true"
+	},
+	{
+		"name": "Greater Inscription of Faith",
+		"id": "28887",
+		"effectID": "2980",
+		"type": "Shoulder",
+		"stats": [
+			{ "name": "HealingPower", "value": 33 },
+			{ "name": "SpellPower", "value": 11 },
+			{ "name": "MP5", "value": 4 }
+		]
+	},
+	{
+		"name": "Greater Inscription of the Oracle",
+		"id": "28912",
+		"effectID": "2993",
+		"type": "Shoulder",
+		"stats": [
+			{ "name": "HealingPower", "value": 22 },
+			{ "name": "SpellPower", "value": 8 },
+			{ "name": "MP5", "value": 6 }
+		]
+	},
+	{
+		"name": "Glyph of Renewal",
+		"id": "29190",
+		"effectID": "3001",
+		"type": "Head",
+		"stats": [
+			{ "name": "HealingPower", "value": 35 },
+			{ "name": "SpellPower", "value": 12 },
+			{ "name": "MP5", "value": 7 }
+		]
+	},
+	{
+		"name": "Glyph of Arcane Warding",
+		"id": "29195",
+		"effectID": "3006",
+		"type": "Head",
+		"stats": [{ "name": "ArcaneResistance", "value": 20 }]
+	},
+	{
+		"name": "Glyph of Fire Warding",
+		"id": "29196",
+		"effectID": "3007",
+		"type": "Head",
+		"stats": [{ "name": "FireResistance", "value": 20 }]
+	},
+	{
+		"name": "Glyph of Frost Warding",
+		"id": "29198",
+		"effectID": "3008",
+		"type": "Head",
+		"stats": [{ "name": "FrostResistance", "value": 20 }]
+	},
+	{
+		"name": "Glyph of Nature Warding",
+		"id": "29194",
+		"effectID": "3005",
+		"type": "Head",
+		"stats": [{ "name": "NatureResistance", "value": 20 }]
+	},
+	{
+		"name": "Glyph of Shadow Warding",
+		"id": "29199",
+		"effectID": "3009",
+		"type": "Head",
+		"stats": [{ "name": "ShadowResistance", "value": 20 }]
 	}
 ]
