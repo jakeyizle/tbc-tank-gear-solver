@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box'
 import Container from '@mui/material/Container'
+import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -43,6 +44,18 @@ function About() {
               (JSON) or a comma-separated list of item IDs.
             </Typography>
           </Box>
+
+          <Typography variant="h6" component="h2" fontWeight={600}>
+            Credits
+          </Typography>
+          <Typography>
+            Item data and icons courtesy of{' '}
+            <Link href="https://www.wowhead.com/tbc" target="_blank" rel="noopener noreferrer">
+              Wowhead
+            </Link>
+            . This is an unofficial fan-made tool, not affiliated with or
+            endorsed by Blizzard Entertainment.
+          </Typography>
         </Stack>
       </Paper>
     </Container>

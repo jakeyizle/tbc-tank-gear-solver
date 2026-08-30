@@ -2,6 +2,8 @@
 
 A gear optimization tool for Protection Paladin tanks in World of Warcraft: The Burning Crusade (TBC). Players paste their gear pool, configure talents/buffs/constraints per gear set, and the solver selects the optimal item+enchant+gem combination using Linear Programming.
 
+This is an unofficial fan-made tool, not affiliated with or endorsed by Blizzard Entertainment. Licensed under [GPL-3.0-or-later](LICENSE) (required by the `glpk.js` solver dependency) — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency and game-data attributions.
+
 ## Quick Start
 
 ```bash
