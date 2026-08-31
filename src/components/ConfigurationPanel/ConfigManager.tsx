@@ -20,7 +20,10 @@ interface ConfigManagerProps {
 	onRenameConfig: (id: string, name: string) => void;
 	onDuplicateConfig: (id: string) => void;
 	onReorderConfig: (draggedId: string, targetId: string) => void;
-	updateConstraints: (uncritabilitySetting: number, uncrushabilitySetting: number) => void;
+	updateConstraints: (
+		uncritabilitySetting: number,
+		uncrushabilitySetting: number,
+	) => void;
 	updateOptimizeStats: (stats: Stat[]) => void;
 	updateResistanceFloors: (floors: ResistanceFloor[]) => void;
 	updateConfig: (id: string, updates: Partial<SolverConfiguration>) => void;
@@ -40,21 +43,29 @@ export default function ConfigManager({
 	updateResistanceFloors,
 	updateConfig,
 }: ConfigManagerProps) {
-	const EXCLUSIVE_BUFF_GROUPS = [["mark-of-the-wild", "improved-mark-of-the-wild"]];
+	const EXCLUSIVE_BUFF_GROUPS = [
+		["mark-of-the-wild", "improved-mark-of-the-wild"],
+	];
 
 	const handleBuffChange = (config: SolverConfiguration, buffId: string) => {
 		const toggledOn = !config.buffs.find((buff) => buff.id === buffId)?.checked;
-		const exclusiveGroup = EXCLUSIVE_BUFF_GROUPS.find((group) => group.includes(buffId));
+		const exclusiveGroup = EXCLUSIVE_BUFF_GROUPS.find((group) =>
+			group.includes(buffId),
+		);
 
 		const newBuffs = config.buffs.map((buff) => {
 			if (buff.id === buffId) return { ...buff, checked: toggledOn };
-			if (toggledOn && exclusiveGroup?.includes(buff.id)) return { ...buff, checked: false };
+			if (toggledOn && exclusiveGroup?.includes(buff.id))
+				return { ...buff, checked: false };
 			return buff;
 		});
 		updateConfig(config.id, { buffs: newBuffs });
 	};
 
-	const handleConsumableChange = (config: SolverConfiguration, consumableId: string) => {
+	const handleConsumableChange = (
+		config: SolverConfiguration,
+		consumableId: string,
+	) => {
 		const isEnabled = config.enabledConsumableIds.includes(consumableId);
 		const newEnabledIds = isEnabled
 			? config.enabledConsumableIds.filter((id) => id !== consumableId)
@@ -76,7 +87,12 @@ export default function ConfigManager({
 						</Typography>
 					)}
 				</Box>
-				<Button startIcon={<AddIcon />} onClick={onAddConfig} variant="outlined" size="small">
+				<Button
+					startIcon={<AddIcon />}
+					onClick={onAddConfig}
+					variant="outlined"
+					size="small"
+				>
 					Add set
 				</Button>
 			</Stack>
@@ -108,10 +124,17 @@ export default function ConfigManager({
 							onRename={(name) => onRenameConfig(config.id, name)}
 							onUpdateConstraints={updateConstraints}
 							onUpdateOptimizeStats={updateOptimizeStats}
+							onUpdateObjectiveMode={(mode) =>
+								updateConfig(config.id, { objectiveMode: mode })
+							}
 							onUpdateResistanceFloors={updateResistanceFloors}
 							onBuffChange={(buffId) => handleBuffChange(config, buffId)}
-							onConsumableChange={(consumableId) => handleConsumableChange(config, consumableId)}
-							onDropReorder={(draggedId) => onReorderConfig(draggedId, config.id)}
+							onConsumableChange={(consumableId) =>
+								handleConsumableChange(config, consumableId)
+							}
+							onDropReorder={(draggedId) =>
+								onReorderConfig(draggedId, config.id)
+							}
 						/>
 					);
 				})}

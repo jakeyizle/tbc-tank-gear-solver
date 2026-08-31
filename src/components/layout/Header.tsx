@@ -25,6 +25,10 @@ export default function Header() {
 
         <Box sx={{ flexGrow: 1 }} />
 
+        <Button component={Link} to="/changelog" color="inherit">
+          Changelog
+        </Button>
+
         <Button component={Link} to="/about" color="inherit">
           About
         </Button>

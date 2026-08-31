@@ -18,11 +18,12 @@ export function useSolverConfigs() {
 				...c,
 				resistanceFloors: c.resistanceFloors ?? [],
 				enabledConsumableIds: c.enabledConsumableIds ?? ALL_CONSUMABLE_IDS,
+				objectiveMode: c.objectiveMode ?? "stats",
 			}),
-		)
+		),
 	);
-	const [activeConfigId, setActiveConfigId] = useState<string>(() =>
-		_saved?.activeConfigId ?? "default"
+	const [activeConfigId, setActiveConfigId] = useState<string>(
+		() => _saved?.activeConfigId ?? "default",
 	);
 
 	const activeConfig = configs.find((c) => c.id === activeConfigId);
@@ -44,7 +45,7 @@ export function useSolverConfigs() {
 
 	const renameConfig = (id: string, newName: string) => {
 		setConfigs((prev) =>
-			prev.map((c) => (c.id === id ? { ...c, name: newName } : c))
+			prev.map((c) => (c.id === id ? { ...c, name: newName } : c)),
 		);
 	};
 
@@ -52,7 +53,8 @@ export function useSolverConfigs() {
 		setConfigs((prev) => {
 			const fromIndex = prev.findIndex((c) => c.id === draggedId);
 			const toIndex = prev.findIndex((c) => c.id === targetId);
-			if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return prev;
+			if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex)
+				return prev;
 			const next = [...prev];
 			const [moved] = next.splice(fromIndex, 1);
 			next.splice(toIndex, 0, moved);
@@ -77,12 +79,9 @@ export function useSolverConfigs() {
 		setActiveConfigId(newId);
 	};
 
-	const updateConfig = (
-		id: string,
-		updates: Partial<SolverConfiguration>
-	) => {
+	const updateConfig = (id: string, updates: Partial<SolverConfiguration>) => {
 		setConfigs((prev) =>
-			prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
+			prev.map((c) => (c.id === id ? { ...c, ...updates } : c)),
 		);
 	};
 

@@ -1,10 +1,21 @@
-import type { BaseConfig, SolveResult, SolverConfiguration as UISolverConfiguration } from "#/types/SolverConfig";
-import type { InputItem, LPItem, ModifierSource, ResistanceFloor, Stat } from "./types";
+import type {
+	BaseConfig,
+	SolveResult,
+	SolverConfiguration as UISolverConfiguration,
+} from "#/types/SolverConfig";
+import type {
+	InputItem,
+	LPItem,
+	ModifierSource,
+	ResistanceFloor,
+	Stat,
+} from "./types";
 
 interface SolveOptions {
 	uncrushabilitySetting: number;
 	uncritabilitySetting: number;
 	optimizeStats: Stat[];
+	objectiveMode?: "stats" | "ehp";
 	resistanceFloors: ResistanceFloor[];
 	areEnchantsGemsLocked: boolean;
 	excludeUniqueGems: boolean;
@@ -117,7 +128,7 @@ export const solveAll = async (
 			id: solverConfig.id,
 			name: solverConfig.name,
 			baseConfig,
-			solverConfig
+			solverConfig,
 		});
 
 		currentInputItems = replaceInputItems(currentInputItems, items);

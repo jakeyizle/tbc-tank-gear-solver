@@ -1,0 +1,40 @@
+#!/bin/sh
+# Reminds you to bump src/data/changelog.ts when meaningful app code is staged.
+# Installed via `core.hooksPath` (see package.json's "prepare" script).
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+
+# No staged files under src/, or the changelog itself is already part of this commit — nothing to do.
+if ! echo "$staged" | grep -qE '^src/'; then
+  exit 0
+fi
+if echo "$staged" | grep -qx 'src/data/changelog.ts'; then
+  exit 0
+fi
+
+# Only src/vite-env.d.ts or test files changed — not user-facing, skip the prompt.
+non_trivial=$(echo "$staged" | grep -E '^src/' | grep -vE '(^src/vite-env\.d\.ts$|\.test\.tsx?$)')
+if [ -z "$non_trivial" ]; then
+  exit 0
+fi
+
+echo "warning: staged changes touch src/ but src/data/changelog.ts was not updated:"
+echo "$non_trivial" | sed 's/^/  /'
+echo
+
+# Non-interactive (CI, GUI clients, no controlling terminal) — warn but don't block.
+if [ ! -t 0 ]; then
+  echo "warning: no tty available to confirm; proceeding without a changelog entry."
+  exit 0
+fi
+
+printf 'Commit without a changelog entry? [y/N] '
+read -r reply
+case "$reply" in
+  [yY]*) exit 0 ;;
+  *)
+    echo "Aborting commit. Add an entry to src/data/changelog.ts (and bump package.json's"
+    echo "version if this is a release) and re-commit, or answer 'y' to skip."
+    exit 1
+    ;;
+esac

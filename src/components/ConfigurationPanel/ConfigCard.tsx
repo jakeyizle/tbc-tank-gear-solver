@@ -7,11 +7,19 @@ import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import type { DragEvent, ReactNode } from "react";
 import { useState } from "react";
-import { type Buff, type ConsumableItem, type ResistanceFloor, STAT_LABELS, type Stat } from "#/solver/types";
+import {
+	type Buff,
+	type ConsumableItem,
+	type ResistanceFloor,
+	STAT_LABELS,
+	type Stat,
+} from "#/solver/types";
 import { monoFontFamily } from "#/theme";
 import type { SolverConfiguration } from "#/types/SolverConfig";
 import BuffSection from "./BuffSection";
@@ -43,6 +51,7 @@ interface ConfigCardProps {
 	onRename: (name: string) => void;
 	onUpdateConstraints: (uncritability: number, uncrushability: number) => void;
 	onUpdateOptimizeStats: (stats: Stat[]) => void;
+	onUpdateObjectiveMode: (mode: "stats" | "ehp") => void;
 	onUpdateResistanceFloors: (floors: ResistanceFloor[]) => void;
 	onBuffChange: (buffId: string) => void;
 	onConsumableChange: (consumableId: string) => void;
@@ -58,13 +67,38 @@ interface ConfigBandProps {
 	children: ReactNode;
 }
 
-function ConfigBand({ accent, titleColor, tint, title, description, children }: ConfigBandProps) {
+function ConfigBand({
+	accent,
+	titleColor,
+	tint,
+	title,
+	description,
+	children,
+}: ConfigBandProps) {
 	return (
 		<Box sx={{ display: "flex", borderTop: 1, borderColor: "divider" }}>
 			<Box sx={{ width: 3, flexShrink: 0, bgcolor: accent }} />
-			<Box sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 1.5, p: 2, bgcolor: tint }}>
-				<Box sx={{ display: "flex", alignItems: "baseline", gap: 1.25, flexWrap: "wrap" }}>
-					<Typography sx={{ fontSize: 14, fontWeight: 700, color: titleColor ?? accent }}>
+			<Box
+				sx={{
+					flex: 1,
+					display: "flex",
+					flexDirection: "column",
+					gap: 1.5,
+					p: 2,
+					bgcolor: tint,
+				}}
+			>
+				<Box
+					sx={{
+						display: "flex",
+						alignItems: "baseline",
+						gap: 1.25,
+						flexWrap: "wrap",
+					}}
+				>
+					<Typography
+						sx={{ fontSize: 14, fontWeight: 700, color: titleColor ?? accent }}
+					>
 						{title}
 					</Typography>
 					<Typography variant="caption" color="text.secondary">
@@ -77,10 +111,14 @@ function ConfigBand({ accent, titleColor, tint, title, description, children }: 
 	);
 }
 
-function statsSummary(stats: Stat[]): string {
+function statsSummary(config: SolverConfiguration): string {
+	if (config.objectiveMode === "ehp") return "Maximize Effective HP";
+	const stats = config.optimizeStats;
 	if (stats.length === 0) return "no stats weighted";
 	const sorted = [...stats].sort((a, b) => b.value - a.value);
-	const shown = sorted.slice(0, 3).map((s) => `${s.name} ${s.value.toFixed(2)}`);
+	const shown = sorted
+		.slice(0, 3)
+		.map((s) => `${s.name} ${s.value.toFixed(2)}`);
 	const remaining = sorted.length - shown.length;
 	return shown.join(" · ") + (remaining > 0 ? ` +${remaining}` : "");
 }
@@ -99,6 +137,7 @@ export default function ConfigCard({
 	onRename,
 	onUpdateConstraints,
 	onUpdateOptimizeStats,
+	onUpdateObjectiveMode,
 	onUpdateResistanceFloors,
 	onBuffChange,
 	onConsumableChange,
@@ -184,7 +223,13 @@ export default function ConfigCard({
 				<Typography sx={{ fontWeight: 500, width: 130, flexShrink: 0 }}>
 					{config.name}
 				</Typography>
-				<Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" sx={{ flex: 1, minWidth: 0 }}>
+				<Stack
+					direction="row"
+					spacing={0.75}
+					alignItems="center"
+					flexWrap="wrap"
+					sx={{ flex: 1, minWidth: 0 }}
+				>
 					{config.uncritabilitySetting > 0 && (
 						<Box
 							sx={{
@@ -231,12 +276,20 @@ export default function ConfigCard({
 					<Typography
 						variant="caption"
 						color="text.secondary"
-						sx={{ fontFamily: monoFontFamily, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+						sx={{
+							fontFamily: monoFontFamily,
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+							whiteSpace: "nowrap",
+						}}
 					>
-						{statsSummary(config.optimizeStats)}
+						{statsSummary(config)}
 					</Typography>
 				</Stack>
-				<ExpandMoreIcon fontSize="small" sx={{ color: "text.secondary", flexShrink: 0 }} />
+				<ExpandMoreIcon
+					fontSize="small"
+					sx={{ color: "text.secondary", flexShrink: 0 }}
+				/>
 			</Box>
 		);
 	}
@@ -293,7 +346,9 @@ export default function ConfigCard({
 					</Typography>
 				)}
 				<Typography variant="caption" color="text.secondary">
-					{config.optimizeStats.length} stats weighted
+					{config.objectiveMode === "ehp"
+						? "Maximize Effective HP"
+						: `${config.optimizeStats.length} stats weighted`}
 					{config.resistanceFloors.length > 0
 						? ` · ${config.resistanceFloors.length} resistance floor${config.resistanceFloors.length > 1 ? "s" : ""}`
 						: ""}
@@ -303,7 +358,12 @@ export default function ConfigCard({
 						? " · no constraints"
 						: ""}
 				</Typography>
-				<Stack direction="row" spacing={1.5} alignItems="center" sx={{ ml: "auto" }}>
+				<Stack
+					direction="row"
+					spacing={1.5}
+					alignItems="center"
+					sx={{ ml: "auto" }}
+				>
 					<Tooltip title="Duplicate set">
 						<IconButton size="small" onClick={onDuplicate}>
 							<ContentCopyIcon fontSize="small" />
@@ -329,7 +389,39 @@ export default function ConfigCard({
 					title="Optimizations"
 					description="solver will optimize for these stats and select consumables"
 				>
-					<StatsEntry stats={config.optimizeStats} onChange={onUpdateOptimizeStats} />
+					<ToggleButtonGroup
+						size="small"
+						exclusive
+						value={config.objectiveMode}
+						onChange={(_, mode) => mode && onUpdateObjectiveMode(mode)}
+						sx={{ alignSelf: "flex-start" }}
+					>
+						<ToggleButton
+							value="stats"
+							sx={{ px: 1.5, py: 0.375, fontSize: 12 }}
+						>
+							Stat weights
+						</ToggleButton>
+						<ToggleButton value="ehp" sx={{ px: 1.5, py: 0.375, fontSize: 12 }}>
+							Maximize Effective HP
+						</ToggleButton>
+					</ToggleButtonGroup>
+					{config.objectiveMode === "ehp" ? (
+						<Typography
+							variant="body2"
+							color="text.secondary"
+							fontStyle="italic"
+						>
+							Solver maximizes armor-mitigated Effective HP directly. Stat
+							weights below are unused in this mode but kept in case you switch
+							back.
+						</Typography>
+					) : (
+						<StatsEntry
+							stats={config.optimizeStats}
+							onChange={onUpdateOptimizeStats}
+						/>
+					)}
 					<ConsumablesSection
 						consumables={displayConsumables}
 						onConsumableChange={onConsumableChange}

@@ -8,9 +8,9 @@ import {
 	buildResistanceVars,
 	buildScoreVars,
 	buildUniqueGemVars,
-	resolveChosenDecomposableItems,
 	type ItemHeader,
 	type LPVar,
+	resolveChosenDecomposableItems,
 	type SubjectTo,
 } from "./decomposedModel";
 import { prepareItemCandidates, transformItem } from "./items";
@@ -30,6 +30,7 @@ export interface SolveOptions {
 	uncrushabilitySetting: number;
 	uncritabilitySetting: number;
 	optimizeStats: Stat[];
+	objectiveMode?: "stats" | "ehp";
 	resistanceFloors: ResistanceFloor[];
 	areEnchantsGemsLocked: boolean;
 	excludeUniqueGems: boolean;
@@ -47,7 +48,11 @@ export interface SolveProgress {
 	maxIterations: number;
 }
 
-const OPTIONAL_TYPES: ProcessedItemType[] = ["Flask", "BattleElixir", "GuardianElixir"];
+const OPTIONAL_TYPES: ProcessedItemType[] = [
+	"Flask",
+	"BattleElixir",
+	"GuardianElixir",
+];
 
 function typeBoundNumber(type: ProcessedItemType) {
 	return type === "Finger" || type === "Trinket" ? 2 : 1;
@@ -93,7 +98,11 @@ const createModel = (
 	};
 };
 
-const makeAvoidanceConstraint = (vars: LPVar[], avoidanceTarget: number, glpk: GLPKType) => {
+const makeAvoidanceConstraint = (
+	vars: LPVar[],
+	avoidanceTarget: number,
+	glpk: GLPKType,
+) => {
 	return {
 		name: "avoidance",
 		vars,
@@ -105,7 +114,11 @@ const makeAvoidanceConstraint = (vars: LPVar[], avoidanceTarget: number, glpk: G
 	};
 };
 
-const makeUncritableConstraint = (vars: LPVar[], uncritabilityTarget: number, glpk: GLPKType) => {
+const makeUncritableConstraint = (
+	vars: LPVar[],
+	uncritabilityTarget: number,
+	glpk: GLPKType,
+) => {
 	return {
 		name: "uncritable",
 		vars,
@@ -226,7 +239,9 @@ const solveOptions = (glpk: GLPKType) => ({
 const describeConstraints = (config: SolverConfiguration): string => {
 	const parts: string[] = [];
 	if (config.avoidanceTarget > 0) {
-		parts.push(`${config.avoidanceStatName} target ${config.avoidanceTarget.toFixed(2)}`);
+		parts.push(
+			`${config.avoidanceStatName} target ${config.avoidanceTarget.toFixed(2)}`,
+		);
 	}
 	if (config.uncritabilityTarget > 0) {
 		parts.push(`Uncritability target ${config.uncritabilityTarget.toFixed(2)}`);
@@ -239,7 +254,13 @@ const describeConstraints = (config: SolverConfiguration): string => {
 	return parts.length > 0 ? parts.join(", ") : "the configured constraints";
 };
 
-const EMPTY_ENCHANT: Enchant = { name: "", id: "", effectID: "", type: "Ranged", stats: [] };
+const EMPTY_ENCHANT: Enchant = {
+	name: "",
+	id: "",
+	effectID: "",
+	type: "Ranged",
+	stats: [],
+};
 
 const runLPModel = async (
 	fixedItems: LPItem[],
@@ -265,8 +286,14 @@ const runLPModel = async (
 	const baseItemConstraint = makeBaseItemConstaint(headersByItemId, glpk);
 	const uniqueGemVars = buildUniqueGemVars(fixedItems, decomposableItems);
 	const uniqueGemConstraint = makeUniqueGemConstraint(uniqueGemVars, glpk);
-	const consumableExclusionConstraint = makeConsumableExclusionConstraint(headersByType, glpk);
-	const linkingConstraints = buildDecomposedLinkingConstraints(decomposableItems, glpk);
+	const consumableExclusionConstraint = makeConsumableExclusionConstraint(
+		headersByType,
+		glpk,
+	);
+	const linkingConstraints = buildDecomposedLinkingConstraints(
+		decomposableItems,
+		glpk,
+	);
 
 	const constraints: SubjectTo[] = [
 		...slotConstraint,
@@ -319,42 +346,39 @@ const runLPModel = async (
 
 	const varValues = result.result.vars as Record<string, number>;
 
-	const chosenFixedItems = fixedItems.filter((item) => varValues[item.uniqueId] === 1);
-	const chosenDecomposable = resolveChosenDecomposableItems(decomposableItems, varValues).map(
-		(resolved) =>
-			transformItem(
-				{
-					...resolved.base,
-					gems: resolved.gems,
-					gemSlots: resolved.gemSlots,
-					enchant: resolved.enchant ?? EMPTY_ENCHANT,
-					uniqueId: resolved.uniqueId,
-					locked: false,
-				},
-				config,
-			),
+	const chosenFixedItems = fixedItems.filter(
+		(item) => varValues[item.uniqueId] === 1,
+	);
+	const chosenDecomposable = resolveChosenDecomposableItems(
+		decomposableItems,
+		varValues,
+	).map((resolved) =>
+		transformItem(
+			{
+				...resolved.base,
+				gems: resolved.gems,
+				gemSlots: resolved.gemSlots,
+				enchant: resolved.enchant ?? EMPTY_ENCHANT,
+				uniqueId: resolved.uniqueId,
+				locked: false,
+			},
+			config,
+		),
 	);
 
 	return [...chosenFixedItems, ...chosenDecomposable];
 };
 
-export const solveConfig = async (
-	items: InputItem[],
-	options: SolveOptions,
+// Runs runLPModel repeatedly, tightening the avoidance/uncritability targets until the
+// rounded (in-game) values actually clear them. Factored out so callers that need to
+// re-solve with a different objective each round (e.g. the EHP linearization loop in
+// solveEHP.ts) can reuse this convergence behavior instead of duplicating it.
+export const runLPModelWithAvoidanceConvergence = async (
+	fixedItems: LPItem[],
+	decomposableItems: DecomposableItem[],
+	config: SolverConfiguration,
 	onProgress?: (progress: SolveProgress) => void,
 ): Promise<LPItem[]> => {
-	console.log("worker started");
-	console.log({ items, options });
-
-	const config = new SolverConfiguration(options);
-	const { fixedItems, decomposableItems } = prepareItemCandidates(items, config);
-	if (options.enabledConsumableIds.length > 0) {
-		fixedItems.push(...getConsumableLPItems(config, options.enabledConsumableIds));
-	}
-	console.log(`avoidance target: ${config.avoidanceTarget}`);
-	console.log(`uncritability target: ${config.uncritabilityTarget}`);
-	console.log(`items: ${fixedItems.length + decomposableItems.length}`);
-
 	// defense skill is rounded down in game, but the LP solver cannot account for this so it does not round values
 	// so the total avoidance/uncritability can be off by up to 1 defense skill, which is 0.16 avoidance or 0.04 uncrit
 	// we step by half of the maximum error
@@ -404,8 +428,12 @@ export const solveConfig = async (
 			break;
 		}
 
-		console.log(`item avoidance: ${itemAvoidance}, avoidance target: ${config.avoidanceTarget}`);
-		console.log(`item uncrit: ${itemUncrit}, uncrit target: ${config.uncritabilityTarget}`);
+		console.log(
+			`item avoidance: ${itemAvoidance}, avoidance target: ${config.avoidanceTarget}`,
+		);
+		console.log(
+			`item uncrit: ${itemUncrit}, uncrit target: ${config.uncritabilityTarget}`,
+		);
 		if (!isAvoidanceTargetMet) {
 			config.stepAvoidanceTarget(AVOIDANCE_STEP);
 		}
@@ -417,4 +445,34 @@ export const solveConfig = async (
 	}
 
 	return result;
+};
+
+export const solveConfig = async (
+	items: InputItem[],
+	options: SolveOptions,
+	onProgress?: (progress: SolveProgress) => void,
+): Promise<LPItem[]> => {
+	console.log("worker started");
+	console.log({ items, options });
+
+	const config = new SolverConfiguration(options);
+	const { fixedItems, decomposableItems } = prepareItemCandidates(
+		items,
+		config,
+	);
+	if (options.enabledConsumableIds.length > 0) {
+		fixedItems.push(
+			...getConsumableLPItems(config, options.enabledConsumableIds),
+		);
+	}
+	console.log(`avoidance target: ${config.avoidanceTarget}`);
+	console.log(`uncritability target: ${config.uncritabilityTarget}`);
+	console.log(`items: ${fixedItems.length + decomposableItems.length}`);
+
+	return runLPModelWithAvoidanceConvergence(
+		fixedItems,
+		decomposableItems,
+		config,
+		onProgress,
+	);
 };

@@ -1,4 +1,5 @@
-import { solveConfig, type SolveOptions } from "./solveConfig";
+import type { SolveOptions } from "./solveConfig";
+import { solveGearSet } from "./solveEHP";
 import type { InputItem } from "./types";
 
 self.onmessage = async (e) => {
@@ -8,7 +9,7 @@ self.onmessage = async (e) => {
 	};
 
 	try {
-		const result = await solveConfig(items, options, (progress) =>
+		const result = await solveGearSet(items, options, (progress) =>
 			postMessage({ type: "progress", ...progress }),
 		);
 		postMessage({ type: "result", items: result });

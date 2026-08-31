@@ -1,5 +1,7 @@
 import Box from '@mui/material/Box'
+import Link from '@mui/material/Link'
 import Typography from '@mui/material/Typography'
+import { Link as RouterLink } from '@tanstack/react-router'
 import { APP_NAME } from '#/constants'
 
 export default function Footer() {
@@ -19,7 +21,10 @@ export default function Footer() {
       }}
     >
       <Typography variant="body2">
-        &copy; {year} {APP_NAME}
+        &copy; {year} {APP_NAME}{' '}
+        <Link component={RouterLink} to="/changelog" color="inherit">
+          v{__APP_VERSION__}
+        </Link>
       </Typography>
       <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
         This is an unofficial fan-made tool and is not affiliated with or

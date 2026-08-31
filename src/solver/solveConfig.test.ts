@@ -7,11 +7,20 @@ import {
 	TEST_RACE_ID,
 	testItemPool,
 } from "./__fixtures__/testItemPool";
-import { computeAchievedStats, validateSolution } from "./__test-helpers__/validateSolution";
+import {
+	computeAchievedStats,
+	validateSolution,
+} from "./__test-helpers__/validateSolution";
+import { type solve, solveAll } from "./index";
 import { SolverConfiguration } from "./SolverConfiguration";
-import { solve, solveAll } from "./index";
-import { solveConfig, type SolveOptions } from "./solveConfig";
-import { STAT_NAMES, type InputItem, type LPItem, type ModifierSource, type Stat } from "./types";
+import { type SolveOptions, solveConfig } from "./solveConfig";
+import {
+	type InputItem,
+	type LPItem,
+	type ModifierSource,
+	STAT_NAMES,
+	type Stat,
+} from "./types";
 
 // representative of real talent/racial/buff avoidance contributions a character always has -
 // calculateAvoidanceTarget subtracts these from the fixed cap, so omitting them (as an empty
@@ -70,7 +79,10 @@ describe("solveConfig", () => {
 	}, 30000);
 
 	it("scenario 2: avoidance floor active", async () => {
-		const options = baseOptions({ uncrushabilitySetting: 1, buffs: [TEST_AVOIDANCE_BUFF] });
+		const options = baseOptions({
+			uncrushabilitySetting: 1,
+			buffs: [TEST_AVOIDANCE_BUFF],
+		});
 		const result = await solveConfig(testItemPool, options);
 		const config = new SolverConfiguration(options);
 
@@ -148,13 +160,18 @@ describe("solveConfig", () => {
 			uncritabilitySetting: 0,
 			uncrushabilitySetting: 0,
 			optimizeStats: OBJECTIVE_STATS,
+			objectiveMode: "stats" as const,
 			resistanceFloors: [],
 			abilities: [],
 			talents: [],
 			buffs: [],
 			enabledConsumableIds: [],
 		};
-		const solverConfig2 = { ...solverConfig1, id: "config-2", name: "Config 2" };
+		const solverConfig2 = {
+			...solverConfig1,
+			id: "config-2",
+			name: "Config 2",
+		};
 		const baseConfig = {
 			areEnchantsGemsLocked: true,
 			excludeUniqueGems: false,
@@ -169,7 +186,11 @@ describe("solveConfig", () => {
 		// solveConfig directly (same underlying logic solver.worker.ts calls) so this test
 		// exercises solveAll's real cross-config locking orchestration without a Worker
 		const solveFnForTest: typeof solve = (items, options, onProgress) =>
-			solveConfig(items, options, onProgress && ((p) => onProgress(p.iteration / p.maxIterations)));
+			solveConfig(
+				items,
+				options,
+				onProgress && ((p) => onProgress(p.iteration / p.maxIterations)),
+			);
 
 		const results = await solveAll(
 			testItemPool,
@@ -186,8 +207,12 @@ describe("solveConfig", () => {
 
 		// Head has exactly one candidate in the fixture pool, so config 2 must reuse the same
 		// base item with the exact same (locked) gems/enchant chosen by config 1, not re-roll them
-		const head1 = results[0].items.find((item) => item.id === TEST_ITEM_IDS.head);
-		const head2 = results[1].items.find((item) => item.id === TEST_ITEM_IDS.head);
+		const head1 = results[0].items.find(
+			(item) => item.id === TEST_ITEM_IDS.head,
+		);
+		const head2 = results[1].items.find(
+			(item) => item.id === TEST_ITEM_IDS.head,
+		);
 		expect(head2?.gems.map((g) => g.id)).toEqual(head1?.gems.map((g) => g.id));
 		expect(head2?.enchant.id).toEqual(head1?.enchant.id);
 	}, 60000);
@@ -196,7 +221,11 @@ describe("solveConfig", () => {
 		// widen "relevant" stats to nearly the full stat list so most of the ~150 phase-1 gems
 		// become candidates - under the old pre-baked-variant model, a 3-socket item alone
 		// would enumerate C(150+2,3) ~= 580k gem combinations before GLPK ever ran
-		const ALL_STATS: Stat[] = STAT_NAMES.map((name) => ({ name, value: 1, type: "flat" }));
+		const ALL_STATS: Stat[] = STAT_NAMES.map((name) => ({
+			name,
+			value: 1,
+			type: "flat",
+		}));
 		const options = baseOptions({ optimizeStats: ALL_STATS });
 
 		const start = Date.now();
@@ -215,11 +244,16 @@ describe("solveConfig", () => {
 		// out-scores every non-unique MeleeCrit gem in the phase<=3 pool, so the solver reaches for
 		// it whenever unique gems are allowed, and must fall back to a lesser non-unique gem
 		// (Smooth Lionseye, 32205, 10 MeleeCrit) once they're excluded
-		const optimizeStats: Stat[] = [{ name: "MeleeCrit", value: 1, type: "flat" }];
+		const optimizeStats: Stat[] = [
+			{ name: "MeleeCrit", value: 1, type: "flat" },
+		];
 		const hasUniqueGem = (items: LPItem[]) =>
 			items.some((item) => item.gems.some((gem) => gem.isUnique === "true"));
 
-		const included = await solveConfig(testItemPool, baseOptions({ optimizeStats }));
+		const included = await solveConfig(
+			testItemPool,
+			baseOptions({ optimizeStats }),
+		);
 		expect(hasUniqueGem(included)).toBe(true);
 
 		const excluded = await solveConfig(
@@ -233,14 +267,26 @@ describe("solveConfig", () => {
 		// Bright Crimson Spinel (35487, Red, phase 5) is the only Red-compatible gem in the data
 		// that grants AttackPower - at phase <5 no eligible gem exists, so relevant Red sockets go
 		// ungemmed; at phase 5 the solver picks it up
-		const optimizeStats: Stat[] = [{ name: "AttackPower", value: 1, type: "flat" }];
+		const optimizeStats: Stat[] = [
+			{ name: "AttackPower", value: 1, type: "flat" },
+		];
 		const phase5Gem = "35487";
 
-		const lowPhase = await solveConfig(testItemPool, baseOptions({ optimizeStats, phase: 3 }));
-		expect(lowPhase.some((item) => item.gems.some((gem) => gem.id === phase5Gem))).toBe(false);
+		const lowPhase = await solveConfig(
+			testItemPool,
+			baseOptions({ optimizeStats, phase: 3 }),
+		);
+		expect(
+			lowPhase.some((item) => item.gems.some((gem) => gem.id === phase5Gem)),
+		).toBe(false);
 
-		const highPhase = await solveConfig(testItemPool, baseOptions({ optimizeStats, phase: 5 }));
-		expect(highPhase.some((item) => item.gems.some((gem) => gem.id === phase5Gem))).toBe(true);
+		const highPhase = await solveConfig(
+			testItemPool,
+			baseOptions({ optimizeStats, phase: 5 }),
+		);
+		expect(
+			highPhase.some((item) => item.gems.some((gem) => gem.id === phase5Gem)),
+		).toBe(true);
 	}, 60000);
 
 	it("scenario 10: throws a descriptive error instead of returning a bogus result when no gear combination can satisfy the constraints", async () => {
@@ -262,6 +308,7 @@ describe("solveConfig", () => {
 			uncritabilitySetting: 0,
 			uncrushabilitySetting: 0,
 			optimizeStats: OBJECTIVE_STATS,
+			objectiveMode: "stats" as const,
 			resistanceFloors: [],
 			abilities: [],
 			talents: [],
@@ -286,7 +333,11 @@ describe("solveConfig", () => {
 		};
 
 		const solveFnForTest: typeof solve = (items, options, onProgress) =>
-			solveConfig(items, options, onProgress && ((p) => onProgress(p.iteration / p.maxIterations)));
+			solveConfig(
+				items,
+				options,
+				onProgress && ((p) => onProgress(p.iteration / p.maxIterations)),
+			);
 
 		await expect(
 			solveAll(
