@@ -33,7 +33,6 @@
     "@tanstack/router-plugin": "^1.132.0",
     "fast-xml-parser": "^5.9.3",
     "glpk.js": "^5.0.0",
-    "lucide-react": "^0.545.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwindcss": "^4.1.18"

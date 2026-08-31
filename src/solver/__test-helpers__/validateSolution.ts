@@ -8,7 +8,7 @@ const MANDATORY_SLOTS: ProcessedItemType[] = [
 ];
 const MULTI_SLOTS: ProcessedItemType[] = ["Finger", "Trinket"];
 
-export interface AchievedStats {
+interface AchievedStats {
 	avoidance: number;
 	uncritability: number;
 	objective: number;

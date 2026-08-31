@@ -1,14 +1,6 @@
 import { convertStatToRating } from "#/helpers/convertStat";
 import type { ModifierSource } from "#/solver/types";
 
-export const getTalent = (id: string, rank: number): ModifierSource => {
-	const talentData = TALENTS.find((t) => t.id === id);
-	if (!talentData) {
-		throw new Error(`No talent found for id ${id}`);
-	}
-	return { ...talentData, rank };
-};
-
 export const getTalentsByClass = (classId: string): ModifierSource[] => {
 	return TALENTS.filter((talent) => talent.classId === classId);
 };

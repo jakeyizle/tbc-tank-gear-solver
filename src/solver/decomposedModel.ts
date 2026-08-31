@@ -200,7 +200,7 @@ export const buildDecomposedLinkingConstraints = (
 // after GLPK solves, turn the chosen y/e/g/b variable values back into concrete
 // (enchant, per-socket gem) selections for each chosen decomposable item, so callers can
 // build ItemVariation objects and score them through the existing transformItem
-export interface ResolvedDecomposableItem {
+interface ResolvedDecomposableItem {
 	base: DecomposableItem["base"];
 	uniqueId: string;
 	enchant: Enchant | undefined;

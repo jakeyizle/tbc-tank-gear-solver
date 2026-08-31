@@ -1,4 +1,4 @@
-export interface ChangelogEntry {
+interface ChangelogEntry {
   version: string
   date: string
   changes: string[]

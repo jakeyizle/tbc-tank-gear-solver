@@ -1,7 +1,7 @@
 import { calculateStatValue } from "#/helpers/stats"
 import type { ModifierSource, Stat, StatName } from "./types";
 
-export const calculateAvoidanceScore = (
+const calculateAvoidanceScore = (
     stats: Stat[],
     modifierSources: ModifierSource[] = [],
     statName: "Avoidance" | "ShearAvoidance" = "Avoidance",
@@ -10,12 +10,12 @@ export const calculateAvoidanceScore = (
     return avoidance;
 }
 
-export const calculateUncritabilityScore = (stats: Stat[], modifierSources: ModifierSource[] = []) => {
+const calculateUncritabilityScore = (stats: Stat[], modifierSources: ModifierSource[] = []) => {
     const uncritability = calculateStatValue({items: [], modifierSources, statName: "Uncritability", baseStats: stats, roundDefenseAndResilience: false});    
     return uncritability;
 }
 
-export const calculateObjectiveScore = (stats: Stat[], objectiveStats: Stat[], modifierSources: ModifierSource[] = []) => {
+const calculateObjectiveScore = (stats: Stat[], objectiveStats: Stat[], modifierSources: ModifierSource[] = []) => {
     // for each objective stat
     // sum the stats for that stat
     // then multiply that value by the objective stat value
@@ -28,7 +28,7 @@ export const calculateObjectiveScore = (stats: Stat[], objectiveStats: Stat[], m
     return objectiveScore;
 }
 
-export const calculateResistanceScores = (
+const calculateResistanceScores = (
     stats: Stat[],
     resistanceStats: StatName[],
     modifierSources: ModifierSource[] = [],

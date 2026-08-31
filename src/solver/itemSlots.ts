@@ -1,4 +1,3 @@
-import { itemMeetsSocketBonus } from "./socketBonus";
 import type { LPItem, ProcessedItemType } from "./types";
 
 export const CONSUMABLE_TYPES: ProcessedItemType[] = [
@@ -48,30 +47,6 @@ export const SLOT_LABELS: Record<string, string> = {
 	Weapon: "Main Hand",
 	Shield: "Off Hand",
 	Ranged: "Ranged",
-};
-
-export interface EquipmentSummary {
-	filledSlots: number;
-	totalSlots: number;
-	gemCount: number;
-	socketBonusesMet: number;
-}
-
-export const summarizeEquipment = (items: LPItem[]): EquipmentSummary => {
-	let gemCount = 0;
-	let socketBonusesMet = 0;
-
-	for (const item of items) {
-		gemCount += item.gems.length;
-		if (itemMeetsSocketBonus(item)) socketBonusesMet++;
-	}
-
-	return {
-		filledSlots: items.length,
-		totalSlots: SLOT_ORDER.length,
-		gemCount,
-		socketBonusesMet,
-	};
 };
 
 export const groupItemsBySlot = (

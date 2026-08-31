@@ -79,7 +79,7 @@ export interface Stat {
 	type: 'flat' | 'multiplier';
 }
 
-export interface Socket {
+interface Socket {
 	color: "Blue" | "Red" | "Yellow" | "Meta";
 }
 
@@ -183,7 +183,7 @@ export const STAT_LABELS: Record<StatName, string> = {
 };
 
 // TODO make item types not dumb
-export type ItemType =
+type ItemType =
 	| "Head"
 	| "Neck"
 	| "Shoulder"
@@ -219,7 +219,7 @@ export type ProcessedItemType =
 	| "BattleElixir"
 	| "GuardianElixir";
 
-export type ConsumableType = "Flask" | "BattleElixir" | "GuardianElixir";
+type ConsumableType = "Flask" | "BattleElixir" | "GuardianElixir";
 
 export interface ConsumableItem {
 	id: string;

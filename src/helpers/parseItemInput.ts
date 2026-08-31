@@ -62,7 +62,7 @@ export const formatItemExport = (items: LPItem[]): string => {
 	return JSON.stringify({ gear: { items: exportItems } });
 };
 
-export type ItemInputAnalysis =
+type ItemInputAnalysis =
 	| { status: "empty" }
 	| { status: "valid"; count: number; format: "json" | "ids" }
 	| {

@@ -20,7 +20,7 @@ npm run check    # Biome lint + format
 
 | Concern | Library |
 |---|---|
-| Framework | React 19 + TanStack Start (Vite-based SSR/SPA) |
+| Framework | React 19 + Vite (client-side SPA, no SSR) |
 | Routing | TanStack Router (file-based, `src/routes/`) |
 | UI | MUI v7 (preferred). Tailwind CSS v4 is present but largely leftover from the initial project template — prefer MUI components. |
 | LP Solver | `glpk.js` (GLPK compiled to WASM) |
@@ -28,7 +28,7 @@ npm run check    # Biome lint + format
 | Testing | Vitest + jsdom |
 | Path alias | `#/` → `src/` (also `@/` → `src/`) |
 
-The LP solver runs inside a **Web Worker** (`src/solver/solver.worker.ts`) to avoid blocking the UI thread. The main thread posts `lpItems + targets` to the worker and receives chosen items back.
+The LP solver runs inside a **Web Worker** (`src/solver/solver.worker.ts`) to avoid blocking the UI thread.
 
 ---
 
@@ -38,16 +38,15 @@ The LP solver runs inside a **Web Worker** (`src/solver/solver.worker.ts`) to av
 src/
   data/           Static game data (items, enchants, gems, base stats, buffs, talents, abilities)
   solver/         Core LP pipeline (item generation, scoring, GLPK interface, Web Worker)
-  helpers/     Stat calculation and conversion utilities (note: folder named with .ts extension)
+  helpers/        Stat calculation and conversion utilities
   types/          UI-facing TypeScript interfaces (SolverConfig, SolveResult)
   components/     React UI components
   contexts/       React contexts
   hooks/          Custom React hooks
   routes/         TanStack Router file-based routes
-tests/
-  integration.test.ts   End-to-end solver test
 ```
 
+Tests are colocated next to the code they cover (`*.test.ts` beside the module), not in a separate `tests/` directory — e.g. `src/data/baseStats.test.ts`, `src/solver/avoidance.test.ts`, `src/helpers/stats.test.ts`.
 
 ---
 
@@ -65,6 +64,7 @@ Tanks must be **Uncrushable** (combined avoidance at or above a threshold) and/o
   - `setting=1` → 5.4% required (Level 72 mobs / heroic dungeons)
   - `setting=2` → 5.6% required (Level 73 mobs / raid bosses)
   - Achieved via Defense Rating and/or Resilience. Each defense *skill point* contributes 0.04% crit reduction.
+- **Resistance Floors**: optional per-stat minimums (e.g. a Fire Resistance floor for a specific encounter), configured per gear set and enforced as additional LP constraints alongside avoidance/uncrit.
 
 ### Stats: Ratings vs. Percentages
 
@@ -102,79 +102,13 @@ Examples: Kings (`Stamina +10%`) → `{ value: 0.1, type: "multiplier" }`. Tough
 **Multiplier modifier sources** (buffs/talents) are applied when scoring items — they scale what gear contributes.  
 **Flat modifier sources** are applied to base stats — they reduce how much gear needs to contribute to hit constraint targets.
 
-
 ---
 
-## Solver Pipeline
+## Multiple Gear Sets
 
-```
-User input (item IDs / WowSims JSON)
-  → parseItemInput()            [helpers/parseItemInput.ts]
-  → InputItem[]
+Each gear-set tab is solved independently but sequentially. After a config solves, its selected items are locked to their chosen enchant and gems before the next config solves — so later configs can't re-gem or re-enchant an item a prior config already claimed. This mirrors real-world cost: once an item is enchanted, every set has to use it as-is.
 
-InputItem[] + SolveOptions
-  → new SolverConfiguration()   [solver/SolverConfiguration.ts]
-    - Merges talents + buffs + abilities into flatModifierSources / multiplierModifierSources
-    - Calculates baseAvoidance and avoidanceTarget (102.4 - baseAvoidance)
-    - Calculates baseUncritability and uncritabilityTarget (5.4 or 5.6 - baseUncritability)
-
-  → getTransformedItems()       [solver/items.ts]
-    - Looks up each item from items.json, applies itemOverride()
-    - Generates every valid enchant × gem combination (ItemVariation[])
-      - Locked items (already enchanted/gemmed) skip variation generation
-      - Only phase-1, non-unique gems considered
-      - Meta sockets handled separately from colored sockets
-      - Socket bonus scored only if gem colors satisfy socket requirements
-    - Scores each variation → LPItem (avoidanceScore, uncritabilityScore, objectiveScore)
-
-  → solver.worker.ts (GLPK MIP)
-    - Binary variable per LPItem (1 = selected, 0 = not)
-    - Constraints: exactly 1 item per slot (2 for Finger/Trinket), max 1 per base item ID
-    - Optional: sum(avoidanceScore) >= avoidanceTarget
-    - Optional: sum(uncritabilityScore) >= uncritabilityTarget
-    - Objective: maximize sum(objectiveScore)
-    - Fallback if no optimal solution found: maximize avoidanceScore instead
-
-  → Validation loop             [solver/index.ts]
-    - Defense rating is floored to integer skill in-game; LP uses fractional values
-    - Max possible error: 0.16% avoidance (1 defense skill × 4 stats × 0.04%)
-    - After each solve, recalculates avoidance accurately; if target not met, steps target
-      up by 0.08% and resolves
-```
-
-### Multi-Config Solve (`solveAll`)
-
-Configs are solved sequentially. After each solve, selected items are locked with their chosen enchant and gem IDs. Subsequent configs only see those exact item+enchant+gem combinations — the LP cannot re-gem or re-enchant them. This reflects real-world cost: once an item is enchanted, future sets must use it as-is.
-
----
-
-## Key Types
-
-### Two things both named `SolverConfiguration` — they are different
-
-| | Location | Purpose |
-|---|---|---|
-| `class SolverConfiguration` | `src/solver/SolverConfiguration.ts` | Internal solver object. Holds derived targets, separated modifier sources. Used by LP pipeline. |
-| `interface SolverConfiguration` | `src/types/SolverConfig.ts` | UI-facing data shape in React state. Holds raw user settings (constraints, buffs, optimizeStats). |
-
-Import path disambiguates which is which. The naming collision is a known issue.
-
-### `SolveConfigContext`
-
-Stores class/race/talents/abilities after a solve completes. Currently populated but not actively consumed — `StatsSummary` receives `baseConfig` and `solverConfig` as direct props from `SolveResult`, not from this context. Likely intended for future use (e.g. re-calculating stats without re-solving).
-
-### Item type chain
-
-| Type | Description |
-|---|---|
-| `InputItem` | Raw user input: id, optional enchant id, gem id array |
-| `Item` | Full item data from items.json |
-| `ItemVariation` | Item + specific enchant + specific gems + `uniqueId` + `locked` flag |
-| `LPItem` | ItemVariation + three precomputed scores; `Weapon` with `weaponType === "Shield"` is remapped to `ProcessedItemType = "Shield"` |
-
-### `ModifierSource` / `Buff`
-
-`ModifierSource` is the base type for talents, abilities, and buffs. `Buff` extends it with a `checked: boolean` toggle. Stat values are multiplied by `rank` during calculation (`rank` defaults to 1 if absent).
+For the actual solving mechanics (how gear/enchants/gems get modeled as an LP problem, the EHP objective mode, avoidance/uncrit convergence), read `src/solver/` directly — it's commented at the points that need it (start with `solveConfig.ts` and `items.ts`) and is a better source of truth than a description here, which will drift as the solver evolves.
 
 ---
 
@@ -190,6 +124,7 @@ Stores class/race/talents/abilities after a solve completes. Currently populated
 | `buffs.ts` | Raid/party buffs as `ModifierSource[]` |
 | `talents.ts` | Paladin tank talents (Toughness, Anticipation, Sacred Duty, Combat Expertise, Deflection) |
 | `abilities.ts` | Class abilities always active (Holy Shield: +30% Block for Paladins) |
+| `consumables.ts` | Flasks, elixirs (battle/guardian), and food as `ConsumableItem[]` |
 
 Item and enchant lookups are by string ID. Enchants can be found by either `id` or `effectID` (both exist due to WowSims export format variations).
 
@@ -216,15 +151,11 @@ The item input text is persisted to `localStorage`. All other UI state resets on
 
 ---
 
-## Known Issues & Intentional Limitations
+## Scope
 
-- **Only Paladin (classId `"2"`) supported**, for the four TBC-valid races: Human, Dwarf, Draenei, and Blood Elf. Other classes/races have no data.
-- **Some enchants missing** — e.g. block rating enchant for shields.
-- **Armor DR formula** uses hardcoded level 73 attacker constant (`10557.5`). Differs against level 72 mobs.
-- **`optimizeStats` uses `Stat[]` type** but semantically represents weighted objectives, not stat values. Known type design issue.
-- **`StatConverter`** mixes rating↔percent conversions with stat-to-derived-stat conversions (e.g. Agility→Dodge). Needs refactoring.
-- **Elixirs/Flasks** UI placeholder exists but is not implemented.
-- **Integration test is broken** — `tests/integration.test.ts` imports `getAvoidanceFromItems` from `helpers/getStatFromItem`, which does not exist. It also calls `solve()` expecting `result.items` but `solve()` returns `LPItem[]` directly.
+Only Paladin (classId `"2"`) is supported, for the four TBC-valid races: Human, Dwarf, Draenei, and Blood Elf. Other classes/races have no data. This is a deliberate scope limit, not a bug — see TODO.md for what it would take to extend it.
+
+For open bugs, gaps, and cleanup work, see [TODO.md](TODO.md) rather than this file — that's the doc that's meant to track things that need doing, so it's the one to check (and update) as work happens.
 
 ---
 

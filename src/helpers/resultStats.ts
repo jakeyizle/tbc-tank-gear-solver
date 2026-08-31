@@ -4,7 +4,7 @@ import { CONSUMABLE_TYPES } from "#/solver/itemSlots";
 import type { LPItem, ModifierSource } from "#/solver/types";
 import type { BaseConfig, SolveResult, SolverConfiguration } from "#/types/SolverConfig";
 
-export interface HeadlineStat {
+interface HeadlineStat {
 	name: string;
 	value: number;
 }

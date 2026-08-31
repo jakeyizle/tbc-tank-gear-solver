@@ -38,12 +38,12 @@ const linearizedEHPWeights = (armor: number, health: number) => {
 	return { healthWeight, armorWeight };
 };
 
-export interface EHPSolveProgress extends SolveProgress {
+interface EHPSolveProgress extends SolveProgress {
 	ehpIteration: number;
 	maxEHPIterations: number;
 }
 
-export interface EHPSolveResult {
+interface EHPSolveResult {
 	items: LPItem[];
 	effectiveHP: number;
 	ehpIterations: number;
