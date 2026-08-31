@@ -12,6 +12,7 @@ import { getAbilities} from "#/data/abilities";
 import {getTalentsByClass} from "#/data/talents";
 import { analyzeItemInput, parseItemInput } from "#/helpers/parseItemInput";
 import { loadAppState, saveAppState } from "#/helpers/persistence";
+import { track } from "#/helpers/track";
 import { useCharacterConfig } from "#/hooks/useCharacterConfig";
 import { useSolverConfigs } from "#/hooks/useSolverConfigs";
 import { solveAll } from "#/solver";
@@ -93,6 +94,7 @@ function App() {
 
 		const analysis = analyzeItemInput(itemInput);
 		if (analysis.status === "empty" || analysis.status === "error") {
+			track({ event: "solve_failed", errorKind: "validation" });
 			handleSolveFailure(
 				analysis.status === "empty"
 					? "Paste a gear pool before solving."
@@ -100,6 +102,9 @@ function App() {
 			);
 			return;
 		}
+
+		const startedAt = performance.now();
+		track({ event: "solve_started", configCount: configs.length, phase });
 
 		try {
 			setSolveProgress({
@@ -141,6 +146,12 @@ function App() {
 				}
 			}
 			setSolveResults(newResults);
+			track({
+				event: "solve_succeeded",
+				durationMs: performance.now() - startedAt,
+				configCount: configs.length,
+				phase,
+			});
 			if (firstResultId) {
 				setActiveResultId(firstResultId);
 			}
@@ -158,6 +169,13 @@ function App() {
 				activeResultId: firstResultId,
 			});
 		} catch (error) {
+			track({
+				event: "solve_failed",
+				durationMs: performance.now() - startedAt,
+				configCount: configs.length,
+				phase,
+				errorKind: "solve_error",
+			});
 			handleSolveFailure(
 				error instanceof Error
 					? error.message
