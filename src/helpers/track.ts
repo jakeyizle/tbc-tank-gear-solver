@@ -1,4 +1,15 @@
-type TrackEvent = "solve_started" | "solve_succeeded" | "solve_failed";
+type TrackEvent =
+	| "solve_started"
+	| "solve_succeeded"
+	| "solve_failed"
+	| "unknown_id_detected";
+
+export type UnknownIdType = "item" | "gem" | "enchant";
+
+export interface UnknownId {
+	type: UnknownIdType;
+	id: string;
+}
 
 interface TrackPayload {
 	event: TrackEvent;
@@ -6,6 +17,7 @@ interface TrackPayload {
 	configCount?: number;
 	phase?: number;
 	errorKind?: "validation" | "solve_error";
+	unknownIds?: UnknownId[];
 }
 
 export const track = (payload: TrackPayload): void => {

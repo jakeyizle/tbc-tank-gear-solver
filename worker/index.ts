@@ -3,13 +3,38 @@ interface Env {
 	TANK_SOLVER_ANALYTICS: AnalyticsEngineDataset;
 }
 
-type TrackEvent = "solve_started" | "solve_succeeded" | "solve_failed";
+type TrackEvent =
+	| "solve_started"
+	| "solve_succeeded"
+	| "solve_failed"
+	| "unknown_id_detected";
 
 const TRACK_EVENTS: readonly TrackEvent[] = [
 	"solve_started",
 	"solve_succeeded",
 	"solve_failed",
+	"unknown_id_detected",
 ];
+
+type UnknownIdType = "item" | "gem" | "enchant";
+
+const UNKNOWN_ID_TYPES: readonly UnknownIdType[] = ["item", "gem", "enchant"];
+
+interface UnknownId {
+	type: UnknownIdType;
+	id: string;
+}
+
+const isUnknownId = (value: unknown): value is UnknownId => {
+	if (typeof value !== "object" || value === null) return false;
+	const entry = value as Record<string, unknown>;
+	return (
+		UNKNOWN_ID_TYPES.includes(entry.type as UnknownIdType) &&
+		typeof entry.id === "string" &&
+		entry.id.length > 0 &&
+		entry.id.length <= 64
+	);
+};
 
 interface TrackBody {
 	event: TrackEvent;
@@ -17,6 +42,7 @@ interface TrackBody {
 	configCount?: number;
 	phase?: number;
 	errorKind?: string;
+	unknownIds?: UnknownId[];
 }
 
 const isTrackBody = (value: unknown): value is TrackBody => {
@@ -25,6 +51,11 @@ const isTrackBody = (value: unknown): value is TrackBody => {
 	if (!TRACK_EVENTS.includes(body.event as TrackEvent)) return false;
 	if (body.durationMs !== undefined && !Number.isFinite(body.durationMs))
 		return false;
+	if (body.unknownIds !== undefined) {
+		if (!Array.isArray(body.unknownIds)) return false;
+		if (body.unknownIds.length > 100) return false;
+		if (!body.unknownIds.every(isUnknownId)) return false;
+	}
 	return true;
 };
 
@@ -52,6 +83,16 @@ const handleTrack = async (request: Request, env: Env): Promise<Response> => {
 		doubles: [durationMs],
 		indexes: [body.event],
 	});
+
+	if (body.unknownIds) {
+		for (const { type, id } of body.unknownIds) {
+			env.TANK_SOLVER_ANALYTICS.writeDataPoint({
+				blobs: ["unknown_id_detected", type, id],
+				doubles: [],
+				indexes: [id],
+			});
+		}
+	}
 
 	return new Response(null, { status: 204 });
 };

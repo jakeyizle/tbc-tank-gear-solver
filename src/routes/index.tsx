@@ -12,7 +12,7 @@ import { getAbilities} from "#/data/abilities";
 import {getTalentsByClass} from "#/data/talents";
 import { analyzeItemInput, parseItemInput } from "#/helpers/parseItemInput";
 import { loadAppState, saveAppState } from "#/helpers/persistence";
-import { track } from "#/helpers/track";
+import { track, type UnknownId } from "#/helpers/track";
 import { useCharacterConfig } from "#/hooks/useCharacterConfig";
 import { useSolverConfigs } from "#/hooks/useSolverConfigs";
 import type { SolveAllProgress } from "#/solver";
@@ -101,6 +101,15 @@ function App() {
 					: analysis.message
 			);
 			return;
+		}
+
+		if (analysis.status === "warning") {
+			const unknownIds: UnknownId[] = [
+				...analysis.unknownItemIds.map((id): UnknownId => ({ type: "item", id })),
+				...analysis.unknownGemIds.map((id): UnknownId => ({ type: "gem", id })),
+				...analysis.unknownEnchantIds.map((id): UnknownId => ({ type: "enchant", id })),
+			];
+			track({ event: "unknown_id_detected", unknownIds });
 		}
 
 		const startedAt = performance.now();
