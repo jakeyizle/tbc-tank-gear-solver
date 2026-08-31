@@ -1,8 +1,10 @@
 {
   "name": "tbc-tank-gear-solver",
   "compatibility_date": "2026-08-30",
+  "main": "worker/index.ts",
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application"
   },
   "analytics_engine_datasets": [

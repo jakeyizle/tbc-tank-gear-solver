@@ -1,4 +1,5 @@
 interface Env {
+	ASSETS: Fetcher;
 	TANK_SOLVER_ANALYTICS: AnalyticsEngineDataset;
 }
 
@@ -27,10 +28,10 @@ const isTrackBody = (value: unknown): value is TrackBody => {
 	return true;
 };
 
-export const onRequestPost: PagesFunction<Env> = async (context) => {
+const handleTrack = async (request: Request, env: Env): Promise<Response> => {
 	let body: unknown;
 	try {
-		body = await context.request.json();
+		body = await request.json();
 	} catch {
 		return new Response("invalid json", { status: 400 });
 	}
@@ -42,7 +43,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 	const durationMs =
 		body.durationMs !== undefined && body.durationMs >= 0 ? body.durationMs : 0;
 
-	context.env.TANK_SOLVER_ANALYTICS.writeDataPoint({
+	env.TANK_SOLVER_ANALYTICS.writeDataPoint({
 		blobs: [
 			body.event,
 			String(body.configCount ?? ""),
@@ -54,3 +55,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
 	return new Response(null, { status: 204 });
 };
+
+export default {
+	async fetch(request, env) {
+		const url = new URL(request.url);
+		if (url.pathname === "/api/track" && request.method === "POST") {
+			return handleTrack(request, env);
+		}
+		return env.ASSETS.fetch(request);
+	},
+} satisfies ExportedHandler<Env>;
