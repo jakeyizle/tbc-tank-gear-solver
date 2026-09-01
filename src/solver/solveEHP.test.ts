@@ -140,11 +140,7 @@ describe("solveConfigForEHP", () => {
 		// the same objectiveMode-dispatch logic solver.worker.ts uses, so this exercises the exact
 		// routing a real solve would do (see solver.worker.ts)
 		const solveFnForTest: typeof solve = (items, options, onProgress) =>
-			solveGearSet(
-				items,
-				options,
-				onProgress && ((p) => onProgress(p.iteration / p.maxIterations)),
-			);
+			solveGearSet(items, options, onProgress);
 
 		const ehpConfig = {
 			id: "config-1",

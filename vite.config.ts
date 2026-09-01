@@ -12,6 +12,12 @@ const config = defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
+  worker: {
+    // solver.worker.ts dynamically import()s src/sim/* modules for sim-backed objectives, so
+    // its bundle needs code-splitting support - the default 'iife' worker format doesn't
+    // support multiple chunks and fails the production build outright.
+    format: 'es',
+  },
   plugins: [
     devtools(),
     tsconfigPaths({ projects: ['./tsconfig.json'] }),

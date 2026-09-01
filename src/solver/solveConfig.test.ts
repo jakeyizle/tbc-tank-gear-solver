@@ -186,11 +186,7 @@ describe("solveConfig", () => {
 		// solveConfig directly (same underlying logic solver.worker.ts calls) so this test
 		// exercises solveAll's real cross-config locking orchestration without a Worker
 		const solveFnForTest: typeof solve = (items, options, onProgress) =>
-			solveConfig(
-				items,
-				options,
-				onProgress && ((p) => onProgress(p.iteration / p.maxIterations)),
-			);
+			solveConfig(items, options, onProgress);
 
 		const results = await solveAll(
 			testItemPool,
@@ -333,11 +329,7 @@ describe("solveConfig", () => {
 		};
 
 		const solveFnForTest: typeof solve = (items, options, onProgress) =>
-			solveConfig(
-				items,
-				options,
-				onProgress && ((p) => onProgress(p.iteration / p.maxIterations)),
-			);
+			solveConfig(items, options, onProgress);
 
 		await expect(
 			solveAll(

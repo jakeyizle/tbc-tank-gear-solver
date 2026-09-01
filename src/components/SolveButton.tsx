@@ -1,5 +1,6 @@
 import Button from "@mui/material/Button";
 import type { SolveAllProgress } from "#/solver";
+import { simProgressText } from "./ResultsPanel/simProgressText";
 
 interface SolveButtonProps {
 	onSolve: () => void;
@@ -14,9 +15,11 @@ export default function SolveButton({
 	setCount,
 	solveProgress,
 }: SolveButtonProps) {
-	const label = solveProgress
-		? `Solving set ${solveProgress.configIndex + 1} of ${solveProgress.totalConfigs}…`
-		: "Solving…";
+	const label =
+		simProgressText(solveProgress?.detail) ??
+		(solveProgress
+			? `Solving set ${solveProgress.configIndex + 1} of ${solveProgress.totalConfigs}…`
+			: "Solving…");
 
 	return (
 		<Button
@@ -26,7 +29,9 @@ export default function SolveButton({
 			onClick={onSolve}
 			disabled={isSolving || setCount === 0}
 		>
-			{isSolving ? label : `Solve all ${setCount} ${setCount === 1 ? "set" : "sets"}`}
+			{isSolving
+				? label
+				: `Solve all ${setCount} ${setCount === 1 ? "set" : "sets"}`}
 		</Button>
 	);
 }

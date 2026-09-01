@@ -13,6 +13,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import type { DragEvent, ReactNode } from "react";
 import { useState } from "react";
+import { PROT_PALADIN_REFERENCE_ENCOUNTER_NAME } from "#/sim/protPaladinEncounter";
 import {
 	type Buff,
 	type ConsumableItem,
@@ -37,6 +38,18 @@ const UNCRUSHABLE_TAGS: Record<number, string> = {
 	2: "Illidan Shear",
 };
 
+// Objective modes that ignore optimizeStats and instead recalibrate their own weight
+// vector - "ehp" via a closed-form formula, the sim-backed ones via a real combat sim (see
+// docs/plans/sim-backed-objectives.md). Both are labeled/explained the same way in this UI.
+const NON_STATS_OBJECTIVE_LABELS: Record<string, string> = {
+	ehp: "Maximize Effective HP",
+	tps: "Maximize Threat Per Second",
+	dtps: "Minimize Damage Taken Per Second",
+	tmi5: "Minimize TMI-5",
+};
+
+const SIM_BACKED_MODES = new Set(["tps", "dtps", "tmi5"]);
+
 interface ConfigCardProps {
 	config: SolverConfiguration;
 	index: number;
@@ -51,7 +64,9 @@ interface ConfigCardProps {
 	onRename: (name: string) => void;
 	onUpdateConstraints: (uncritability: number, uncrushability: number) => void;
 	onUpdateOptimizeStats: (stats: Stat[]) => void;
-	onUpdateObjectiveMode: (mode: "stats" | "ehp") => void;
+	onUpdateObjectiveMode: (
+		mode: "stats" | "ehp" | "tps" | "dtps" | "tmi5",
+	) => void;
 	onUpdateResistanceFloors: (floors: ResistanceFloor[]) => void;
 	onBuffChange: (buffId: string) => void;
 	onConsumableChange: (consumableId: string) => void;
@@ -112,7 +127,9 @@ function ConfigBand({
 }
 
 function statsSummary(config: SolverConfiguration): string {
-	if (config.objectiveMode === "ehp") return "Maximize Effective HP";
+	if (config.objectiveMode !== "stats") {
+		return NON_STATS_OBJECTIVE_LABELS[config.objectiveMode];
+	}
 	const stats = config.optimizeStats;
 	if (stats.length === 0) return "no stats weighted";
 	const sorted = [...stats].sort((a, b) => b.value - a.value);
@@ -346,8 +363,8 @@ export default function ConfigCard({
 					</Typography>
 				)}
 				<Typography variant="caption" color="text.secondary">
-					{config.objectiveMode === "ehp"
-						? "Maximize Effective HP"
+					{config.objectiveMode !== "stats"
+						? NON_STATS_OBJECTIVE_LABELS[config.objectiveMode]
 						: `${config.optimizeStats.length} stats weighted`}
 					{config.resistanceFloors.length > 0
 						? ` · ${config.resistanceFloors.length} resistance floor${config.resistanceFloors.length > 1 ? "s" : ""}`
@@ -405,8 +422,23 @@ export default function ConfigCard({
 						<ToggleButton value="ehp" sx={{ px: 1.5, py: 0.375, fontSize: 12 }}>
 							Maximize Effective HP
 						</ToggleButton>
+						<ToggleButton value="tps" sx={{ px: 1.5, py: 0.375, fontSize: 12 }}>
+							Maximize TPS
+						</ToggleButton>
+						<ToggleButton
+							value="dtps"
+							sx={{ px: 1.5, py: 0.375, fontSize: 12 }}
+						>
+							Minimize DTPS
+						</ToggleButton>
+						<ToggleButton
+							value="tmi5"
+							sx={{ px: 1.5, py: 0.375, fontSize: 12 }}
+						>
+							Minimize TMI-5
+						</ToggleButton>
 					</ToggleButtonGroup>
-					{config.objectiveMode === "ehp" ? (
+					{config.objectiveMode === "ehp" && (
 						<Typography
 							variant="body2"
 							color="text.secondary"
@@ -416,7 +448,22 @@ export default function ConfigCard({
 							weights below are unused in this mode but kept in case you switch
 							back.
 						</Typography>
-					) : (
+					)}
+					{SIM_BACKED_MODES.has(config.objectiveMode) && (
+						<Typography
+							variant="body2"
+							color="text.secondary"
+							fontStyle="italic"
+						>
+							Solver recalibrates a weight vector against a real combat
+							simulation each round — expect this to take longer than the
+							instant modes above. Protection Paladin only for now, optimized
+							against: {PROT_PALADIN_REFERENCE_ENCOUNTER_NAME}, standard raid
+							buffs, default talents (not yet configurable). Stat weights below
+							are unused in this mode but kept in case you switch back.
+						</Typography>
+					)}
+					{config.objectiveMode === "stats" && (
 						<StatsEntry
 							stats={config.optimizeStats}
 							onChange={onUpdateOptimizeStats}

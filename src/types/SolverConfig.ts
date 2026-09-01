@@ -15,7 +15,10 @@ export interface SolverConfiguration {
 	optimizeStats: Stat[];
 	// 'stats' = maximize the weighted sum in optimizeStats (default). 'ehp' = ignore
 	// optimizeStats and let the solver directly maximize armor-mitigated Effective HP.
-	objectiveMode: "stats" | "ehp";
+	// 'tps'/'dtps'/'tmi5' = sim-calibrated objectives (Protection Paladin only for now) -
+	// see docs/plans/sim-backed-objectives.md. Like 'ehp', these ignore optimizeStats;
+	// the solver recalibrates its own weight vector via a real combat sim instead.
+	objectiveMode: "stats" | "ehp" | "tps" | "dtps" | "tmi5";
 	resistanceFloors: ResistanceFloor[];
 	abilities: ModifierSource[];
 	talents: ModifierSource[];

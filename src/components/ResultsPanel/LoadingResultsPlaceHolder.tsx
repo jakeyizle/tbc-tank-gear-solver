@@ -3,6 +3,7 @@ import LinearProgress from "@mui/material/LinearProgress";
 import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
 import type { SolveAllProgress } from "#/solver";
+import { simProgressText } from "./simProgressText";
 
 interface LoadingResultsPlaceholderProps {
 	solveProgress?: SolveAllProgress | null;
@@ -29,6 +30,7 @@ export default function LoadingResultsPlaceholder({
 				99,
 			)
 		: 0;
+	const simText = simProgressText(solveProgress?.detail);
 
 	return (
 		<Box
@@ -51,8 +53,13 @@ export default function LoadingResultsPlaceholder({
 			</Box>
 			{solveProgress && (
 				<Typography variant="body2" color="text.secondary">
-					Solving "{solveProgress.configName}" ({solveProgress.configIndex + 1} of{" "}
-					{solveProgress.totalConfigs})…
+					Solving "{solveProgress.configName}" ({solveProgress.configIndex + 1}{" "}
+					of {solveProgress.totalConfigs})…
+				</Typography>
+			)}
+			{simText && (
+				<Typography variant="body2" color="text.secondary">
+					{simText}
 				</Typography>
 			)}
 			<Typography variant="caption" color="text.secondary">

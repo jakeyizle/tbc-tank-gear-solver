@@ -1,3 +1,4 @@
+import type { SimMetricSolvePhase } from "#/sim/solveSimMetric";
 import type {
 	BaseConfig,
 	SolveResult,
@@ -15,7 +16,7 @@ interface SolveOptions {
 	uncrushabilitySetting: number;
 	uncritabilitySetting: number;
 	optimizeStats: Stat[];
-	objectiveMode?: "stats" | "ehp";
+	objectiveMode?: "stats" | "ehp" | "tps" | "dtps" | "tmi5";
 	resistanceFloors: ResistanceFloor[];
 	areEnchantsGemsLocked: boolean;
 	excludeUniqueGems: boolean;
@@ -28,15 +29,31 @@ interface SolveOptions {
 	enabledConsumableIds: string[];
 }
 
+// Every worker progress message carries at least iteration/maxIterations (the avoidance-
+// convergence LP sub-loop); sim-backed objectives (see solveSimMetric.ts) additionally carry
+// which calibration round it's on and whether that round is currently calibrating (running
+// the sim) or solving (running the LP). Plain "stats"/"ehp" solves simply never set the
+// optional fields, so this is an additive, backward-compatible superset of what was here
+// before, not a breaking shape change.
+export interface WorkerProgressDetail {
+	iteration: number;
+	maxIterations: number;
+	simIteration?: number;
+	maxSimIterations?: number;
+	phase?: SimMetricSolvePhase;
+	calibrationCompletedIterations?: number;
+	calibrationTotalIterations?: number;
+}
+
 type WorkerMessage =
-	| { type: "progress"; iteration: number; maxIterations: number }
+	| ({ type: "progress" } & WorkerProgressDetail)
 	| { type: "result"; items: LPItem[] }
 	| { type: "error"; message: string };
 
 export const solve = async (
 	items: InputItem[],
 	options: SolveOptions,
-	onProgress?: (fraction: number) => void,
+	onProgress?: (progress: WorkerProgressDetail) => void,
 ): Promise<LPItem[]> => {
 	return new Promise((resolve, reject) => {
 		const worker = new Worker(new URL("./solver.worker.ts", import.meta.url), {
@@ -46,7 +63,8 @@ export const solve = async (
 		worker.onmessage = (e) => {
 			const data = e.data as WorkerMessage;
 			if (data.type === "progress") {
-				onProgress?.(data.iteration / data.maxIterations);
+				const { type: _type, ...progress } = data;
+				onProgress?.(progress);
 				return;
 			}
 
@@ -76,6 +94,8 @@ export interface SolveAllProgress {
 	totalConfigs: number;
 	configName: string;
 	innerFraction: number;
+	// present for sim-backed objectives only - see WorkerProgressDetail.
+	detail?: WorkerProgressDetail;
 }
 
 export const solveAll = async (
@@ -111,12 +131,13 @@ export const solveAll = async (
 					...baseConfig,
 					...solverConfig,
 				},
-				(innerFraction) =>
+				(progress) =>
 					onProgress?.({
 						configIndex,
 						totalConfigs,
 						configName: solverConfig.name,
-						innerFraction,
+						innerFraction: progress.iteration / progress.maxIterations,
+						detail: progress,
 					}),
 			);
 		} catch (error) {
