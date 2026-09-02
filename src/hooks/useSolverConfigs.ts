@@ -9,17 +9,35 @@ import {
 
 const ALL_CONSUMABLE_IDS = CONSUMABLES.map((consumable) => consumable.id);
 
+// Migrates configs saved before the three exclusive TPS/DTPS/TMI-5 sim modes were replaced by
+// one "Weighted Sim Metrics" mode with per-metric ratios - e.g. an old "Minimize TMI-5" config
+// becomes the equivalent {tps: 0, dtps: 0, tmi5: 1} blend, with no behavior change.
+const LEGACY_SIM_MODE_RATIOS: Partial<
+	Record<string, { tps: number; dtps: number; tmi5: number }>
+> = {
+	tps: { tps: 1, dtps: 0, tmi5: 0 },
+	dtps: { tps: 0, dtps: 1, tmi5: 0 },
+	tmi5: { tps: 0, dtps: 0, tmi5: 1 },
+};
+
 export function useSolverConfigs() {
 	const _saved = loadAppState();
 
 	const [configs, setConfigs] = useState<SolverConfiguration[]>(() =>
 		(_saved?.configs ?? [createEmptyConfig("default", "Default Config")]).map(
-			(c) => ({
-				...c,
-				resistanceFloors: c.resistanceFloors ?? [],
-				enabledConsumableIds: c.enabledConsumableIds ?? ALL_CONSUMABLE_IDS,
-				objectiveMode: c.objectiveMode ?? "stats",
-			}),
+			(c) => {
+				const legacyRatios = LEGACY_SIM_MODE_RATIOS[c.objectiveMode as string];
+				return {
+					...c,
+					resistanceFloors: c.resistanceFloors ?? [],
+					enabledConsumableIds: c.enabledConsumableIds ?? ALL_CONSUMABLE_IDS,
+					objectiveMode: legacyRatios
+						? "simWeighted"
+						: (c.objectiveMode ?? "stats"),
+					simMetricWeights: c.simMetricWeights ??
+						legacyRatios ?? { tps: 0, dtps: 0, tmi5: 1 },
+				};
+			},
 		),
 	);
 	const [activeConfigId, setActiveConfigId] = useState<string>(

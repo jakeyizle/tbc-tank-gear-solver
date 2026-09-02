@@ -15,10 +15,14 @@ export interface SolverConfiguration {
 	optimizeStats: Stat[];
 	// 'stats' = maximize the weighted sum in optimizeStats (default). 'ehp' = ignore
 	// optimizeStats and let the solver directly maximize armor-mitigated Effective HP.
-	// 'tps'/'dtps'/'tmi5' = sim-calibrated objectives (Protection Paladin only for now) -
-	// see docs/plans/sim-backed-objectives.md. Like 'ehp', these ignore optimizeStats;
-	// the solver recalibrates its own weight vector via a real combat sim instead.
-	objectiveMode: "stats" | "ehp" | "tps" | "dtps" | "tmi5";
+	// 'simWeighted' = sim-calibrated objective (Protection Paladin only for now) - see
+	// docs/plans/sim-backed-objectives.md. Like 'ehp', this ignores optimizeStats; the solver
+	// recalibrates its own weight vector via a real combat sim instead, blended per
+	// simMetricWeights.
+	objectiveMode: "stats" | "ehp" | "simWeighted";
+	// Per-metric ratios for 'simWeighted' mode - e.g. {tps: 0, dtps: 0, tmi5: 1} reproduces
+	// the old "Minimize TMI-5"-only behavior. Unused (but kept) in other modes.
+	simMetricWeights: { tps: number; dtps: number; tmi5: number };
 	resistanceFloors: ResistanceFloor[];
 	abilities: ModifierSource[];
 	talents: ModifierSource[];
@@ -55,6 +59,7 @@ export function createEmptyConfig(
 		uncrushabilitySetting: 1,
 		optimizeStats: [],
 		objectiveMode: "stats",
+		simMetricWeights: { tps: 0, dtps: 0, tmi5: 1 },
 		resistanceFloors: [],
 		abilities: [],
 		talents: [],

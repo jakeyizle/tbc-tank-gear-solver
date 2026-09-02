@@ -2,15 +2,19 @@ import type { SolveOptions } from "./solveConfig";
 import { solveGearSet } from "./solveEHP";
 import type { InputItem } from "./types";
 
-// objectiveMode's public "tmi5" is distinct from calibrateWeights.ts's internal SimMetric
-// ("tmi") - the former is a user-facing UI value, the latter matches tbc-new's own
+// The public simMetricWeights key "tmi5" is distinct from calibrateWeights.ts's internal
+// SimMetric ("tmi") - the former is a user-facing UI value, the latter matches tbc-new's own
 // StatWeightsResult field name. Kept as a separate mapping rather than renaming one to match
 // the other, since "TMI-5" (the actual metric name) reads oddly as a bare "tmi" in the UI.
-const SIM_METRIC_BY_OBJECTIVE_MODE = {
-	tps: "tps",
-	dtps: "dtps",
-	tmi5: "tmi",
-} as const;
+function toMetricRatios(
+	simMetricWeights: NonNullable<SolveOptions["simMetricWeights"]>,
+): Partial<Record<"tps" | "dtps" | "tmi", number>> {
+	return {
+		tps: simMetricWeights.tps,
+		dtps: simMetricWeights.dtps,
+		tmi: simMetricWeights.tmi5,
+	};
+}
 
 self.onmessage = async (e) => {
 	const { items, options } = e.data as {
@@ -19,14 +23,8 @@ self.onmessage = async (e) => {
 	};
 
 	try {
-		const simMetric = options.objectiveMode
-			? SIM_METRIC_BY_OBJECTIVE_MODE[
-					options.objectiveMode as keyof typeof SIM_METRIC_BY_OBJECTIVE_MODE
-				]
-			: undefined;
-
 		let result: Awaited<ReturnType<typeof solveGearSet>>;
-		if (simMetric) {
+		if (options.objectiveMode === "simWeighted" && options.simMetricWeights) {
 			// Dispatched here rather than from solveGearSet/solveEHP.ts so src/solver/ (the
 			// generic LP core) never has to import from src/sim/ (the tbc-new integration) -
 			// see docs/plans/sim-backed-objectives.md's "Open decisions" note.
@@ -45,7 +43,7 @@ self.onmessage = async (e) => {
 				options,
 				PROT_PALADIN_BASELINE_GEAR,
 				db,
-				simMetric,
+				toMetricRatios(options.simMetricWeights),
 				(progress) => postMessage({ type: "progress", ...progress }),
 			);
 			result = simResult.items;

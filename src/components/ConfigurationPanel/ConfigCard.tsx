@@ -26,6 +26,9 @@ import type { SolverConfiguration } from "#/types/SolverConfig";
 import BuffSection from "./BuffSection";
 import ConstraintsSection from "./ConstraintsSection";
 import ConsumablesSection from "./ConsumablesSection";
+import SimMetricWeightsEntry, {
+	type SimMetricWeights,
+} from "./SimMetricWeightsEntry";
 import StatsEntry from "./StatsEntry";
 
 const CRIT_TAGS: Record<number, string> = {
@@ -39,16 +42,18 @@ const UNCRUSHABLE_TAGS: Record<number, string> = {
 };
 
 // Objective modes that ignore optimizeStats and instead recalibrate their own weight
-// vector - "ehp" via a closed-form formula, the sim-backed ones via a real combat sim (see
+// vector - "ehp" via a closed-form formula, "simWeighted" via a real combat sim (see
 // docs/plans/sim-backed-objectives.md). Both are labeled/explained the same way in this UI.
 const NON_STATS_OBJECTIVE_LABELS: Record<string, string> = {
 	ehp: "Maximize Effective HP",
-	tps: "Maximize Threat Per Second",
-	dtps: "Minimize Damage Taken Per Second",
-	tmi5: "Minimize TMI-5",
+	simWeighted: "Weighted Sim Metrics",
 };
 
-const SIM_BACKED_MODES = new Set(["tps", "dtps", "tmi5"]);
+const METRIC_SUMMARY_LABELS: Record<keyof SimMetricWeights, string> = {
+	tps: "TPS",
+	dtps: "DTPS",
+	tmi5: "TMI-5",
+};
 
 interface ConfigCardProps {
 	config: SolverConfiguration;
@@ -64,9 +69,8 @@ interface ConfigCardProps {
 	onRename: (name: string) => void;
 	onUpdateConstraints: (uncritability: number, uncrushability: number) => void;
 	onUpdateOptimizeStats: (stats: Stat[]) => void;
-	onUpdateObjectiveMode: (
-		mode: "stats" | "ehp" | "tps" | "dtps" | "tmi5",
-	) => void;
+	onUpdateObjectiveMode: (mode: "stats" | "ehp" | "simWeighted") => void;
+	onUpdateSimMetricWeights: (weights: SimMetricWeights) => void;
 	onUpdateResistanceFloors: (floors: ResistanceFloor[]) => void;
 	onBuffChange: (buffId: string) => void;
 	onConsumableChange: (consumableId: string) => void;
@@ -126,7 +130,19 @@ function ConfigBand({
 	);
 }
 
+function simMetricWeightsSummary(weights: SimMetricWeights): string {
+	const shown = (
+		Object.keys(METRIC_SUMMARY_LABELS) as (keyof SimMetricWeights)[]
+	)
+		.filter((key) => weights[key] !== 0)
+		.map((key) => `${METRIC_SUMMARY_LABELS[key]} ${weights[key].toFixed(2)}`);
+	return shown.length > 0 ? shown.join(" · ") : "no metrics weighted";
+}
+
 function statsSummary(config: SolverConfiguration): string {
+	if (config.objectiveMode === "simWeighted") {
+		return simMetricWeightsSummary(config.simMetricWeights);
+	}
 	if (config.objectiveMode !== "stats") {
 		return NON_STATS_OBJECTIVE_LABELS[config.objectiveMode];
 	}
@@ -155,6 +171,7 @@ export default function ConfigCard({
 	onUpdateConstraints,
 	onUpdateOptimizeStats,
 	onUpdateObjectiveMode,
+	onUpdateSimMetricWeights,
 	onUpdateResistanceFloors,
 	onBuffChange,
 	onConsumableChange,
@@ -363,9 +380,9 @@ export default function ConfigCard({
 					</Typography>
 				)}
 				<Typography variant="caption" color="text.secondary">
-					{config.objectiveMode !== "stats"
-						? NON_STATS_OBJECTIVE_LABELS[config.objectiveMode]
-						: `${config.optimizeStats.length} stats weighted`}
+					{config.objectiveMode === "stats"
+						? `${config.optimizeStats.length} stats weighted`
+						: statsSummary(config)}
 					{config.resistanceFloors.length > 0
 						? ` · ${config.resistanceFloors.length} resistance floor${config.resistanceFloors.length > 1 ? "s" : ""}`
 						: ""}
@@ -422,20 +439,11 @@ export default function ConfigCard({
 						<ToggleButton value="ehp" sx={{ px: 1.5, py: 0.375, fontSize: 12 }}>
 							Maximize Effective HP
 						</ToggleButton>
-						<ToggleButton value="tps" sx={{ px: 1.5, py: 0.375, fontSize: 12 }}>
-							Maximize TPS
-						</ToggleButton>
 						<ToggleButton
-							value="dtps"
+							value="simWeighted"
 							sx={{ px: 1.5, py: 0.375, fontSize: 12 }}
 						>
-							Minimize DTPS
-						</ToggleButton>
-						<ToggleButton
-							value="tmi5"
-							sx={{ px: 1.5, py: 0.375, fontSize: 12 }}
-						>
-							Minimize TMI-5
+							Weighted Sim Metrics
 						</ToggleButton>
 					</ToggleButtonGroup>
 					{config.objectiveMode === "ehp" && (
@@ -449,19 +457,26 @@ export default function ConfigCard({
 							back.
 						</Typography>
 					)}
-					{SIM_BACKED_MODES.has(config.objectiveMode) && (
+					{config.objectiveMode === "simWeighted" && (
 						<Typography
 							variant="body2"
 							color="text.secondary"
 							fontStyle="italic"
 						>
 							Solver recalibrates a weight vector against a real combat
-							simulation each round — expect this to take longer than the
-							instant modes above. Protection Paladin only for now, optimized
-							against: {PROT_PALADIN_REFERENCE_ENCOUNTER_NAME}, standard raid
-							buffs, default talents (not yet configurable). Stat weights below
-							are unused in this mode but kept in case you switch back.
+							simulation each round, blending TPS/DTPS/TMI-5 by the ratios below
+							— expect this to take longer than the instant modes above.
+							Protection Paladin only for now, optimized against:{" "}
+							{PROT_PALADIN_REFERENCE_ENCOUNTER_NAME}, standard raid buffs,
+							default talents (not yet configurable). Stat weights below are
+							unused in this mode but kept in case you switch back.
 						</Typography>
+					)}
+					{config.objectiveMode === "simWeighted" && (
+						<SimMetricWeightsEntry
+							weights={config.simMetricWeights}
+							onChange={onUpdateSimMetricWeights}
+						/>
 					)}
 					{config.objectiveMode === "stats" && (
 						<StatsEntry

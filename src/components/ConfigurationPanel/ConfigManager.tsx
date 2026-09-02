@@ -127,6 +127,9 @@ export default function ConfigManager({
 							onUpdateObjectiveMode={(mode) =>
 								updateConfig(config.id, { objectiveMode: mode })
 							}
+							onUpdateSimMetricWeights={(simMetricWeights) =>
+								updateConfig(config.id, { simMetricWeights })
+							}
 							onUpdateResistanceFloors={updateResistanceFloors}
 							onBuffChange={(buffId) => handleBuffChange(config, buffId)}
 							onConsumableChange={(consumableId) =>

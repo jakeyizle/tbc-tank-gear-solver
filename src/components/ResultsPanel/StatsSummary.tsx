@@ -97,6 +97,7 @@ export default function StatsSummary({
 			unit: "%" as const,
 			rating: blockRating,
 		},
+		{ name: "Block Value", value: stat("BlockValue") },
 		{ name: "Miss", value: stat("Miss"), unit: "%" as const },
 		{
 			name: "Resilience",

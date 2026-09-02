@@ -30,7 +30,8 @@ export interface SolveOptions {
 	uncrushabilitySetting: number;
 	uncritabilitySetting: number;
 	optimizeStats: Stat[];
-	objectiveMode?: "stats" | "ehp" | "tps" | "dtps" | "tmi5";
+	objectiveMode?: "stats" | "ehp" | "simWeighted";
+	simMetricWeights?: { tps: number; dtps: number; tmi5: number };
 	resistanceFloors: ResistanceFloor[];
 	areEnchantsGemsLocked: boolean;
 	excludeUniqueGems: boolean;

@@ -53,8 +53,9 @@ function sameItemSet(a: GearPiece[], b: GearPiece[]): boolean {
 }
 
 /**
- * Solves for `metric`, recalibrating sim weights each round around the previous round's
- * result until the chosen item set stabilizes (or `maxIterations` is hit).
+ * Solves for a weighted blend of `metricRatios`, recalibrating sim weights each round around
+ * the previous round's result until the chosen item set stabilizes (or `maxIterations` is
+ * hit). A single nonzero ratio (e.g. `{tmi: 1}`) reproduces a "pick one metric" solve exactly.
  *
  * @param baselineGear Starting point for round 1's calibration - see calibrateWeights.ts's
  * note that calibration is a local approximation around whatever gear it's centered on.
@@ -66,7 +67,7 @@ export async function solveConfigForSimMetric(
 	options: Omit<SolveOptions, "optimizeStats" | "objectiveMode">,
 	baselineGear: GearPiece[],
 	db: TbcUiDatabase,
-	metric: SimMetric,
+	metricRatios: Partial<Record<SimMetric, number>>,
 	onProgress?: (progress: SimMetricSolveProgress) => void,
 ): Promise<SimMetricSolveResult> {
 	const MAX_ITERATIONS = 5;
@@ -82,7 +83,7 @@ export async function solveConfigForSimMetric(
 			currentGear,
 			db,
 			SIM_CALIBRATION_STATS,
-			metric,
+			metricRatios,
 			CALIBRATION_ITERATIONS,
 			(calibrationProgress: CalibrationProgress) =>
 				onProgress?.({
