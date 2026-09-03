@@ -5,6 +5,7 @@
 // Spawned and pooled by simWorkerPool.ts; mirrors wowsims' own worker_pool.ts SimWorker,
 // scoped down to just the raidSimAsync call this app's calibration pool needs.
 import "./wasm_exec.js";
+import { fetchWasmModule } from "./fetchWasmModule";
 import { ProgressMetrics, RaidSimResult } from "./proto/api.js";
 
 interface GoWasmGlobals {
@@ -37,9 +38,9 @@ const ready = new Promise<void>((resolve) => {
 		throw new Error("wasm_exec.js did not register globalThis.Go");
 	}
 	const go = new wasmGlobals.Go();
-	fetch("/sim/lib.wasm")
-		.then((r) => WebAssembly.instantiateStreaming(r, go.importObject))
-		.then((result) => go.run(result.instance));
+	fetchWasmModule("/sim/lib.wasm.gz", go.importObject).then((result) =>
+		go.run(result.instance),
+	);
 });
 
 interface RunMessage {

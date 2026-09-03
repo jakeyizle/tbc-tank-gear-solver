@@ -5,16 +5,17 @@
 // regression coverage instead of a throwaway script — a submodule bump or proto schema
 // change that breaks the integration will show up here.
 //
-// Loads the wasm module by reading public/sim/lib.wasm directly from disk rather than
-// through statWeightsClient.ts's fetch("/sim/lib.wasm") - that relative fetch has no base
-// URL to resolve against under plain Node/vitest (it works in the browser worker context
-// statWeightsClient.ts actually ships in), so this test exercises the same wasm_exec.js
-// loading sequence by hand instead.
+// Loads the wasm module by reading public/sim/lib.wasm.gz directly from disk (gunzipping by
+// hand) rather than through statWeightsClient.ts's fetch("/sim/lib.wasm.gz") - that relative
+// fetch has no base URL to resolve against under plain Node/vitest (it works in the browser
+// worker context statWeightsClient.ts actually ships in), so this test exercises the same
+// wasm_exec.js loading sequence by hand instead.
 //
 // Skipped automatically if the submodule/wasm artifact aren't present (e.g. a checkout that
 // hasn't run `git submodule update --init` and `npm run sim:build-wasm` yet).
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_SIM_CALIBRATION_PROFILE } from "#/types/SimCalibrationProfile";
 import { buildStatWeightsRequest } from "./buildStatWeightsRequest";
@@ -53,15 +54,16 @@ async function loadFreshWasmInstance(): Promise<GoWasmGlobals> {
 		if (!wasmGlobals.Go)
 			throw new Error("wasm_exec.js did not register globalThis.Go");
 		const go = new wasmGlobals.Go();
-		WebAssembly.instantiate(fs.readFileSync(wasmPath), go.importObject).then(
-			(result) => go.run(result.instance),
-		);
+		WebAssembly.instantiate(
+			zlib.gunzipSync(fs.readFileSync(wasmGzPath)),
+			go.importObject,
+		).then((result) => go.run(result.instance));
 	});
 	return wasmGlobals;
 }
 
 const root = path.resolve(__dirname, "../..");
-const wasmPath = path.join(root, "public/sim/lib.wasm");
+const wasmGzPath = path.join(root, "public/sim/lib.wasm.gz");
 const wasmExecPath = path.join(root, "src/sim/wasm_exec.js");
 const dbPath = path.join(root, "vendor/tbc-sim/assets/database/db.json");
 const gearPath = path.join(
@@ -69,7 +71,7 @@ const gearPath = path.join(
 	"vendor/tbc-sim/ui/paladin/protection/gear_sets/p3.gear.json",
 );
 
-const canRun = [wasmPath, wasmExecPath, dbPath, gearPath].every(fs.existsSync);
+const canRun = [wasmGzPath, wasmExecPath, dbPath, gearPath].every(fs.existsSync);
 
 function fakeItem(
 	id: string,

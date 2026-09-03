@@ -1,5 +1,5 @@
 // Loads the vendored tbc-new WASM sim (built by `npm run sim:build-wasm` into
-// public/sim/lib.wasm) and exposes its statWeights()/statWeightsAsync() calls as plain async
+// public/sim/lib.wasm.gz) and exposes its statWeights()/statWeightsAsync() calls as plain async
 // functions.
 //
 // Callers run this from inside src/solver/solver.worker.ts, which is already off the main
@@ -18,6 +18,7 @@
 // "coordinator" for the cheap, non-iteration-bound calls (statWeightRequests,
 // raidSimRequestSplit, raidSimResultCombination, statWeightCompute).
 import "./wasm_exec.js";
+import { fetchWasmModule } from "./fetchWasmModule";
 import {
 	ProgressMetrics,
 	RaidSimRequest,
@@ -64,10 +65,9 @@ function loadWasm(): Promise<void> {
 		if (!wasmGlobals.Go)
 			throw new Error("wasm_exec.js did not register globalThis.Go");
 		const go = new wasmGlobals.Go();
-		WebAssembly.instantiateStreaming(
-			fetch("/sim/lib.wasm"),
-			go.importObject,
-		).then((result) => go.run(result.instance));
+		fetchWasmModule("/sim/lib.wasm.gz", go.importObject).then((result) =>
+			go.run(result.instance),
+		);
 	}
 	return wasmReady;
 }

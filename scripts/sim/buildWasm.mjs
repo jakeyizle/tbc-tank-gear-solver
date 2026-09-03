@@ -7,8 +7,10 @@
 // against the vendored submodule rather than a standalone tbc-new checkout.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import zlib from "node:zlib";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const simRoot = path.join(root, "vendor/tbc-sim");
@@ -44,10 +46,22 @@ run(
 	{ env: { ...process.env, PATH: pathWithGoBin } },
 );
 
-// 3. Build the WASM binary.
+// 3. Build the WASM binary. Built to a scratch path (not public/) and stripped (-s -w drops the
+// symbol table and DWARF debug info) since the raw binary is ~37MB - well over Cloudflare
+// Workers assets' 25MiB per-file deploy limit. It's gzipped into public/ below instead
+// (~5.5MB), which both clears that limit and cuts the user's download by ~6x; the runtime
+// loaders (simExecutor.worker.ts, statWeightsClient.ts) decompress it with DecompressionStream.
 fs.mkdirSync(publicSimDir, { recursive: true });
-const wasmOut = path.join(publicSimDir, "lib.wasm");
-run("go", ["build", "-o", wasmOut, "./sim/wasm/"], { env: { ...process.env, GOOS: "js", GOARCH: "wasm" } });
+const wasmScratch = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "tbc-sim-wasm-")), "lib.wasm");
+run("go", ["build", "-ldflags", "-s -w", "-o", wasmScratch, "./sim/wasm/"], {
+	env: { ...process.env, GOOS: "js", GOARCH: "wasm" },
+	// go is a real binary (unlike the npm-installed .cmd shims run() otherwise needs shell:true
+	// for on Windows) - skip the shell here so cmd.exe doesn't re-split "-s -w" on its space.
+	shell: false,
+});
+const wasmOut = path.join(publicSimDir, "lib.wasm.gz");
+fs.writeFileSync(wasmOut, zlib.gzipSync(fs.readFileSync(wasmScratch), { level: 9 }));
+fs.rmSync(path.join(publicSimDir, "lib.wasm"), { force: true });
 
 // 4. Vendor the matching wasm_exec.js runtime shim (coupled to the Go version that built
 // the binary above — regenerated here rather than committed once, so it can't drift).
