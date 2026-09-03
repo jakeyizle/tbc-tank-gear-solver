@@ -82,6 +82,22 @@ export default function CompareView({
 	const statsA = getHeadlineStats(resultA, includeBuffsConsumables);
 	const statsB = getHeadlineStats(resultB, includeBuffsConsumables);
 
+	// Only meaningful when both sides are "Weighted Sim Metrics" results - a diff against a
+	// stats/ehp result (which has no simMetrics) would misleadingly show one side as a bare 0,
+	// so it's skipped entirely rather than fabricating a partial comparison.
+	if (resultA.simMetrics && resultB.simMetrics) {
+		statsA.push(
+			{ name: "TPS", value: resultA.simMetrics.tps },
+			{ name: "DTPS", value: resultA.simMetrics.dtps },
+			{ name: "TMI-5", value: resultA.simMetrics.tmi5 },
+		);
+		statsB.push(
+			{ name: "TPS", value: resultB.simMetrics.tps },
+			{ name: "DTPS", value: resultB.simMetrics.dtps },
+			{ name: "TMI-5", value: resultB.simMetrics.tmi5 },
+		);
+	}
+
 	return (
 		<Paper
 			elevation={1}
@@ -135,7 +151,9 @@ export default function CompareView({
 				<Typography variant="body2" color="text.secondary">
 					{differingCount} of {totalRows} slots differ
 				</Typography>
-				<Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1.5 }}>
+				<Box
+					sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1.5 }}
+				>
 					{buffsConsumablesToggle}
 					<Typography
 						variant="body2"

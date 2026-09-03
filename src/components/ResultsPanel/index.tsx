@@ -127,7 +127,9 @@ export default function ResultsPanel({
 				<Paper elevation={1} sx={{ p: 2 }}>
 					<Box display="flex" alignItems="center" gap={1.5} sx={{ mb: 1.5 }}>
 						<Typography variant="h6">Equipment</Typography>
-						<Box sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1 }}>
+						<Box
+							sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1 }}
+						>
 							{buffsConsumablesToggle}
 							{nextResult && (
 								<Button
@@ -182,6 +184,7 @@ export default function ResultsPanel({
 								baseConfig={activeResult.baseConfig}
 								solverConfig={activeResult.solverConfig}
 								includeBuffsConsumables={includeBuffsConsumables}
+								simMetrics={activeResult.simMetrics}
 							/>
 						</Box>
 					</Box>

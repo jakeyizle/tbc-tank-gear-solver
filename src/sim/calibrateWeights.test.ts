@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { blendMetricEpValues } from "./calibrateWeights";
-import type { StatWeightsResult } from "./proto/api.js";
+import {
+	blendMetricEpValueStdevs,
+	blendMetricEpValues,
+	extractSimMetrics,
+} from "./calibrateWeights";
+import type { RaidSimResult, StatWeightsResult } from "./proto/api.js";
 
 // Stat enum ordinals from proto/common.ts, for readability below.
 const STRENGTH = 0;
@@ -9,6 +13,10 @@ const ARMOR = 31;
 
 function fakeEpValues(stats: number[]) {
 	return { epValues: { apiVersion: 0, stats, pseudoStats: [] } };
+}
+
+function fakeEpValueStdevs(stats: number[]) {
+	return { epValuesStdev: { apiVersion: 0, stats, pseudoStats: [] } };
 }
 
 function fakeResult(overrides: Partial<StatWeightsResult>): StatWeightsResult {
@@ -89,5 +97,126 @@ describe("blendMetricEpValues", () => {
 			{ name: "Stamina", value: 0, type: "flat" },
 			{ name: "Armor", value: -5, type: "flat" },
 		]);
+	});
+});
+
+describe("blendMetricEpValueStdevs", () => {
+	it("a single nonzero ratio passes the stdev through unsigned (no lower-is-better flip)", () => {
+		const stats: number[] = [];
+		stats[STAMINA] = 2.0;
+		const result = fakeResult({ tmi: fakeEpValueStdevs(stats) });
+
+		const blended = blendMetricEpValueStdevs(result, ["Stamina"], { tmi: 1 });
+
+		// unlike blendMetricEpValues, tmi being lower-is-better must NOT sign-flip a stdev.
+		expect(blended).toEqual([{ name: "Stamina", value: 2.0, type: "flat" }]);
+	});
+
+	it("combines multiple metrics' stdevs by summing variances, not the stdevs themselves", () => {
+		const tpsStats: number[] = [];
+		tpsStats[STAMINA] = 3;
+		const dtpsStats: number[] = [];
+		dtpsStats[STAMINA] = 4;
+		const result = fakeResult({
+			tps: fakeEpValueStdevs(tpsStats),
+			dtps: fakeEpValueStdevs(dtpsStats),
+		});
+
+		const blended = blendMetricEpValueStdevs(result, ["Stamina"], {
+			tps: 1,
+			dtps: 1,
+		});
+
+		// sqrt(3^2 + 4^2) = 5, the classic 3-4-5 triangle - a plain sum (7) would be wrong.
+		expect(blended).toEqual([{ name: "Stamina", value: 5, type: "flat" }]);
+	});
+
+	it("skips a metric with a zero (or omitted) ratio", () => {
+		const stats: number[] = [];
+		stats[STAMINA] = 100;
+		const result = fakeResult({ tmi: fakeEpValueStdevs(stats) });
+
+		const blended = blendMetricEpValueStdevs(result, ["Stamina"], {
+			tmi: 0,
+			tps: undefined,
+		});
+
+		expect(blended).toEqual([{ name: "Stamina", value: 0, type: "flat" }]);
+	});
+
+	it("skips a metric with no epValuesStdev for a given stat rather than producing NaN", () => {
+		const stats: number[] = [];
+		stats[ARMOR] = 5;
+		const result = fakeResult({ tmi: fakeEpValueStdevs(stats) });
+
+		const blended = blendMetricEpValueStdevs(result, ["Stamina", "Armor"], {
+			tmi: 1,
+		});
+
+		expect(blended).toEqual([
+			{ name: "Stamina", value: 0, type: "flat" },
+			{ name: "Armor", value: 5, type: "flat" },
+		]);
+	});
+});
+
+function fakeRaidSimResult(overrides: Partial<RaidSimResult>): RaidSimResult {
+	return overrides as RaidSimResult;
+}
+
+describe("extractSimMetrics", () => {
+	it("reads threat/dtps/tmi averages off the first party's first player", () => {
+		const result = fakeRaidSimResult({
+			raidMetrics: {
+				parties: [
+					{
+						players: [
+							{
+								threat: { avg: 5000 },
+								dtps: { avg: 1200 },
+								tmi: { avg: 3500 },
+							},
+						],
+					},
+				],
+			},
+		} as unknown as Partial<RaidSimResult>);
+
+		expect(extractSimMetrics(result)).toEqual({
+			tps: 5000,
+			dtps: 1200,
+			tmi5: 3500,
+		});
+	});
+
+	it("returns zeros rather than throwing when the player/parties are missing", () => {
+		expect(extractSimMetrics(fakeRaidSimResult({}))).toEqual({
+			tps: 0,
+			dtps: 0,
+			tmi5: 0,
+		});
+		expect(
+			extractSimMetrics(
+				fakeRaidSimResult({
+					raidMetrics: {
+						parties: [],
+					} as unknown as RaidSimResult["raidMetrics"],
+				}),
+			),
+		).toEqual({ tps: 0, dtps: 0, tmi5: 0 });
+	});
+
+	it("returns zeros for a metric missing on an otherwise-present player", () => {
+		const result = fakeRaidSimResult({
+			raidMetrics: {
+				parties: [{ players: [{ threat: { avg: 5000 } }] }],
+			} as unknown as RaidSimResult["raidMetrics"],
+		});
+
+		expect(extractSimMetrics(result)).toEqual({
+			tps: 5000,
+			dtps: 0,
+			tmi5: 0,
+		});
 	});
 });

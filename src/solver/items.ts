@@ -49,7 +49,10 @@ export const prepareItemCandidates = (
 	const filteredGems = gems.filter((gem) => gem.color !== "Meta");
 	const metaGems = gems.filter((gem) => gem.color === "Meta");
 
-	const enchantScoreCache = new Map<string, ReturnType<SolverConfiguration["calculateScoresForStats"]>>();
+	const enchantScoreCache = new Map<
+		string,
+		ReturnType<SolverConfiguration["calculateScoresForStats"]>
+	>();
 	const getEnchantScores = (enchant: Enchant) => {
 		let scores = enchantScoreCache.get(enchant.id);
 		if (!scores) {
@@ -59,7 +62,10 @@ export const prepareItemCandidates = (
 		return scores;
 	};
 
-	const gemScoreCache = new Map<string, ReturnType<SolverConfiguration["calculateScoresForStats"]>>();
+	const gemScoreCache = new Map<
+		string,
+		ReturnType<SolverConfiguration["calculateScoresForStats"]>
+	>();
 	const getGemScores = (gem: Gem) => {
 		let scores = gemScoreCache.get(gem.id);
 		if (!scores) {
@@ -86,11 +92,13 @@ export const prepareItemCandidates = (
 		}
 
 		const itemEnchants = getEnchantsForItem(item, enchants);
-		const enchantCandidates: EnchantCandidate[] = itemEnchants.map((enchant) => ({
-			enchant,
-			varName: `e_${uniqueId}_${enchant.id}`,
-			scores: getEnchantScores(enchant),
-		}));
+		const enchantCandidates: EnchantCandidate[] = itemEnchants.map(
+			(enchant) => ({
+				enchant,
+				varName: `e_${uniqueId}_${enchant.id}`,
+				scores: getEnchantScores(enchant),
+			}),
+		);
 
 		const sockets: SocketCandidates[] = [];
 		item.sockets.forEach((socket, socketIndex) => {
@@ -116,7 +124,9 @@ export const prepareItemCandidates = (
 			enchantCandidates,
 			sockets,
 			bonusVarName: hasBonus ? `b_${uniqueId}` : undefined,
-			bonusScores: hasBonus ? config.calculateScoresForStats(item.socketBonus) : undefined,
+			bonusScores: hasBonus
+				? config.calculateScoresForStats(item.socketBonus)
+				: undefined,
 		});
 	});
 
@@ -164,7 +174,7 @@ const getGems = (config: SolverConfiguration) => {
 	return gems;
 };
 
-const getItem = (inputItem: InputItem) => {
+export const getItem = (inputItem: InputItem) => {
 	const items = Items as Item[];
 	let baseItem = items.find((i) => i.id === inputItem.id);
 	if (!baseItem) {
@@ -264,21 +274,18 @@ export const transformItem = (
 			? config.calculateScoresForStats(item.enchant.stats)
 			: EMPTY_SCORES;
 
-	const gemScores = item.gems.reduce(
-		(acc, gem) => {
-			const scores = config.calculateScoresForStats(gem.stats);
-			return {
-				avoidanceScore: acc.avoidanceScore + scores.avoidanceScore,
-				objectiveScore: acc.objectiveScore + scores.objectiveScore,
-				uncritabilityScore: acc.uncritabilityScore + scores.uncritabilityScore,
-				resistanceScores: sumResistanceScores(
-					acc.resistanceScores,
-					scores.resistanceScores,
-				),
-			};
-		},
-		EMPTY_SCORES,
-	);
+	const gemScores = item.gems.reduce((acc, gem) => {
+		const scores = config.calculateScoresForStats(gem.stats);
+		return {
+			avoidanceScore: acc.avoidanceScore + scores.avoidanceScore,
+			objectiveScore: acc.objectiveScore + scores.objectiveScore,
+			uncritabilityScore: acc.uncritabilityScore + scores.uncritabilityScore,
+			resistanceScores: sumResistanceScores(
+				acc.resistanceScores,
+				scores.resistanceScores,
+			),
+		};
+	}, EMPTY_SCORES);
 
 	const nonMetaSockets = item.sockets
 		.map((s) => s.color)

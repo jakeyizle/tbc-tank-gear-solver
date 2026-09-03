@@ -13,7 +13,6 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import type { DragEvent, ReactNode } from "react";
 import { useState } from "react";
-import { PROT_PALADIN_REFERENCE_ENCOUNTER_NAME } from "#/sim/protPaladinEncounter";
 import {
 	type Buff,
 	type ConsumableItem,
@@ -466,10 +465,11 @@ export default function ConfigCard({
 							Solver recalibrates a weight vector against a real combat
 							simulation each round, blending TPS/DTPS/TMI-5 by the ratios below
 							— expect this to take longer than the instant modes above.
-							Protection Paladin only for now, optimized against:{" "}
-							{PROT_PALADIN_REFERENCE_ENCOUNTER_NAME}, standard raid buffs,
-							default talents (not yet configurable). Stat weights below are
-							unused in this mode but kept in case you switch back.
+							Protection Paladin only for now, optimized against the encounter,
+							healing model, and raid buffs/talents/consumables set in the
+							"Advanced: Sim Calibration Profile" panel below. Stat weights and
+							the character Assumptions above are unused in this mode but kept
+							in case you switch back.
 						</Typography>
 					)}
 					{config.objectiveMode === "simWeighted" && (
@@ -503,15 +503,17 @@ export default function ConfigCard({
 						onUpdateResistanceFloors={onUpdateResistanceFloors}
 					/>
 				</ConfigBand>
-				<ConfigBand
-					accent="rgba(255,255,255,0.3)"
-					titleColor="rgba(255,255,255,0.85)"
-					tint="rgba(255,255,255,0.025)"
-					title="Assumptions"
-					description="added stats, not solved for"
-				>
-					<BuffSection buffs={displayBuffs} onBuffChange={onBuffChange} />
-				</ConfigBand>
+				{config.objectiveMode !== "simWeighted" && (
+					<ConfigBand
+						accent="rgba(255,255,255,0.3)"
+						titleColor="rgba(255,255,255,0.85)"
+						tint="rgba(255,255,255,0.025)"
+						title="Assumptions"
+						description="added stats, not solved for"
+					>
+						<BuffSection buffs={displayBuffs} onBuffChange={onBuffChange} />
+					</ConfigBand>
+				)}
 			</Box>
 		</Box>
 	);

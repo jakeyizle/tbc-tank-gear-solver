@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseItemInput } from "#/helpers/parseItemInput";
 import { calculateStatValue } from "#/helpers/stats";
+import { DEFAULT_SIM_CALIBRATION_PROFILE } from "#/types/SimCalibrationProfile";
 import { EXAMPLE_GEAR_POOL_JSON } from "./__fixtures__/exampleGearPool";
 import {
 	TEST_CLASS_ID,
@@ -173,6 +174,7 @@ describe("solveConfigForEHP", () => {
 			classId: TEST_CLASS_ID,
 			abilitySources: [],
 			talentSources: [],
+			simCalibrationProfile: DEFAULT_SIM_CALIBRATION_PROFILE,
 		};
 
 		const results = await solveAll(

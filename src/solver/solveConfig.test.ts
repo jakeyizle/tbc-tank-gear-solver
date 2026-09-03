@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_SIM_CALIBRATION_PROFILE } from "#/types/SimCalibrationProfile";
 import {
 	TEST_CLASS_ID,
 	TEST_CONSUMABLE_IDS,
@@ -181,6 +182,7 @@ describe("solveConfig", () => {
 			classId: TEST_CLASS_ID,
 			abilitySources: [],
 			talentSources: [],
+			simCalibrationProfile: DEFAULT_SIM_CALIBRATION_PROFILE,
 		};
 
 		// solveAll's real solve() spins up a browser Worker, unavailable under vitest - inject
@@ -328,6 +330,7 @@ describe("solveConfig", () => {
 			classId: TEST_CLASS_ID,
 			abilitySources: [],
 			talentSources: [],
+			simCalibrationProfile: DEFAULT_SIM_CALIBRATION_PROFILE,
 		};
 
 		const solveFnForTest: typeof solve = (items, options, onProgress) =>

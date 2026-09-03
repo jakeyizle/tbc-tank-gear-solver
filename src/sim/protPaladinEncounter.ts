@@ -7,6 +7,25 @@ export const PROT_PALADIN_REFERENCE_ENCOUNTER_NAME = "Generic raid boss (180s)";
 
 export const PROT_PALADIN_REFERENCE_TANKS = [{ type: "Player" }];
 
+// Positional stat array indices used by the target's `stats` field below - see the field's own
+// comment for the full index-to-Stat mapping.
+export const TARGET_ARMOR_STAT_INDEX = 31;
+export const TARGET_HEALTH_STAT_INDEX = 33;
+
+/**
+ * Rebuilds the reference target's `stats` array with a caller-supplied boss armor/health,
+ * keeping every other (fixed, unexposed) slot - e.g. index 17's trivial Armor entry - as-is.
+ */
+export function buildReferenceTargetStats(
+	bossArmor: number,
+	bossHealth: number,
+): number[] {
+	const stats = [...PROT_PALADIN_REFERENCE_ENCOUNTER.targets[0].stats];
+	stats[TARGET_ARMOR_STAT_INDEX] = bossArmor;
+	stats[TARGET_HEALTH_STAT_INDEX] = bossHealth;
+	return stats;
+}
+
 export const PROT_PALADIN_REFERENCE_ENCOUNTER = {
 	duration: 180,
 	durationVariation: 5,

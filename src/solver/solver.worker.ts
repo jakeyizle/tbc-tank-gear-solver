@@ -32,10 +32,12 @@ self.onmessage = async (e) => {
 				{ solveConfigForSimMetric },
 				{ loadTbcDatabase },
 				{ PROT_PALADIN_BASELINE_GEAR },
+				{ DEFAULT_SIM_CALIBRATION_PROFILE },
 			] = await Promise.all([
 				import("#/sim/solveSimMetric"),
 				import("#/sim/simDatabaseClient"),
 				import("#/sim/protPaladinBaselineGear"),
+				import("#/types/SimCalibrationProfile"),
 			]);
 			const db = await loadTbcDatabase();
 			const simResult = await solveConfigForSimMetric(
@@ -44,14 +46,20 @@ self.onmessage = async (e) => {
 				PROT_PALADIN_BASELINE_GEAR,
 				db,
 				toMetricRatios(options.simMetricWeights),
+				options.simCalibrationProfile ?? DEFAULT_SIM_CALIBRATION_PROFILE,
 				(progress) => postMessage({ type: "progress", ...progress }),
 			);
 			result = simResult.items;
-		} else {
-			result = await solveGearSet(items, options, (progress) =>
-				postMessage({ type: "progress", ...progress }),
-			);
+			postMessage({
+				type: "result",
+				items: result,
+				simMetrics: simResult.simMetrics,
+			});
+			return;
 		}
+		result = await solveGearSet(items, options, (progress) =>
+			postMessage({ type: "progress", ...progress }),
+		);
 
 		postMessage({ type: "result", items: result });
 	} catch (error) {

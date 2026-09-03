@@ -22,6 +22,15 @@ interface GoWasmGlobals {
 
 const wasmGlobals = globalThis as unknown as GoWasmGlobals;
 
+// tsconfig's lib list doesn't include "webworker" (this repo is otherwise a plain DOM app), so
+// `postMessage` here resolves to Window's (targetOrigin, not transfer-list) overload - cast to
+// the DedicatedWorkerGlobalScope shape this file actually runs under instead of pulling in the
+// whole webworker lib for one call shape.
+const postWorkerMessage = postMessage as (
+	message: unknown,
+	transfer?: Transferable[],
+) => void;
+
 const ready = new Promise<void>((resolve) => {
 	wasmGlobals.wasmready = () => resolve();
 	if (!wasmGlobals.Go) {
@@ -53,14 +62,15 @@ self.onmessage = async (e: MessageEvent<RunMessage>) => {
 		(progressBytes) => {
 			const metrics = ProgressMetrics.fromBinary(progressBytes);
 			if (metrics.finalRaidResult) {
-				postMessage({
-					type: "done",
-					id,
-					resultBytes: RaidSimResult.toBinary(metrics.finalRaidResult),
-				});
+				const resultBytes = RaidSimResult.toBinary(metrics.finalRaidResult);
+				// Transfer, not clone - see simWorkerPool.ts's postMessage for why this matters
+				// (SaveAllValues means this can be a large per-iteration array).
+				postWorkerMessage({ type: "done", id, resultBytes }, [
+					resultBytes.buffer,
+				]);
 				return;
 			}
-			postMessage({
+			postWorkerMessage({
 				type: "progress",
 				id,
 				completedIterations: metrics.completedIterations,

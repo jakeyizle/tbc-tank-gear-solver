@@ -7,6 +7,10 @@ import type {
 	ResistanceFloor,
 	Stat,
 } from "#/solver/types";
+import type {
+	SimCalibrationProfile,
+	SimMetricsSnapshot,
+} from "./SimCalibrationProfile";
 export interface SolverConfiguration {
 	id: string;
 	name: string;
@@ -36,6 +40,8 @@ export interface SolveResult {
 	items: LPItem[];
 	baseConfig: BaseConfig;
 	solverConfig: SolverConfiguration;
+	// Absolute TPS/DTPS/TMI-5 for this result's gear - only set for a "simWeighted" solve.
+	simMetrics?: SimMetricsSnapshot;
 }
 
 export interface BaseConfig {
@@ -46,6 +52,10 @@ export interface BaseConfig {
 	classId: string;
 	abilitySources: ModifierSource[];
 	talentSources: ModifierSource[];
+	// Global (not per-solver-config) sim calibration inputs for "Weighted Sim Metrics" - one
+	// character fights one encounter, so this lives alongside race/class/phase rather than
+	// being duplicated per config. See src/types/SimCalibrationProfile.ts.
+	simCalibrationProfile: SimCalibrationProfile;
 }
 
 export function createEmptyConfig(

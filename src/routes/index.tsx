@@ -7,20 +7,21 @@ import CharacterSection from "#/components/CharacterSection";
 import ConfigurationPanel from "#/components/ConfigurationPanel";
 import ItemInputSection from "#/components/ItemInputSection";
 import ResultsPanel from "#/components/ResultsPanel";
+import SimCalibrationPanel from "#/components/SimCalibrationPanel";
 import SolveButton from "#/components/SolveButton";
-import { getAbilities} from "#/data/abilities";
-import {getTalentsByClass} from "#/data/talents";
+import { getAbilities } from "#/data/abilities";
+import { getTalentsByClass } from "#/data/talents";
 import { analyzeItemInput, parseItemInput } from "#/helpers/parseItemInput";
 import { loadAppState, saveAppState } from "#/helpers/persistence";
 import { track, type UnknownId } from "#/helpers/track";
 import { useCharacterConfig } from "#/hooks/useCharacterConfig";
+import { useSimCalibrationProfile } from "#/hooks/useSimCalibrationProfile";
 import { useSolverConfigs } from "#/hooks/useSolverConfigs";
 import type { SolveAllProgress } from "#/solver";
 import { solveAll } from "#/solver";
 import type { ModifierSource } from "#/solver/types";
 import type { SolveResult } from "#/types/SolverConfig";
 export const Route = createFileRoute("/")({ component: App });
-
 
 function App() {
 	const _saved = loadAppState();
@@ -30,13 +31,16 @@ function App() {
 	const [raceValue, setRaceValue] = useState(() => _saved?.raceValue ?? "1");
 	const [talents, setTalents] = useState<ModifierSource[]>(() => {
 		if (_saved?.talents) return _saved.talents;
-		return getTalentsByClass(_saved?.classValue ?? "2").map((talent) => ({ ...talent, rank: talent.maxRank }));
+		return getTalentsByClass(_saved?.classValue ?? "2").map((talent) => ({
+			...talent,
+			rank: talent.maxRank,
+		}));
 	});
 	const [areEnchantsGemsLocked, setAreEnchantsGemsLocked] = useState(
-		() => _saved?.areEnchantsGemsLocked ?? false
+		() => _saved?.areEnchantsGemsLocked ?? false,
 	);
 	const [excludeUniqueGems, setExcludeUniqueGems] = useState(
-		() => _saved?.excludeUniqueGems ?? false
+		() => _saved?.excludeUniqueGems ?? false,
 	);
 	const [phase, setPhase] = useState(() => _saved?.phase ?? 3);
 
@@ -56,14 +60,19 @@ function App() {
 	} = useSolverConfigs();
 
 	const { updateCharacterConfig } = useCharacterConfig();
+	const { simCalibrationProfile, updateSimCalibrationProfile } =
+		useSimCalibrationProfile();
 
 	const [solveResults, setSolveResults] = useState<Map<string, SolveResult>>(
-		() => _saved?.solveResults?.length ? new Map(_saved.solveResults) : new Map()
+		() =>
+			_saved?.solveResults?.length ? new Map(_saved.solveResults) : new Map(),
 	);
-	const [solveProgress, setSolveProgress] = useState<SolveAllProgress | null>(null);
+	const [solveProgress, setSolveProgress] = useState<SolveAllProgress | null>(
+		null,
+	);
 	const isSolving = solveProgress !== null;
 	const [activeResultId, setActiveResultId] = useState<string | null>(
-		() => _saved?.activeResultId ?? null
+		() => _saved?.activeResultId ?? null,
 	);
 	const [solveError, setSolveError] = useState<string | null>(null);
 
@@ -82,6 +91,7 @@ function App() {
 			areEnchantsGemsLocked,
 			excludeUniqueGems,
 			phase,
+			simCalibrationProfile,
 			configs,
 			activeConfigId,
 			solveResults: [],
@@ -98,16 +108,20 @@ function App() {
 			handleSolveFailure(
 				analysis.status === "empty"
 					? "Paste a gear pool before solving."
-					: analysis.message
+					: analysis.message,
 			);
 			return;
 		}
 
 		if (analysis.status === "warning") {
 			const unknownIds: UnknownId[] = [
-				...analysis.unknownItemIds.map((id): UnknownId => ({ type: "item", id })),
+				...analysis.unknownItemIds.map(
+					(id): UnknownId => ({ type: "item", id }),
+				),
 				...analysis.unknownGemIds.map((id): UnknownId => ({ type: "gem", id })),
-				...analysis.unknownEnchantIds.map((id): UnknownId => ({ type: "enchant", id })),
+				...analysis.unknownEnchantIds.map(
+					(id): UnknownId => ({ type: "enchant", id }),
+				),
 			];
 			track({ event: "unknown_id_detected", unknownIds });
 		}
@@ -137,7 +151,8 @@ function App() {
 				phase,
 				talentSources: talents,
 				abilitySources,
-			}
+				simCalibrationProfile,
+			};
 
 			// Store the solve configuration values in context
 			updateCharacterConfig({
@@ -147,7 +162,12 @@ function App() {
 				abilitySources,
 			});
 
-			const solverResults = await solveAll(items, baseConfig, configs, setSolveProgress);
+			const solverResults = await solveAll(
+				items,
+				baseConfig,
+				configs,
+				setSolveProgress,
+			);
 			for (const result of solverResults) {
 				newResults.set(result.id, result);
 				if (!firstResultId) {
@@ -188,7 +208,7 @@ function App() {
 			handleSolveFailure(
 				error instanceof Error
 					? error.message
-					: "Something went wrong while solving. Please check your input and try again."
+					: "Something went wrong while solving. Please check your input and try again.",
 			);
 		} finally {
 			setSolveProgress(null);
@@ -234,6 +254,13 @@ function App() {
 						updateResistanceFloors={updateResistanceFloors}
 						updateConfig={updateConfig}
 					/>
+
+					{configs.some((config) => config.objectiveMode === "simWeighted") && (
+						<SimCalibrationPanel
+							profile={simCalibrationProfile}
+							onChange={updateSimCalibrationProfile}
+						/>
+					)}
 
 					<Box>
 						<SolveButton

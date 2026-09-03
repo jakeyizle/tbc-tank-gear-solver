@@ -1,4 +1,9 @@
+import { createTrailingThrottle } from "#/helpers/trailingThrottle";
 import type { SimMetricSolvePhase } from "#/sim/solveSimMetric";
+import type {
+	SimCalibrationProfile,
+	SimMetricsSnapshot,
+} from "#/types/SimCalibrationProfile";
 import type {
 	BaseConfig,
 	SolveResult,
@@ -18,6 +23,7 @@ interface SolveOptions {
 	optimizeStats: Stat[];
 	objectiveMode?: "stats" | "ehp" | "simWeighted";
 	simMetricWeights?: { tps: number; dtps: number; tmi5: number };
+	simCalibrationProfile?: SimCalibrationProfile;
 	resistanceFloors: ResistanceFloor[];
 	areEnchantsGemsLocked: boolean;
 	excludeUniqueGems: boolean;
@@ -48,24 +54,39 @@ export interface WorkerProgressDetail {
 
 type WorkerMessage =
 	| ({ type: "progress" } & WorkerProgressDetail)
-	| { type: "result"; items: LPItem[] }
+	| { type: "result"; items: LPItem[]; simMetrics?: SimMetricsSnapshot }
 	| { type: "error"; message: string };
 
 export const solve = async (
 	items: InputItem[],
 	options: SolveOptions,
 	onProgress?: (progress: WorkerProgressDetail) => void,
+	// only ever set for a "simWeighted" solve's result - see solveSimMetric.ts's
+	// measureFinalSimMetrics. A callback (rather than widening this function's return type)
+	// keeps every existing `typeof solve`-typed callsite (tests substituting solveGearSet
+	// directly) compiling unchanged.
+	onSimMetrics?: (metrics: SimMetricsSnapshot) => void,
 ): Promise<LPItem[]> => {
 	return new Promise((resolve, reject) => {
 		const worker = new Worker(new URL("./solver.worker.ts", import.meta.url), {
 			type: "module",
 		});
 
+		// A backgrounded tab keeps sim Worker threads running at full speed but deprioritizes
+		// this main thread's message processing, so refocusing can dump a large backlog of
+		// queued "progress" messages at once. Throttling how often that actually triggers a
+		// React state update (rather than doing so unconditionally, once per raw message) is
+		// what keeps draining that backlog fast instead of causing a multi-second catch-up -
+		// see createTrailingThrottle's own comment.
+		const emitProgress = onProgress
+			? createTrailingThrottle(onProgress, 150)
+			: undefined;
+
 		worker.onmessage = (e) => {
 			const data = e.data as WorkerMessage;
 			if (data.type === "progress") {
 				const { type: _type, ...progress } = data;
-				onProgress?.(progress);
+				emitProgress?.(progress);
 				return;
 			}
 
@@ -77,6 +98,7 @@ export const solve = async (
 
 			console.log("worker result");
 			worker.terminate();
+			if (data.simMetrics) onSimMetrics?.(data.simMetrics);
 			resolve(data.items);
 		};
 
@@ -125,6 +147,7 @@ export const solveAll = async (
 		});
 
 		let items: LPItem[];
+		let simMetrics: SimMetricsSnapshot | undefined;
 		try {
 			items = await solveFn(
 				currentInputItems,
@@ -140,6 +163,9 @@ export const solveAll = async (
 						innerFraction: progress.iteration / progress.maxIterations,
 						detail: progress,
 					}),
+				(metrics) => {
+					simMetrics = metrics;
+				},
 			);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
@@ -147,6 +173,7 @@ export const solveAll = async (
 		}
 		solverResults.push({
 			items,
+			simMetrics,
 			id: solverConfig.id,
 			name: solverConfig.name,
 			baseConfig,

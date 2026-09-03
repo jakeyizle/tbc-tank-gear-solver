@@ -1,5 +1,6 @@
 import GLPK, { type GLPK as GLPKType, type LP } from "glpk.js";
 import { calculateStatValue } from "#/helpers/stats";
+import type { SimCalibrationProfile } from "#/types/SimCalibrationProfile";
 import { getConsumableLPItems } from "./consumables";
 import {
 	allBinaryVarNames,
@@ -32,6 +33,7 @@ export interface SolveOptions {
 	optimizeStats: Stat[];
 	objectiveMode?: "stats" | "ehp" | "simWeighted";
 	simMetricWeights?: { tps: number; dtps: number; tmi5: number };
+	simCalibrationProfile?: SimCalibrationProfile;
 	resistanceFloors: ResistanceFloor[];
 	areEnchantsGemsLocked: boolean;
 	excludeUniqueGems: boolean;

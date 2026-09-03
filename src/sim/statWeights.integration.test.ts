@@ -16,11 +16,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { DEFAULT_SIM_CALIBRATION_PROFILE } from "#/types/SimCalibrationProfile";
 import { buildStatWeightsRequest } from "./buildStatWeightsRequest";
 import type { GearPiece } from "./toTbcItemSpec";
 import "./wasm_exec.js";
 import {
 	ProgressMetrics,
+	RaidSimRequest,
+	RaidSimResult,
+	StatWeightRequestsData,
 	StatWeightsRequest,
 	StatWeightsResult,
 } from "./proto/api.js";
@@ -33,6 +37,8 @@ interface GoWasmGlobals {
 		onProgress: (progressBytes: Uint8Array) => void,
 		requestId: string,
 	) => void;
+	statWeightRequests?: (requestBytes: Uint8Array) => Uint8Array;
+	raidSim?: (requestBytes: Uint8Array) => Uint8Array;
 	Go?: new () => {
 		importObject: WebAssembly.Imports;
 		run: (instance: WebAssembly.Instance) => Promise<void>;
@@ -94,7 +100,14 @@ function buildTestRequestBytes(): Uint8Array {
 		db,
 		["Stamina", "Armor", "Dodge", "Defense"],
 		200,
+		DEFAULT_SIM_CALIBRATION_PROFILE,
 	);
+	// buildStatWeightsRequest always seeds off Date.now() (real-app behavior, where a fresh
+	// seed each solve is desirable) - pinned here instead so this test's Monte Carlo output is
+	// deterministic. Without this, the "directionally correct" assertions below occasionally
+	// fail: 200 iterations/branch is a small enough sample that a marginal stat's true (small,
+	// correctly-signed) effect on TMI/DTPS can be swamped by sampling noise for an unlucky seed.
+	requestJson.simOptions.randomSeed = "1";
 	const request = StatWeightsRequest.fromJson(
 		requestJson as unknown as Parameters<typeof StatWeightsRequest.fromJson>[0],
 		{ ignoreUnknownFields: true },
@@ -156,5 +169,39 @@ describe.skipIf(!canRun)("statWeights wasm integration", () => {
 			expect(result.tmi?.weights?.stats[idx]).toBeLessThanOrEqual(0);
 			expect(result.dtps?.weights?.stats[idx]).toBeLessThanOrEqual(0);
 		}
+	}, 30000);
+
+	// Regression guard for calibrateWeights.ts's extractSimMetrics/measureFinalSimMetrics: a
+	// real raid sim's UnitMetrics carries absolute (not marginal) threat/dtps/tmi averages at
+	// exactly this path. Runs statWeightRequests -> raidSim directly (skipping
+	// statWeightsClient.ts's Worker-pool machinery, unavailable under plain Node/vitest - see
+	// this file's header comment) since a single un-split baseRequest doesn't need it.
+	it("a raid sim's baseRequest carries absolute threat/dtps/tmi averages for the player", async () => {
+		const requestBytes = buildTestRequestBytes();
+
+		const wasmGlobals = await loadFreshWasmInstance();
+		if (!wasmGlobals.statWeightRequests || !wasmGlobals.raidSim) {
+			throw new Error("statWeightRequests/raidSim globals not registered");
+		}
+
+		const reqData = StatWeightRequestsData.fromBinary(
+			wasmGlobals.statWeightRequests(requestBytes),
+		);
+		if (!reqData.baseRequest) {
+			throw new Error("statWeightRequests returned no baseRequest");
+		}
+
+		const resultBytes = wasmGlobals.raidSim(
+			RaidSimRequest.toBinary(reqData.baseRequest),
+		);
+		const result = RaidSimResult.fromBinary(resultBytes);
+		expect(result.error).toBeUndefined();
+
+		const player = result.raidMetrics?.parties[0]?.players[0];
+		expect(player).toBeDefined();
+		expect(Number.isFinite(player?.threat?.avg)).toBe(true);
+		expect(Number.isFinite(player?.dtps?.avg)).toBe(true);
+		expect(Number.isFinite(player?.tmi?.avg)).toBe(true);
+		expect(player?.threat?.avg).toBeGreaterThan(0);
 	}, 30000);
 });

@@ -44,6 +44,7 @@ interface GoWasmGlobals {
 	statWeightCompute?: (requestBytes: Uint8Array) => Uint8Array;
 	raidSimRequestSplit?: (requestBytes: Uint8Array) => Uint8Array;
 	raidSimResultCombination?: (requestBytes: Uint8Array) => Uint8Array;
+	raidSim?: (requestBytes: Uint8Array) => Uint8Array;
 	Go?: new () => {
 		importObject: WebAssembly.Imports;
 		run: (instance: WebAssembly.Instance) => Promise<void>;
@@ -83,8 +84,8 @@ export async function runStatWeights(
 }
 
 let pool: SimWorkerPool | undefined;
-function getPool(): SimWorkerPool {
-	if (!pool) pool = new SimWorkerPool();
+function getPool(workerCount?: number): SimWorkerPool {
+	if (!pool) pool = new SimWorkerPool(workerCount);
 	return pool;
 }
 
@@ -151,15 +152,64 @@ export async function runConcurrentSim(
 }
 
 /**
+ * Runs a single real raid sim (not a calibration batch) for `requestBytes`' gear/encounter/
+ * buffs, returning the raw RaidSimResult - used to measure absolute TPS/DTPS/TMI-5 values for
+ * display, since StatWeightsResult only ever carries per-stat marginal weights, never an
+ * absolute value (see calibrateWeights.ts's measureFinalSimMetrics).
+ *
+ * Reuses the wasm module's statWeightRequests export purely for its Go-side assembly of a
+ * StatWeightsRequest into a proper RaidSimRequest (buffs/database/talents wiring etc.) - the
+ * same `reqData.baseRequest` runStatWeightsAsync computes and discards after using it as the
+ * calibration baseline.
+ *
+ * Deliberately calls the coordinator instance's plain synchronous `raidSim` export directly
+ * instead of going through runConcurrentSim's pool-split/combine path: calling this right after
+ * a full calibration batch (which itself already made dozens of split/combine round trips on
+ * this same coordinator instance) was observed to hang indefinitely inside
+ * `raidSimResultCombination` specifically - reproduced live, isolated by tracing each step, and
+ * confirmed fixed by switching to this single-threaded path (also exactly what
+ * statWeights.integration.test.ts's own regression test already exercises against the real
+ * wasm module). One extra un-parallelized sim is a small, bounded cost - not worth the
+ * reliability risk of a many-times-reused coordinator's split/combine state for a single
+ * one-off measurement.
+ */
+export async function measureRaidSim(
+	requestBytes: Uint8Array,
+): Promise<RaidSimResult> {
+	await loadWasm();
+	if (!wasmGlobals.statWeightRequests || !wasmGlobals.raidSim) {
+		throw new Error(
+			"statWeightRequests/raidSim globals were not registered by the wasm module",
+		);
+	}
+	const reqData = StatWeightRequestsData.fromBinary(
+		wasmGlobals.statWeightRequests(requestBytes),
+	);
+	if (!reqData.baseRequest) {
+		throw new Error("statWeightRequests returned no baseRequest");
+	}
+	const bytes = wasmGlobals.raidSim(
+		RaidSimRequest.toBinary(reqData.baseRequest),
+	);
+	return RaidSimResult.fromBinary(bytes);
+}
+
+/**
  * Runs a full stat-weight calibration batch (baseline + every stat's low/high perturbation)
  * across a SimWorkerPool, reporting cumulative progress the same shape as the old
  * single-instance statWeightsAsync call did (`ProgressMetrics.totalIterations`/
  * `completedIterations`/`totalSims`/`completedSims`), so callers (calibrateWeights.ts) need no
  * changes.
+ *
+ * `workerCount` (0/undefined = auto-detect) only takes effect the first time this module
+ * creates its pool - see getPool()/SimWorkerPool. Fine in practice since a fresh Worker (and
+ * so a fresh copy of this module) is spun up per solve (see solver.worker.ts), so there's
+ * never a stale pool sized for a since-changed setting within one solve.
  */
 export async function runStatWeightsAsync(
 	requestBytes: Uint8Array,
 	onProgress?: (progress: ProgressMetrics) => void,
+	workerCount?: number,
 ): Promise<StatWeightsResult> {
 	await loadWasm();
 	if (!wasmGlobals.statWeightRequests || !wasmGlobals.statWeightCompute) {
@@ -167,7 +217,7 @@ export async function runStatWeightsAsync(
 			"statWeightRequests/statWeightCompute globals were not registered by the wasm module",
 		);
 	}
-	const simWorkerPool = getPool();
+	const simWorkerPool = getPool(workerCount);
 
 	const reqData = StatWeightRequestsData.fromBinary(
 		wasmGlobals.statWeightRequests(requestBytes),

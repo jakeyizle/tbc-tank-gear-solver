@@ -5,6 +5,7 @@ import { convertStatToPercentageOrSkill } from "#/helpers/convertStat";
 import { buildStatInputs } from "#/helpers/resultStats";
 import { calculateStatValue } from "#/helpers/stats";
 import type { LPItem } from "#/solver/types";
+import type { SimMetricsSnapshot } from "#/types/SimCalibrationProfile";
 import type { BaseConfig, SolverConfiguration } from "#/types/SolverConfig";
 import StatsGroup from "./StatsGroup";
 
@@ -13,6 +14,7 @@ interface StatsSummaryProps {
 	baseConfig: BaseConfig;
 	solverConfig: SolverConfiguration;
 	includeBuffsConsumables: boolean;
+	simMetrics?: SimMetricsSnapshot;
 }
 
 export default function StatsSummary({
@@ -20,6 +22,7 @@ export default function StatsSummary({
 	baseConfig,
 	solverConfig,
 	includeBuffsConsumables,
+	simMetrics,
 }: StatsSummaryProps) {
 	if (!rawItems || rawItems.length === 0) {
 		return null;
@@ -145,6 +148,16 @@ export default function StatsSummary({
 		{ name: "Spirit", value: stat("Spirit") },
 	];
 
+	const showSimMetrics =
+		solverConfig.objectiveMode === "simWeighted" && simMetrics != null;
+	const simMetricStats = showSimMetrics
+		? [
+				{ name: "TPS", value: simMetrics.tps },
+				{ name: "DTPS", value: simMetrics.dtps },
+				{ name: "TMI-5", value: simMetrics.tmi5 },
+			]
+		: [];
+
 	return (
 		<Box
 			sx={{
@@ -191,6 +204,43 @@ export default function StatsSummary({
 					</Box>
 				))}
 			</Box>
+
+			{showSimMetrics && (
+				<Box
+					sx={{
+						display: "grid",
+						gridTemplateColumns: `repeat(${simMetricStats.length}, 1fr)`,
+						gap: 1,
+						borderRadius: 1,
+						bgcolor: "background.paper",
+						border: 1,
+						borderColor: "divider",
+						p: 1.25,
+					}}
+				>
+					{simMetricStats.map((s) => (
+						<Box key={s.name} sx={{ minWidth: 0 }}>
+							<Typography
+								variant="overline"
+								color="text.secondary"
+								sx={{ lineHeight: 1.5, whiteSpace: "nowrap" }}
+							>
+								{s.name}
+							</Typography>
+							<Typography
+								variant="h5"
+								color="secondary.light"
+								fontWeight={700}
+								sx={{ whiteSpace: "nowrap" }}
+							>
+								{s.value.toLocaleString(undefined, {
+									maximumFractionDigits: 0,
+								})}
+							</Typography>
+						</Box>
+					))}
+				</Box>
+			)}
 
 			<StatsGroup header="Mitigation" stats={mitigationStats} showRating />
 			<StatsGroup header="Threat" stats={threatStats} showRating />
