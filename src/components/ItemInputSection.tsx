@@ -13,6 +13,9 @@ import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CLASS_LABELS } from "#/data/classes";
+import { RACE_LABELS } from "#/data/races";
+import type { DetectedCharacter } from "#/helpers/parseItemInput";
 import { analyzeItemInput } from "#/helpers/parseItemInput";
 
 const PHASE_OPTIONS = [1, 2, 3, 4, 5];
@@ -24,11 +27,39 @@ interface ItemInputSectionProps {
 	setAreEnchantsGemsLocked: (value: boolean) => void;
 	excludeUniqueGems: boolean;
 	setExcludeUniqueGems: (value: boolean) => void;
+	independentConfigs: boolean;
+	setIndependentConfigs: (value: boolean) => void;
 	phase: number;
 	setPhase: (value: number) => void;
+	// Called once per pasted character export that resolves to a supported class -
+	// used to pre-fill the Character section's class/race/talent inputs, which stay
+	// editable afterward.
+	onCharacterDetected?: (character: DetectedCharacter) => void;
 }
 
-function PhaseSelect({ phase, setPhase }: { phase: number; setPhase: (value: number) => void }) {
+const characterLabel = (character: DetectedCharacter): string => {
+	const parts: string[] = [];
+	if (character.name) parts.push(character.name);
+	const raceLabel =
+		(character.raceId && RACE_LABELS[character.raceId]) || character.raceName;
+	const classLabel =
+		(character.classId && CLASS_LABELS[character.classId]) ||
+		character.className;
+	const classRace = [raceLabel, classLabel].filter(Boolean).join(" ");
+	if (classRace) parts.push(classRace);
+	if (character.spec) {
+		parts.push(character.spec[0].toUpperCase() + character.spec.slice(1));
+	}
+	return parts.join(" · ");
+};
+
+function PhaseSelect({
+	phase,
+	setPhase,
+}: {
+	phase: number;
+	setPhase: (value: number) => void;
+}) {
 	return (
 		<Select
 			size="small"
@@ -58,7 +89,9 @@ const formatUnknownIdsMessage = (analysis: {
 		clauses.push(`Unknown gem IDs: ${analysis.unknownGemIds.join(", ")}.`);
 	}
 	if (analysis.unknownEnchantIds.length) {
-		clauses.push(`Unknown enchant IDs: ${analysis.unknownEnchantIds.join(", ")}.`);
+		clauses.push(
+			`Unknown enchant IDs: ${analysis.unknownEnchantIds.join(", ")}.`,
+		);
 	}
 	return clauses.join(" ");
 };
@@ -67,9 +100,8 @@ const PLACEHOLDER = `Paste your WowSims Exporter output here, e.g.
 
 {"items":[{"id":28825,"enchant":2673,"gems":[24033]}, ...]}
 
-— or — a comma-separated list of item IDs:
-
-28825, 29011, 28749`;
+A full character export (with class/race/talents) also works, and will
+pre-fill the Character section above.`;
 
 export default function ItemInputSection({
 	itemInput,
@@ -78,13 +110,33 @@ export default function ItemInputSection({
 	setAreEnchantsGemsLocked,
 	excludeUniqueGems,
 	setExcludeUniqueGems,
+	independentConfigs,
+	setIndependentConfigs,
 	phase,
 	setPhase,
+	onCharacterDetected,
 }: ItemInputSectionProps) {
 	const analysis = useMemo(() => analyzeItemInput(itemInput), [itemInput]);
 	const isValid = analysis.status === "valid" || analysis.status === "warning";
+	const character =
+		analysis.status === "valid" || analysis.status === "warning"
+			? analysis.character
+			: null;
 
-	const [textareaOpen, setTextareaOpen] = useState(() => itemInput.trim().length > 0);
+	// Pre-fill class/race/talents from a pasted character export, once per distinct
+	// paste - the user can freely edit those fields afterward without this
+	// overwriting them again.
+	const appliedCharacterInputRef = useRef<string | null>(null);
+	useEffect(() => {
+		if (!onCharacterDetected || !character?.supported) return;
+		if (appliedCharacterInputRef.current === itemInput) return;
+		appliedCharacterInputRef.current = itemInput;
+		onCharacterDetected(character);
+	}, [character, itemInput, onCharacterDetected]);
+
+	const [textareaOpen, setTextareaOpen] = useState(
+		() => itemInput.trim().length > 0,
+	);
 	const [manualEdit, setManualEdit] = useState(false);
 	const [focused, setFocused] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
@@ -98,9 +150,13 @@ export default function ItemInputSection({
 	useEffect(() => {
 		if (!focused) return;
 		const handlePointerDown = (e: MouseEvent) => {
-			if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+			if (
+				containerRef.current &&
+				!containerRef.current.contains(e.target as Node)
+			) {
 				setFocused(false);
-				if (analyzeItemInput(itemInput).status === "valid") setManualEdit(false);
+				if (analyzeItemInput(itemInput).status === "valid")
+					setManualEdit(false);
 			}
 		};
 		document.addEventListener("mousedown", handlePointerDown);
@@ -129,7 +185,10 @@ export default function ItemInputSection({
 					py: 1.25,
 				}}
 			>
-				<Typography variant="body2" sx={{ fontWeight: 500, width: 78, flexShrink: 0 }}>
+				<Typography
+					variant="body2"
+					sx={{ fontWeight: 500, width: 78, flexShrink: 0 }}
+				>
 					Gear pool
 				</Typography>
 				<Stack direction="row" spacing={0.75} alignItems="center">
@@ -160,12 +219,23 @@ export default function ItemInputSection({
 					) : (
 						<Typography variant="body2" color="success.main">
 							{analysis.status === "valid" &&
-								`${analysis.count} ${analysis.count === 1 ? "item" : "items"}${analysis.format === "json" ? " · WowSims export" : ""}`}
+								`${analysis.count} ${analysis.count === 1 ? "item" : "items"}`}
+						</Typography>
+					)}
+					{character && (
+						<Typography variant="body2" color="text.secondary">
+							· {characterLabel(character)}
+							{!character.supported && " (unsupported)"}
 						</Typography>
 					)}
 				</Stack>
 
-				<Stack direction="row" spacing={1} alignItems="center" sx={{ ml: "auto" }}>
+				<Stack
+					direction="row"
+					spacing={1}
+					alignItems="center"
+					sx={{ ml: "auto" }}
+				>
 					<PhaseSelect phase={phase} setPhase={setPhase} />
 					<FormControlLabel
 						sx={{ mr: 0 }}
@@ -197,6 +267,21 @@ export default function ItemInputSection({
 							</Typography>
 						}
 					/>
+					<FormControlLabel
+						sx={{ mr: 0 }}
+						control={
+							<Switch
+								size="small"
+								checked={independentConfigs}
+								onChange={(e) => setIndependentConfigs(e.target.checked)}
+							/>
+						}
+						label={
+							<Typography variant="body2" color="text.secondary">
+								Compare independently
+							</Typography>
+						}
+					/>
 					<Typography
 						variant="body2"
 						color="primary"
@@ -216,7 +301,11 @@ export default function ItemInputSection({
 			variant="outlined"
 			sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1.25 }}
 		>
-			<Stack direction="row" alignItems="baseline" justifyContent="space-between">
+			<Stack
+				direction="row"
+				alignItems="baseline"
+				justifyContent="space-between"
+			>
 				<Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
 					Gear pool
 				</Typography>
@@ -249,7 +338,8 @@ export default function ItemInputSection({
 						color="text.secondary"
 						sx={{ maxWidth: 380 }}
 					>
-						Or a comma-separated list of item IDs. Export with the{" "}
+						A full character export also works, and will pre-fill your class,
+						race, and talents. Export with the{" "}
 						<Link
 							href="https://www.curseforge.com/wow/addons/wowsimsexporter"
 							target="_blank"
@@ -289,8 +379,12 @@ export default function ItemInputSection({
 							<Stack direction="row" spacing={0.5} alignItems="center">
 								<CheckCircleIcon color="success" fontSize="small" />
 								<Typography variant="caption" color="success.main">
-									{analysis.count} {analysis.count === 1 ? "item" : "items"} recognized
-									{analysis.format === "json" ? " from WowSims export" : ""}
+									{analysis.count} {analysis.count === 1 ? "item" : "items"}{" "}
+									recognized from WowSims export
+									{character && `. Detected ${characterLabel(character)}`}
+									{character &&
+										!character.supported &&
+										" — class not supported here, only class/race/talents were skipped."}
 								</Typography>
 							</Stack>
 						) : analysis.status === "warning" ? (
@@ -309,7 +403,13 @@ export default function ItemInputSection({
 							</Stack>
 						) : null}
 					</Box>
-					<Stack direction="row" spacing={2} alignItems="center" useFlexGap sx={{ flexWrap: "wrap" }}>
+					<Stack
+						direction="row"
+						spacing={2}
+						alignItems="center"
+						useFlexGap
+						sx={{ flexWrap: "wrap" }}
+					>
 						<FormControlLabel
 							control={
 								<Switch
@@ -321,7 +421,9 @@ export default function ItemInputSection({
 							label={
 								<Stack direction="row" spacing={0.5} alignItems="center">
 									<LockIcon fontSize="inherit" />
-									<Typography variant="body2">Lock enchants and gems</Typography>
+									<Typography variant="body2">
+										Lock enchants and gems
+									</Typography>
 								</Stack>
 							}
 						/>
@@ -334,6 +436,18 @@ export default function ItemInputSection({
 								/>
 							}
 							label={<Typography variant="body2">Unique gems</Typography>}
+						/>
+						<FormControlLabel
+							control={
+								<Switch
+									size="small"
+									checked={independentConfigs}
+									onChange={(e) => setIndependentConfigs(e.target.checked)}
+								/>
+							}
+							label={
+								<Typography variant="body2">Compare independently</Typography>
+							}
 						/>
 						<Stack direction="row" spacing={1} alignItems="center">
 							<Typography variant="body2">Phase</Typography>

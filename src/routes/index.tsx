@@ -11,6 +11,7 @@ import SimCalibrationPanel from "#/components/SimCalibrationPanel";
 import SolveButton from "#/components/SolveButton";
 import { getAbilities } from "#/data/abilities";
 import { getTalentsByClass } from "#/data/talents";
+import type { DetectedCharacter } from "#/helpers/parseItemInput";
 import { analyzeItemInput, parseItemInput } from "#/helpers/parseItemInput";
 import { loadAppState, saveAppState } from "#/helpers/persistence";
 import { track, type UnknownId } from "#/helpers/track";
@@ -41,6 +42,9 @@ function App() {
 	);
 	const [excludeUniqueGems, setExcludeUniqueGems] = useState(
 		() => _saved?.excludeUniqueGems ?? false,
+	);
+	const [independentConfigs, setIndependentConfigs] = useState(
+		() => _saved?.independentConfigs ?? false,
 	);
 	const [phase, setPhase] = useState(() => _saved?.phase ?? 3);
 
@@ -90,6 +94,7 @@ function App() {
 			talents,
 			areEnchantsGemsLocked,
 			excludeUniqueGems,
+			independentConfigs,
 			phase,
 			simCalibrationProfile,
 			configs,
@@ -97,6 +102,20 @@ function App() {
 			solveResults: [],
 			activeResultId: null,
 		});
+	};
+
+	const handleCharacterDetected = (character: DetectedCharacter) => {
+		if (character.classId) setClassValue(character.classId);
+		if (character.raceId) setRaceValue(character.raceId);
+		if (Object.keys(character.talentRanks).length > 0) {
+			setTalents((prev) =>
+				prev.map((talent) =>
+					talent.id in character.talentRanks
+						? { ...talent, rank: character.talentRanks[talent.id] }
+						: talent,
+				),
+			);
+		}
 	};
 
 	const handleSolveAll = async () => {
@@ -148,6 +167,7 @@ function App() {
 				classId: classValue,
 				areEnchantsGemsLocked,
 				excludeUniqueGems,
+				independentConfigs,
 				phase,
 				talentSources: talents,
 				abilitySources,
@@ -236,8 +256,11 @@ function App() {
 						setAreEnchantsGemsLocked={setAreEnchantsGemsLocked}
 						excludeUniqueGems={excludeUniqueGems}
 						setExcludeUniqueGems={setExcludeUniqueGems}
+						independentConfigs={independentConfigs}
+						setIndependentConfigs={setIndependentConfigs}
 						phase={phase}
 						setPhase={setPhase}
+						onCharacterDetected={handleCharacterDetected}
 					/>
 
 					<ConfigurationPanel

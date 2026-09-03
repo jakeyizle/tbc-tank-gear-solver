@@ -47,6 +47,10 @@ export interface SolveResult {
 export interface BaseConfig {
 	areEnchantsGemsLocked: boolean;
 	excludeUniqueGems: boolean;
+	// When true, every config solves independently from the same original item
+	// pool instead of inheriting prior configs' picks - for comparing configs
+	// on equal footing rather than building one gear set across all of them.
+	independentConfigs: boolean;
 	phase: number;
 	raceId: string;
 	classId: string;

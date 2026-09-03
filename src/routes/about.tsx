@@ -41,7 +41,8 @@ function About() {
             </Typography>
             <Typography component="li">
               You supply the gear pool: paste a WowSims Exporter addon export
-              (JSON) or a comma-separated list of item IDs.
+              (JSON). A full character export also pre-fills class, race, and
+              talents.
             </Typography>
           </Box>
 

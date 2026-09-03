@@ -13,6 +13,9 @@ export interface PersistedState {
 	talents: ModifierSource[];
 	areEnchantsGemsLocked: boolean;
 	excludeUniqueGems: boolean;
+	// Optional - absent for saves from before this setting existed; loadAppState's caller
+	// falls back to false/serial mode, same undefined-tolerant pattern as simCalibrationProfile.
+	independentConfigs?: boolean;
 	phase: number;
 	configs: SolverConfiguration[];
 	activeConfigId: string;

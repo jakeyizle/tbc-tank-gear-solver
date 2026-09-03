@@ -177,6 +177,7 @@ describe("solveConfig", () => {
 		const baseConfig = {
 			areEnchantsGemsLocked: true,
 			excludeUniqueGems: false,
+			independentConfigs: false,
 			phase: 3,
 			raceId: TEST_RACE_ID,
 			classId: TEST_CLASS_ID,
@@ -214,6 +215,59 @@ describe("solveConfig", () => {
 		);
 		expect(head2?.gems.map((g) => g.id)).toEqual(head1?.gems.map((g) => g.id));
 		expect(head2?.enchant.id).toEqual(head1?.enchant.id);
+	}, 60000);
+
+	it("scenario 6b: solveAll with independentConfigs solves every config from the original, unlocked pool", async () => {
+		const solverConfig1 = {
+			id: "config-1",
+			name: "Config 1",
+			uncritabilitySetting: 0,
+			uncrushabilitySetting: 0,
+			optimizeStats: OBJECTIVE_STATS,
+			objectiveMode: "stats" as const,
+			simMetricWeights: { tps: 0, dtps: 0, tmi5: 0 },
+			resistanceFloors: [],
+			abilities: [],
+			talents: [],
+			buffs: [],
+			enabledConsumableIds: [],
+		};
+		const solverConfig2 = {
+			...solverConfig1,
+			id: "config-2",
+			name: "Config 2",
+		};
+		const baseConfig = {
+			areEnchantsGemsLocked: true,
+			excludeUniqueGems: false,
+			independentConfigs: true,
+			phase: 3,
+			raceId: TEST_RACE_ID,
+			classId: TEST_CLASS_ID,
+			abilitySources: [],
+			talentSources: [],
+			simCalibrationProfile: DEFAULT_SIM_CALIBRATION_PROFILE,
+		};
+
+		const capturedInputs: InputItem[][] = [];
+		const solveFnForTest: typeof solve = (items, options, onProgress) => {
+			capturedInputs.push(items);
+			return solveConfig(items, options, onProgress);
+		};
+
+		const results = await solveAll(
+			testItemPool,
+			baseConfig,
+			[solverConfig1, solverConfig2],
+			undefined,
+			solveFnForTest,
+		);
+		expect(results).toHaveLength(2);
+
+		// with independentConfigs, config 2 must receive the exact same starting pool as
+		// config 1 - not config 1's locked-in picks
+		expect(capturedInputs).toHaveLength(2);
+		expect(capturedInputs[1]).toEqual(capturedInputs[0]);
 	}, 60000);
 
 	it("scenario 7: stays fast with a large relevant-gem candidate pool (was combinatorially intractable before the MIP reformulation)", async () => {
@@ -325,6 +379,7 @@ describe("solveConfig", () => {
 		const baseConfig = {
 			areEnchantsGemsLocked: false,
 			excludeUniqueGems: false,
+			independentConfigs: false,
 			phase: 3,
 			raceId: TEST_RACE_ID,
 			classId: TEST_CLASS_ID,

@@ -132,10 +132,13 @@ export const solveAll = async (
 ): Promise<SolveResult[]> => {
 	// the idea here is to solve in order
 	// the items that are selected are locked, and no variants for those items will be generated for the next configs
+	// - unless baseConfig.independentConfigs is set, in which case every config solves from this
+	// same starting pool instead, so configs can be compared on equal footing.
 	const solverResults: SolveResult[] = [];
-	let currentInputItems: InputItem[] = items.map((item) => {
+	const initialInputItems: InputItem[] = items.map((item) => {
 		return { ...item, locked: baseConfig.areEnchantsGemsLocked };
 	});
+	let currentInputItems: InputItem[] = initialInputItems;
 
 	const totalConfigs = solverConfigs.length;
 	for (const [configIndex, solverConfig] of solverConfigs.entries()) {
@@ -180,7 +183,9 @@ export const solveAll = async (
 			solverConfig,
 		});
 
-		currentInputItems = replaceInputItems(currentInputItems, items);
+		currentInputItems = baseConfig.independentConfigs
+			? initialInputItems
+			: replaceInputItems(currentInputItems, items);
 	}
 
 	return solverResults;

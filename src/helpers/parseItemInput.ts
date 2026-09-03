@@ -1,11 +1,13 @@
-// Supported input formats:
-//   1. WowSims Exporter JSON: { gear: { items: [...] } }
-//   2. WowSims Exporter JSON: { items: [...] }
-//   3. Legacy comma-separated list of item IDs: 123, 456, ...
+// Supported input: WowSims Exporter JSON, either the full character export
+// ({ class, race, talents, gear: { items: [...] }, ... }) or just an item pool
+// ({ items: [...] }).
 
+import { CLASS_NAME_TO_ID } from "#/data/classes";
 import Enchants from "#/data/enchants.json";
 import Gems from "#/data/gems.json";
 import Items from "#/data/items.json";
+import { RACE_NAME_TO_ID } from "#/data/races";
+import { parseTalentsString } from "#/data/talents";
 import { groupItemsBySlot, SLOT_ORDER } from "#/solver/itemSlots";
 import type { InputItem, LPItem } from "#/solver/types";
 
@@ -21,14 +23,6 @@ const looksLikeJson = (input: string) => {
 export const parseItemInput = (input: string): InputItem[] => {
 	const trimmed = input.trim();
 	if (!trimmed) return [];
-
-	if (!looksLikeJson(trimmed)) {
-		return trimmed
-			.split(",")
-			.map((s) => s.trim())
-			.filter(Boolean)
-			.map((id) => ({ id, gems: [] })) as InputItem[];
-	}
 
 	const data = JSON.parse(trimmed);
 	const items = data.items || data.gear?.items || [];
@@ -62,18 +56,75 @@ export const formatItemExport = (items: LPItem[]): string => {
 	return JSON.stringify({ gear: { items: exportItems } });
 };
 
+// Character info pulled out of a full WowSims character export - present only for
+// the "gear.items" export shape, not the bare "{items:[...]}" pool shape.
+export interface DetectedCharacter {
+	name?: string;
+	className?: string;
+	classId?: string;
+	raceName?: string;
+	raceId?: string;
+	spec?: string;
+	talentRanks: Record<string, number>;
+	// false when the export's class doesn't resolve to a class/spec this app models
+	// (currently Protection Paladin only) - class/race/talents shouldn't be applied.
+	supported: boolean;
+}
+
+export const parseCharacterExport = (
+	input: string,
+): DetectedCharacter | null => {
+	const trimmed = input.trim();
+	if (!looksLikeJson(trimmed)) return null;
+
+	let data: Record<string, unknown>;
+	try {
+		data = JSON.parse(trimmed);
+	} catch {
+		return null;
+	}
+
+	const className = typeof data.class === "string" ? data.class : undefined;
+	const raceName = typeof data.race === "string" ? data.race : undefined;
+	const talentsStr =
+		typeof data.talents === "string" ? data.talents : undefined;
+	if (!className && !raceName && !talentsStr) return null;
+
+	const normalize = (name: string) => name.toLowerCase().replaceAll(" ", "");
+	const classId = className
+		? CLASS_NAME_TO_ID[normalize(className)]
+		: undefined;
+	const raceId = raceName ? RACE_NAME_TO_ID[normalize(raceName)] : undefined;
+	const talentRanks =
+		classId && talentsStr ? parseTalentsString(classId, talentsStr) : {};
+
+	return {
+		name: typeof data.name === "string" ? data.name : undefined,
+		className,
+		classId,
+		raceName,
+		raceId,
+		spec: typeof data.spec === "string" ? data.spec : undefined,
+		talentRanks,
+		supported: classId != null,
+	};
+};
+
 type ItemInputAnalysis =
 	| { status: "empty" }
-	| { status: "valid"; count: number; format: "json" | "ids" }
+	| { status: "valid"; count: number; character: DetectedCharacter | null }
 	| {
 			status: "warning";
 			count: number;
-			format: "json" | "ids";
+			character: DetectedCharacter | null;
 			unknownItemIds: string[];
 			unknownGemIds: string[];
 			unknownEnchantIds: string[];
 	  }
 	| { status: "error"; message: string };
+
+const INVALID_EXPORT_MESSAGE =
+	"Couldn't read that as a WowSims export. Paste the full JSON from the WowSims Exporter addon.";
 
 // An id of "0" (or empty) conventionally means "no gem"/"no enchant" in a
 // WowSims export, not an unknown id.
@@ -84,7 +135,9 @@ export const analyzeItemInput = (input: string): ItemInputAnalysis => {
 	const trimmed = input.trim();
 	if (!trimmed) return { status: "empty" };
 
-	const format = looksLikeJson(trimmed) ? "json" : "ids";
+	if (!looksLikeJson(trimmed)) {
+		return { status: "error", message: INVALID_EXPORT_MESSAGE };
+	}
 
 	try {
 		const items = parseItemInput(trimmed);
@@ -92,11 +145,11 @@ export const analyzeItemInput = (input: string): ItemInputAnalysis => {
 			return {
 				status: "error",
 				message:
-					format === "json"
-						? "No items found in that export. Make sure you copied the full WowSims Exporter output."
-						: "No item IDs found. Enter IDs separated by commas, e.g. 28825, 29011.",
+					"No items found in that export. Make sure you copied the full WowSims Exporter output.",
 			};
 		}
+
+		const character = parseCharacterExport(trimmed);
 
 		const unknownItemIds = new Set<string>();
 		const unknownGemIds = new Set<string>();
@@ -116,19 +169,15 @@ export const analyzeItemInput = (input: string): ItemInputAnalysis => {
 			return {
 				status: "warning",
 				count: items.length,
-				format,
+				character,
 				unknownItemIds: [...unknownItemIds],
 				unknownGemIds: [...unknownGemIds],
 				unknownEnchantIds: [...unknownEnchantIds],
 			};
 		}
 
-		return { status: "valid", count: items.length, format };
+		return { status: "valid", count: items.length, character };
 	} catch {
-		return {
-			status: "error",
-			message:
-				"Couldn't read that as a WowSims export. Paste the full JSON, or enter a comma-separated list of item IDs.",
-		};
+		return { status: "error", message: INVALID_EXPORT_MESSAGE };
 	}
 };

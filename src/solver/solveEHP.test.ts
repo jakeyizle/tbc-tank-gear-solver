@@ -169,6 +169,7 @@ describe("solveConfigForEHP", () => {
 		const baseConfig = {
 			areEnchantsGemsLocked: true,
 			excludeUniqueGems: false,
+			independentConfigs: false,
 			phase: 3,
 			raceId: TEST_RACE_ID,
 			classId: TEST_CLASS_ID,
