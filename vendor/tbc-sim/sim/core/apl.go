@@ -1,0 +1,675 @@
+package core
+
+import (
+	"fmt"
+
+	"github.com/wowsims/tbc/sim/core/proto"
+	"google.golang.org/protobuf/encoding/protojson"
+)
+
+type APLRotation struct {
+	unit           *Unit
+	prepullActions []*APLAction
+	priorityList   []*APLAction
+	groups         []*APLGroup
+	valueVariables []*APLValueVariable
+
+	// Shared variable caches: all APLValueVariableRef instances for the same
+	// variable name share the same cache (but each has its own expression tree).
+	variableCaches map[string]*variableCache
+	evalGeneration uint32
+
+	// Values orphaned by compile-time constant folding (e.g. And/Or short-circuit).
+	// These still need Finalize() called on them.
+	orphanedValues []APLValue
+
+	// Actions pruned by compile-time constant folding (const false condition).
+	// Their spells still need to be removed from MCD auto-casting.
+	prunedActions []APLActionImpl
+
+	// Action currently controlling this rotation (only used for certain actions, such as StrictSequence).
+	controllingActions []APLActionImpl
+
+	// Value that should evaluate to 'true' if the current channel is to be interrupted.
+	// Will be nil when there is no active channel.
+	interruptChannelIf APLValue
+
+	// If true, can recast channel when interrupted.
+	allowChannelRecastOnInterrupt bool
+
+	// Used inside of actions/value to determine whether they will occur during the prepull or regular rotation.
+	parsingPrepull bool
+
+	// Used to avoid recursive APL loops.
+	inLoop bool
+
+	// Used to override MCD restrictions within sequences.
+	inSequence bool
+
+	// Validation warnings that occur during proto parsing.
+	// We return these back to the user for display in the UI.
+	curValidations          []*proto.APLValidation
+	prepullValidations      [][]*proto.APLValidation
+	priorityListValidations [][]*proto.APLValidation
+	groupListValidations    [][][]*proto.APLValidation
+	uuidValidations         map[*proto.UUID][]*proto.APLValidation
+
+	// Maps indices in filtered sim lists to indices in configs.
+	prepullIdxMap      []int
+	priorityListIdxMap []int
+	groupListIdxMap    [][]int
+}
+
+type APLGroup struct {
+	name         string
+	actions      []*APLAction
+	variables    map[string]*proto.APLValue
+	referencedBy *APLActionGroupReference
+}
+
+type APLValueVariable struct {
+	name  string
+	value *proto.APLValue
+}
+
+func (rot *APLRotation) ValidationMessage(log_level proto.LogLevel, message string, vals ...interface{}) {
+	formatted_message := fmt.Sprintf(message, vals...)
+	rot.curValidations = append(rot.curValidations, &proto.APLValidation{
+		LogLevel:   log_level,
+		Validation: formatted_message,
+	})
+}
+
+func (rot *APLRotation) ValidationMessageByUUID(uuid *proto.UUID, log_level proto.LogLevel, message string, vals ...interface{}) {
+	if uuid != nil {
+		formatted_message := fmt.Sprintf(message, vals...)
+		rot.uuidValidations[uuid] = append(rot.uuidValidations[uuid], &proto.APLValidation{
+			LogLevel:   log_level,
+			Validation: formatted_message,
+		})
+	}
+}
+
+// Invokes the fn function, and attributes all warnings generated during its invocation
+// to the provided warningsList.
+func (rot *APLRotation) doAndRecordWarnings(warningsList *[]*proto.APLValidation, isPrepull bool, fn func()) {
+	rot.parsingPrepull = isPrepull
+	fn()
+	if warningsList != nil {
+		*warningsList = append(*warningsList, rot.curValidations...)
+	}
+	rot.curValidations = nil
+	rot.parsingPrepull = false
+}
+
+func (unit *Unit) newCustomRotation() *APLRotation {
+	return unit.newAPLRotation(&proto.APLRotation{
+		Type: proto.APLRotation_TypeAPL,
+		PriorityList: []*proto.APLListItem{
+			{
+				Action: &proto.APLAction{
+					Action: &proto.APLAction_CustomRotation{},
+				},
+			},
+		},
+	})
+}
+
+func (unit *Unit) newAPLRotation(config *proto.APLRotation) *APLRotation {
+	if config == nil {
+		return nil
+	}
+
+	groupsConfig := config.Groups
+	rotation := &APLRotation{
+		unit:                    unit,
+		variableCaches:          make(map[string]*variableCache),
+		evalGeneration:          1, // Start at 1 so zero-value generation fields never match
+		prepullValidations:      make([][]*proto.APLValidation, len(config.PrepullActions)),
+		priorityListValidations: make([][]*proto.APLValidation, len(config.PriorityList)),
+		groupListValidations:    make([][][]*proto.APLValidation, len(groupsConfig)),
+		uuidValidations:         make(map[*proto.UUID][]*proto.APLValidation),
+	}
+
+	// Parse value variables FIRST, before any actions that might reference them
+	for _, condVar := range config.ValueVariables {
+		rotation.valueVariables = append(rotation.valueVariables, &APLValueVariable{
+			name:  condVar.Name,
+			value: condVar.Value,
+		})
+	}
+
+	// Parse prepull actions
+	for i, prepullItem := range config.PrepullActions {
+		prepullIdx := i // Save to local variable for correct lambda capture behavior
+		rotation.doAndRecordWarnings(&rotation.prepullValidations[prepullIdx], true, func() {
+			if !prepullItem.Hide {
+				doAtVal := rotation.newAPLValue(prepullItem.DoAtValue)
+				if doAtVal != nil {
+					doAt := doAtVal.GetDuration(nil)
+					if doAt > 0 {
+						rotation.ValidationMessage(proto.LogLevel_Warning, "Invalid time for 'Do At', ignoring this Prepull Action")
+					} else {
+						action := rotation.newAPLAction(prepullItem.Action)
+						if action != nil {
+							rotation.prepullActions = append(rotation.prepullActions, action)
+							rotation.prepullIdxMap = append(rotation.prepullIdxMap, prepullIdx)
+							unit.RegisterPrepullAction(doAt, func(sim *Simulation) {
+								// Warnings for prepull cast failure are detected by running a fake prepull,
+								// so this action.Execute needs to record warnings.
+								rotation.doAndRecordWarnings(&rotation.prepullValidations[prepullIdx], true, func() {
+									action.Execute(sim)
+								})
+							})
+						}
+					}
+				}
+			}
+		})
+	}
+
+	// Parse priority list
+	for i, aplItem := range config.PriorityList {
+		rotation.doAndRecordWarnings(&rotation.priorityListValidations[i], false, func() {
+			if !aplItem.Hide {
+				action := rotation.newAPLAction(aplItem.Action)
+				if action != nil {
+					rotation.priorityList = append(rotation.priorityList, action)
+					rotation.priorityListIdxMap = append(rotation.priorityListIdxMap, i)
+				}
+			}
+		})
+	}
+
+	// Parse groups
+	for groupIdx := 0; groupIdx < len(groupsConfig); groupIdx++ {
+		groupConfig := groupsConfig[groupIdx]
+		group := &APLGroup{
+			name:      groupConfig.Name,
+			variables: make(map[string]*proto.APLValue),
+		}
+
+		for _, varConfig := range groupConfig.Variables {
+			group.variables[varConfig.Name] = varConfig.Value
+		}
+
+		if rotation.groupListValidations[groupIdx] == nil {
+			rotation.groupListValidations[groupIdx] = make([][]*proto.APLValidation, len(groupConfig.Actions))
+			rotation.groupListIdxMap = append(rotation.groupListIdxMap, []int{})
+		}
+
+		// Parse actions in the group
+		for i, aplItem := range groupConfig.Actions {
+			rotation.doAndRecordWarnings(&rotation.groupListValidations[groupIdx][i], false, func() {
+				if !aplItem.Hide {
+					// Don't pass group.variables here - placeholders should remain as placeholders
+					// until the group is actually referenced with specific variable values
+					action := rotation.newAPLActionWithGroupVars(aplItem.Action, nil)
+					if action != nil {
+						group.actions = append(group.actions, action)
+						rotation.groupListIdxMap[groupIdx] = append(rotation.groupListIdxMap[groupIdx], i)
+					}
+				}
+			})
+		}
+
+		rotation.groups = append(rotation.groups, group)
+
+		// Duplicate the group if it is referenced more than once in the priority list.
+		foundReference := false
+
+		for _, action := range rotation.priorityList {
+			if groupReferenceAction, ok := action.impl.(*APLActionGroupReference); ok {
+				if (groupReferenceAction.groupName == group.name) && !groupReferenceAction.matched {
+					if foundReference {
+						groupsConfig = append(groupsConfig, groupConfig)
+						rotation.groupListValidations = append(rotation.groupListValidations, nil)
+					}
+
+					foundReference = true
+					groupReferenceAction.matched = true
+					group.referencedBy = groupReferenceAction
+				}
+			}
+		}
+
+		// Duplicate any other groups referenced by this group's actions.
+		for _, action := range group.actions {
+			if groupReferenceAction, ok := action.impl.(*APLActionGroupReference); ok {
+				for _, groupConfig := range groupsConfig {
+					if (groupReferenceAction.groupName == groupConfig.Name) && !groupReferenceAction.matched {
+						groupsConfig = append(groupsConfig, groupConfig)
+						rotation.groupListValidations = append(rotation.groupListValidations, nil)
+						groupReferenceAction.matched = true
+					}
+				}
+			}
+		}
+	}
+
+	// Finalize
+	for i, action := range rotation.prepullActions {
+		rotation.doAndRecordWarnings(&rotation.prepullValidations[rotation.prepullIdxMap[i]], true, func() {
+			action.Finalize(rotation)
+		})
+	}
+
+	for groupIdx, group := range rotation.groups {
+		for actionIdx, action := range group.actions {
+			rotation.doAndRecordWarnings(&rotation.groupListValidations[groupIdx][rotation.groupListIdxMap[groupIdx][actionIdx]], false, func() {
+				action.Finalize(rotation)
+			})
+		}
+	}
+
+	for i, action := range rotation.priorityList {
+		rotation.doAndRecordWarnings(&rotation.priorityListValidations[rotation.priorityListIdxMap[i]], false, func() {
+			action.Finalize(rotation)
+		})
+	}
+
+	// Finalize orphaned values from compile-time constant folding.
+	for _, value := range rotation.orphanedValues {
+		value.Finalize(rotation)
+	}
+
+	agent := unit.Env.GetAgentFromUnit(unit)
+	if agent != nil {
+		character := agent.GetCharacter()
+
+		// Remove MCDs that are referenced by APL actions (including pruned ones),
+		// so that the Autocast Other Cooldowns action does not include them.
+		for _, action := range rotation.allAPLActions() {
+			removeFromMajorCooldowns(action.impl, character)
+		}
+		for _, impl := range rotation.prunedActions {
+			removeFromMajorCooldowns(impl, character)
+		}
+
+		// If user has Item Swapping enabled and hasn't swapped back to the main set do it here.
+		if character != nil && character.ItemSwap.IsEnabled() {
+			skipItemSwapCheck := true
+			hasMainSwap := false
+			for _, prepullAction := range rotation.allPrepullActions() {
+				if action, ok := prepullAction.impl.(*APLActionItemSwap); ok {
+					hasMainSwap = action.swapSet == proto.APLActionItemSwap_Main
+					skipItemSwapCheck = false
+				}
+			}
+			if !skipItemSwapCheck && !hasMainSwap {
+				unit.RegisterPrepullAction(-1, func(sim *Simulation) {
+					character.ItemSwap.SwapItems(sim, proto.APLActionItemSwap_Main, false)
+				})
+			}
+		}
+	}
+
+	return rotation
+}
+
+func (rot *APLRotation) getStats() *proto.APLStats {
+	// Perform one final round of validation after post-finalize effects.
+	for i, action := range rot.prepullActions {
+		rot.doAndRecordWarnings(&rot.prepullValidations[rot.prepullIdxMap[i]], true, func() {
+			action.impl.PostFinalize(rot)
+		})
+	}
+
+	// Parse groups
+	for groupIdx, group := range rot.groups {
+		// Parse actions in the group
+		for actionIdx, action := range group.actions {
+			rot.doAndRecordWarnings(&rot.groupListValidations[groupIdx][rot.groupListIdxMap[groupIdx][actionIdx]], false, func() {
+				action.impl.PostFinalize(rot)
+			})
+		}
+	}
+
+	for i, action := range rot.priorityList {
+		rot.doAndRecordWarnings(&rot.priorityListValidations[rot.priorityListIdxMap[i]], false, func() {
+			action.impl.PostFinalize(rot)
+		})
+	}
+
+	uuidValidationsArr := make([]*proto.UUIDValidations, len(rot.uuidValidations))
+	i := 0
+	for uuid, validations := range rot.uuidValidations {
+		uuidValidationsArr[i] = &proto.UUIDValidations{
+			Uuid:        uuid,
+			Validations: validations,
+		}
+		i++
+	}
+
+	return &proto.APLStats{
+		PrepullActions: MapSlice(rot.prepullValidations, func(validations []*proto.APLValidation) *proto.APLActionStats {
+			return &proto.APLActionStats{Validations: validations}
+		}),
+		PriorityList: MapSlice(rot.priorityListValidations, func(validations []*proto.APLValidation) *proto.APLActionStats {
+			return &proto.APLActionStats{Validations: validations}
+		}),
+		Groups: MapSlice(rot.groupListValidations, func(validations [][]*proto.APLValidation) *proto.APLGroupStats {
+			return &proto.APLGroupStats{Actions: MapSlice(validations, func(validations []*proto.APLValidation) *proto.APLActionStats {
+				return &proto.APLActionStats{Validations: validations}
+			})}
+		}),
+		UuidValidations: uuidValidationsArr,
+	}
+}
+
+func getAllActionsSafe(action *APLAction) []*APLAction {
+	// Check if action is nil before calling GetAllActions
+	if action == nil {
+		return []*APLAction{}
+	}
+	return action.GetAllActions()
+}
+
+func (rot *APLRotation) allAPLActions() []*APLAction {
+	if rot == nil || rot.priorityList == nil {
+		return []*APLAction{}
+	}
+
+	actions := Flatten(MapSlice(rot.priorityList, getAllActionsSafe))
+
+	//Grab rot.groups actions as well
+	if rot.groups != nil {
+		for _, group := range rot.groups {
+			groupActions := Flatten(MapSlice(group.actions, getAllActionsSafe))
+			actions = append(actions, groupActions...)
+		}
+	}
+
+	return actions
+}
+
+// Returns all action objects from the prepull as an unstructured list. Used for easily finding specific actions.
+func (rot *APLRotation) allPrepullActions() []*APLAction {
+	return Flatten(MapSlice(rot.prepullActions, func(action *APLAction) []*APLAction { return action.GetAllActions() }))
+}
+
+func (rot *APLRotation) reset(sim *Simulation) {
+	rot.controllingActions = nil
+	rot.inLoop = false
+	rot.interruptChannelIf = nil
+	rot.allowChannelRecastOnInterrupt = false
+	rot.evalGeneration++ // Invalidate any variable caches from previous iteration or initialization
+	for _, action := range rot.allAPLActions() {
+		action.impl.Reset(sim)
+	}
+}
+
+// We intentionally try to mimic the behavior of simc APL to avoid confusion
+// and leverage the community's existing familiarity.
+// https://github.com/simulationcraft/simc/wiki/ActionLists
+func (apl *APLRotation) DoNextAction(sim *Simulation) {
+	if sim.CurrentTime < 0 {
+		return
+	}
+
+	if apl.inLoop {
+		return
+	}
+
+	if apl.unit.IsChanneling() {
+		dot := apl.unit.ChanneledDot
+		// All ticks consumed but aura not yet expired (lazy expiry). Deactivate now so
+		// the caster doesn't idle between GCD-ready and the lazy aura expiry time.
+		if dot.remainingTicks == 0 {
+			dot.Deactivate(sim)
+			return
+		}
+		// Increment evalGeneration so variable refs re-evaluate with current game state,
+		// not the cached values from the previous getNextAction call.
+		apl.evalGeneration++
+		// Also evaluate interruptIf when the GCD fires, not only on each tick.
+		if apl.shouldInterruptChannel(sim) {
+			clipDelay := dot.getChannelClipDelay()
+			dot.tickAction.NextActionAt = NeverExpires
+			dot.Deactivate(sim)
+			if dot.Spell.Unit.GCD.IsReady(sim) {
+				apl.unit.WaitUntil(sim, sim.CurrentTime+clipDelay)
+			}
+		}
+		return
+	}
+
+	if !apl.unit.RotationTimer.IsReady(sim) {
+		return
+	}
+
+	i := 0
+	apl.inLoop = true
+
+	apl.unit.UpdatePosition(sim, false)
+	for nextAction := apl.getNextAction(sim); nextAction != nil; i, nextAction = i+1, apl.getNextAction(sim) {
+		if i > 1000 {
+			panic(fmt.Sprintf("[USER_ERROR] Infinite loop detected, current action:\n%s", nextAction))
+		}
+
+		nextAction.Execute(sim)
+	}
+	apl.inLoop = false
+
+	if sim.Log != nil && i == 0 {
+		apl.unit.Log(sim, "No available actions!")
+	}
+
+	// Schedule the next rotation evaluation based on either the GCD or reaction time
+	if apl.unit.RotationTimer.IsReady(sim) {
+		nextEvaluation := sim.CurrentTime + apl.unit.ReactionTime
+
+		if !apl.unit.Moving {
+			nextEvaluation = max(nextEvaluation, apl.unit.NextGCDAt())
+		}
+
+		apl.unit.WaitUntil(sim, nextEvaluation)
+	}
+}
+
+func (apl *APLRotation) getNextAction(sim *Simulation) *APLAction {
+	apl.evalGeneration++
+
+	if len(apl.controllingActions) != 0 {
+		return apl.controllingActions[len(apl.controllingActions)-1].GetNextAction(sim)
+	}
+
+	for _, action := range apl.priorityList {
+		if action.IsReady(sim) {
+			return action
+		}
+	}
+
+	return nil
+}
+
+// HasBlockingControllingAction reports whether the rotation is currently parked
+// in a controlling action that has set the rotation timer to a specific wake
+// time and must not be cut short by reaction-time-based shrinks (Wait, WaitUntil).
+// Cooperative controllers like StrictSequence return false.
+func (apl *APLRotation) HasBlockingControllingAction() bool {
+	if apl == nil || len(apl.controllingActions) == 0 {
+		return false
+	}
+	switch apl.controllingActions[len(apl.controllingActions)-1].(type) {
+	case *APLActionWait, *APLActionWaitUntil:
+		return true
+	}
+	return false
+}
+
+func (apl *APLRotation) pushControllingAction(ca APLActionImpl) {
+	apl.controllingActions = append(apl.controllingActions, ca)
+}
+
+func (apl *APLRotation) popControllingAction(ca APLActionImpl) {
+	if len(apl.controllingActions) == 0 || apl.controllingActions[len(apl.controllingActions)-1] != ca {
+		panic("Wrong APL controllingAction in pop()")
+	}
+	apl.controllingActions = apl.controllingActions[:len(apl.controllingActions)-1]
+}
+
+// nextActionWouldRecastChannel reports whether the same channeled spell would be
+// the first action cast if the channel ended right now. It evaluates the APL in
+// the post-channel state (ChanneledDot = nil) so channel-state-dependent
+// conditions don't produce stale results.
+//
+// Uses CanCast rather than CanCastOrQueue so that a proc-queued spell in the
+// same timestep does not incorrectly block a same-spell re-cast from being
+// detected.
+//
+// Caller must restore ChanneledDot after this call — this function does NOT
+// restore it.
+func (apl *APLRotation) nextActionWouldRecastChannel(sim *Simulation, channeledDot *Dot) bool {
+	channeledSpell := channeledDot.Spell
+
+	// Evaluate in post-channel state.
+	apl.unit.ChanneledDot = nil
+
+	for _, action := range apl.priorityList {
+		if action.condition != nil && !action.condition.GetBool(sim) {
+			continue
+		}
+
+		if castAction, ok := action.impl.(*APLActionCastSpell); ok {
+			canCast := castAction.spell.CanCast(sim, castAction.target.Get())
+			if castAction.spell == channeledSpell || castAction.spell.Matches(channeledSpell.ClassSpellMask) {
+				return canCast
+			}
+			// Use CanCast (not CanCastOrQueue) so SQW-queued spells don't
+			// prematurely interrupt — they'll fire after the channel's next tick.
+			if canCast {
+				return false
+			}
+			continue
+		}
+
+		if channelAction, ok := action.impl.(*APLActionChannelSpell); ok {
+			canCast := channelAction.spell.CanCast(sim, channelAction.target.Get())
+			if channelAction.spell == channeledSpell || channelAction.spell.Matches(channeledSpell.ClassSpellMask) {
+				return canCast
+			}
+			if canCast {
+				return false
+			}
+			continue
+		}
+
+		// autocast_other_cooldowns fires off-GCD MCDs alongside the main rotation —
+		// never blocks same-spell detection.
+		if _, ok := action.impl.(*APLActionAutocastOtherCooldowns); ok {
+			continue
+		}
+
+		// A different non-spell action is fully ready — it would be cast first.
+		if action.impl.IsReady(sim) {
+			return false
+		}
+	}
+
+	return false
+}
+
+func (apl *APLRotation) shouldInterruptChannel(sim *Simulation) bool {
+	channeledDot := apl.unit.ChanneledDot
+
+	if channeledDot == nil || !channeledDot.ChannelCanBeInterrupted(sim) {
+		return false
+	}
+
+	// Check whether the same channel would be re-cast in post-channel state.
+	// nextActionWouldRecastChannel clears ChanneledDot — restore it afterwards.
+	wouldRecast := apl.nextActionWouldRecastChannel(sim, channeledDot)
+	apl.unit.ChanneledDot = channeledDot
+
+	if wouldRecast {
+		return apl.allowChannelRecastOnInterrupt
+	}
+
+	return true
+}
+
+func APLRotationFromJsonString(jsonString string) *proto.APLRotation {
+	apl := &proto.APLRotation{}
+	data := []byte(jsonString)
+	if err := protojson.Unmarshal(data, apl); err != nil {
+		panic(err)
+	}
+	return apl
+}
+
+// Add newAPLActionWithGroupVars to propagate groupVars to action condition and impl
+func (rot *APLRotation) newAPLActionWithGroupVars(config *proto.APLAction, groupVars map[string]*proto.APLValue) *APLAction {
+	if config == nil {
+		return nil
+	}
+
+	action := &APLAction{
+		condition: rot.coerceTo(rot.newAPLValueWithContext(config.Condition, groupVars), proto.APLValueType_ValueTypeBool),
+		impl:      rot.newAPLActionImpl(config),
+	}
+
+	if action.impl == nil {
+		return nil
+	} else {
+		return action
+	}
+}
+
+// Re-resolve variable references in an APLValue with updated group variables
+func (rot *APLRotation) reResolveVariableRefs(value APLValue, groupVars map[string]*proto.APLValue) APLValue {
+	if value == nil {
+		return nil
+	}
+
+	// Check if this is a variable reference that needs re-resolving
+	if varRef, ok := value.(*APLValueVariableRef); ok {
+		// Re-resolve the variable reference with the updated group variables
+		if groupVars != nil {
+			if val, ok := groupVars[varRef.name]; ok {
+				resolved := rot.newAPLValue(val)
+				if resolved != nil {
+					// Group override: update resolved value and use a private cache
+					// (not shared with global variable refs)
+					varRef.resolved = resolved
+					varRef.cache = &variableCache{}
+					return varRef
+				}
+			}
+		}
+
+		// Fall back to global value variables
+		for _, condVar := range rot.valueVariables {
+			if condVar.name == varRef.name {
+				resolved := rot.newAPLValue(condVar.value)
+				if resolved != nil {
+					varRef.resolved = resolved
+					return varRef
+				}
+			}
+		}
+	}
+
+	// For other value types, recursively re-resolve their inner values
+	innerValues := value.GetInnerValues()
+	if len(innerValues) > 0 {
+		for i, innerValue := range innerValues {
+			innerValues[i] = rot.reResolveVariableRefs(innerValue, groupVars)
+		}
+	}
+
+	return value
+}
+
+// orphanValue collects a value and all its descendants into orphanedValues
+// so they still get Finalize() called even though they've been removed from
+// the active APL tree by compile-time constant folding.
+func (rot *APLRotation) orphanValue(value APLValue) {
+	if value == nil {
+		return
+	}
+	rot.orphanedValues = append(rot.orphanedValues, value)
+	for _, inner := range value.GetInnerValues() {
+		rot.orphanValue(inner)
+	}
+}

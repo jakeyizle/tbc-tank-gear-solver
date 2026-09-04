@@ -39,9 +39,6 @@ export type DrumsType =
 	| "LesserDrumsOfRestoration"
 	| "LesserDrumsOfWar";
 
-// "SanctityAura" is deliberately excluded - tbc-new falls back from it to AuraNone when the
-// Sanctity Aura talent is missing, and this app doesn't derive talent presence from the (now
-// user-editable) talent string - see protPaladinSimpleRotation.ts's header comment.
 export type PaladinAura =
 	| "AuraNone"
 	| "DevotionAura"
@@ -49,7 +46,8 @@ export type PaladinAura =
 	| "ConcentrationAura"
 	| "FireResistanceAura"
 	| "FrostResistanceAura"
-	| "ShadowResistanceAura";
+	| "ShadowResistanceAura"
+	| "SanctityAura";
 
 export type PaladinJudgement =
 	| "JudgementNone"
@@ -135,6 +133,11 @@ export interface DebuffSettings {
 
 export interface ConsumableSettings {
 	flaskId: number;
+	// Not exposed as manual picker fields in RaidProfileFields.tsx (a flask replaces both
+	// elixirs, so the manual UI only ever needs one picker) - these exist purely so
+	// solveSimMetric.ts can override them with a solved battle+guardian elixir combo.
+	battleElixirId: number;
+	guardianElixirId: number;
 	foodId: number;
 	potId: number;
 	conjuredId: number;
@@ -148,15 +151,13 @@ export interface ConsumableSettings {
 	scrollArm: boolean;
 }
 
-// useAvengersShield/precastAvengersShield are deliberately omitted - tbc-new forces both to
-// false unless the character's talent string has the Avenger's Shield talent, which this app's
-// fixed reference build doesn't have either; see protPaladinSimpleRotation.ts's header comment
-// for why this isn't re-derived from the (now user-editable) talent string.
 export interface SimpleRotationSettings {
 	prioritizeHolyShield: boolean;
 	consecrationRank: number;
 	useExorcism: boolean;
 	useHammerOfWrath: boolean;
+	useAvengersShield: boolean;
+	precastAvengersShield: boolean;
 	maintainJudgement: PaladinJudgement;
 	aura: PaladinAura;
 }
@@ -231,6 +232,13 @@ export const DEFAULT_SIM_CALIBRATION_PROFILE: SimCalibrationProfile = {
 			consecrationRank: PROT_PALADIN_DEFAULT_SIMPLE_ROTATION.consecrationRank,
 			useExorcism: PROT_PALADIN_DEFAULT_SIMPLE_ROTATION.useExorcism,
 			useHammerOfWrath: PROT_PALADIN_DEFAULT_SIMPLE_ROTATION.useHammerOfWrath,
+			// Deliberately false, not PROT_PALADIN_DEFAULT_SIMPLE_ROTATION.precastAvengersShield
+			// (true) - tbc-new's own UI defaults both these to false regardless of talent
+			// presence (the talent only gates whether the user *can* turn them on), and
+			// precastAvengersShield structurally changes the compiled APL when true, which would
+			// break this file's "unedited profile reproduces today's request exactly" invariant.
+			useAvengersShield: false,
+			precastAvengersShield: false,
 			maintainJudgement: PROT_PALADIN_DEFAULT_SIMPLE_ROTATION.maintainJudgement,
 			aura: PROT_PALADIN_DEFAULT_SIMPLE_ROTATION.aura,
 		} as SimpleRotationSettings,

@@ -1,0 +1,104 @@
+{
+	"classes": {
+		"druid": "Druid",
+		"hunter": "Hunter",
+		"mage": "Mage",
+		"paladin": "Paladin",
+		"priest": "Priest",
+		"rogue": "Rogue",
+		"shaman": "Shaman",
+		"warlock": "Warlock",
+		"warrior": "Warrior"
+	},
+	"specs": {
+		"druid": {
+			"balance": "Balance",
+			"feralcat": "Feral Cat",
+			"feralbear": "Feral Bear",
+			"restoration": "Restoration"
+		},
+		"hunter": {
+			"hunter": ""
+		},
+		"mage": {
+			"mage": ""
+		},
+		"paladin": {
+			"holy": "Holy",
+			"protection": "Protection",
+			"retribution": "Retribution"
+		},
+		"priest": {
+			"priest": ""
+		},
+		"rogue": {
+			"rogue": ""
+		},
+		"shaman": {
+			"elemental": "Elemental",
+			"enhancement": "Enhancement",
+			"restoration": "Restoration"
+		},
+		"warlock": {
+			"warlock": ""
+		},
+		"warrior": {
+			"dps": "DPS",
+			"protection": "Protection"
+		}
+	},
+	"races": {
+		"unknown": "None",
+		"blood_elf": "Blood Elf",
+		"draenei": "Draenei",
+		"dwarf": "Dwarf",
+		"gnome": "Gnome",
+		"goblin": "Goblin",
+		"human": "Human",
+		"night_elf": "Night Elf",
+		"orc": "Orc",
+		"alliance_pandaren": "Pandaren (A)",
+		"horde_pandaren": "Pandaren (H)",
+		"tauren": "Tauren",
+		"troll": "Troll",
+		"undead": "Undead",
+		"worgen": "Worgen"
+	},
+	"professions": {
+		"unknown": "None",
+		"alchemy": "Alchemy",
+		"blacksmithing": "Blacksmithing",
+		"enchanting": "Enchanting",
+		"engineering": "Engineering",
+		"herbalism": "Herbalism",
+		"inscription": "Inscription",
+		"jewelcrafting": "Jewelcrafting",
+		"leatherworking": "Leatherworking",
+		"mining": "Mining",
+		"skinning": "Skinning",
+		"tailoring": "Tailoring",
+		"archeology": "Archeology"
+	},
+	"slots": {
+		"head": "Head",
+		"neck": "Neck",
+		"shoulder": "Shoulders",
+		"back": "Back",
+		"chest": "Chest",
+		"wrist": "Wrist",
+		"hands": "Hands",
+		"waist": "Waist",
+		"legs": "Legs",
+		"feet": "Feet",
+		"finger_1": "Ring 1",
+		"finger_2": "Ring 2",
+		"rings": "Rings",
+		"trinket_1": "Trinket 1",
+		"trinket_2": "Trinket 2",
+		"trinkets": "Trinkets",
+		"main_hand": "Main Hand",
+		"off_hand": "Off Hand",
+		"ranged": "Ranged",
+		"weapons": "Weapons"
+	}
+}

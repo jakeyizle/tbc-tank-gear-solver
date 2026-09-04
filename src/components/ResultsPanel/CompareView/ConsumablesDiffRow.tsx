@@ -24,7 +24,12 @@ function ConsumablesCell({ items }: ConsumablesCellProps) {
 				return (
 					<Box
 						key={item.uniqueId}
-						sx={{ display: "flex", alignItems: "center", gap: 1.25, minWidth: 0 }}
+						sx={{
+							display: "flex",
+							alignItems: "center",
+							gap: 1.25,
+							minWidth: 0,
+						}}
 					>
 						<Box
 							component="img"

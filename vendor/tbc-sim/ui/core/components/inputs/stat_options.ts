@@ -1,0 +1,58 @@
+import { IndividualSimUI, IndividualSimUIConfig } from '../../individual_sim_ui';
+import { Player } from '../../player';
+import { Faction, Stat } from '../../proto/common';
+import { ActionId } from '../../proto_utils/action_id';
+import { BooleanPicker, BooleanPickerConfig } from '../pickers/boolean_picker';
+import { IconEnumPicker, IconEnumPickerConfig } from '../pickers/icon_enum_picker';
+import { IconPicker, IconPickerConfig } from '../pickers/icon_picker';
+import { MultiIconPicker, MultiIconPickerConfig } from '../pickers/multi_icon_picker';
+import { UnitStat } from '../../proto_utils/stats';
+
+export interface ActionInputConfig<T> {
+	actionId: ActionId;
+	value: T;
+	faction?: Faction;
+	showWhen?: (player: Player<any>) => boolean;
+}
+
+export interface StatOption {
+	stats: Array<Stat>;
+}
+
+export interface ItemStatOption<T> extends StatOption {
+	config: ActionInputConfig<T>;
+}
+
+export interface PickerStatOption<PickerType, ConfigType> extends StatOption {
+	config: ConfigType;
+	picker: PickerType;
+}
+
+export interface IconPickerStatOption extends PickerStatOption<typeof IconPicker<Player<any>, any>, IconPickerConfig<Player<any>, any>> {}
+
+export interface MultiIconPickerStatOption extends PickerStatOption<typeof MultiIconPicker<Player<any>>, MultiIconPickerConfig<Player<any>>> {}
+
+export interface IconEnumPickerStatOption extends PickerStatOption<typeof IconEnumPicker<Player<any>, any>, IconEnumPickerConfig<Player<any>, any>> {}
+
+export interface BooleanPickerStatOption extends PickerStatOption<typeof BooleanPicker<Player<any>>, BooleanPickerConfig<Player<any>>> {}
+
+export type ItemStatOptions<T> = ItemStatOption<T>;
+export type PickerStatOptions = IconPickerStatOption | MultiIconPickerStatOption | IconEnumPickerStatOption | BooleanPickerStatOption;
+export type StatOptions<T, Options extends ItemStatOptions<T> | PickerStatOptions> = Array<Options>;
+
+export function relevantStatOptions<T, OptionsType extends ItemStatOptions<T> | PickerStatOptions>(
+	options: StatOptions<T, OptionsType>,
+	individualConfig: IndividualSimUIConfig<any>,
+): StatOptions<T, OptionsType> {
+	const displayStatSet = new Set(individualConfig.displayStats.map(us => (us.hasRootStat() ? us.getRootStat() : us.getPseudoStat())));
+
+	return options
+		.filter(
+			option =>
+				option.stats.length === 0 ||
+				option.stats.some(stat => displayStatSet.has(stat)) ||
+				option.stats.some(stat => individualConfig.epStats.includes(stat)) ||
+				option.stats.some(stat => individualConfig.includeBuffDebuffInputs.includes(stat)),
+		)
+		.filter(option => !option.stats.some(stat => individualConfig.excludeBuffDebuffInputs.includes(stat)));
+}

@@ -1,5 +1,6 @@
 import { getBuffs } from "#/data/buffs";
 import { CONSUMABLES } from "#/data/consumables";
+import type { BalanceEndpoint } from "#/sim/solveBalancedSimMetric";
 import type {
 	Buff,
 	LPItem,
@@ -21,12 +22,14 @@ export interface SolverConfiguration {
 	// optimizeStats and let the solver directly maximize armor-mitigated Effective HP.
 	// 'simWeighted' = sim-calibrated objective (Protection Paladin only for now) - see
 	// docs/plans/sim-backed-objectives.md. Like 'ehp', this ignores optimizeStats; the solver
-	// recalibrates its own weight vector via a real combat sim instead, blended per
-	// simMetricWeights.
+	// recalibrates its own weight vector via a real combat sim instead, per simBalance.
 	objectiveMode: "stats" | "ehp" | "simWeighted";
-	// Per-metric ratios for 'simWeighted' mode - e.g. {tps: 0, dtps: 0, tmi5: 1} reproduces
-	// the old "Minimize TMI-5"-only behavior. Unused (but kept) in other modes.
-	simMetricWeights: { tps: number; dtps: number; tmi5: number };
+	// A single 0 (pure Survivability) .. 1 (pure Threat) dial for 'simWeighted' mode - see
+	// solveBalancedSimMetric.ts. Replaced an earlier raw {tps,dtps,tmi5} ratio blend, which had
+	// no principled interpretation (different metrics' calibrated weights live on incomparable
+	// scales - see docs/plans/sim-backed-objectives.md's rejection of exactly that mechanism).
+	// Unused (but kept) in other modes.
+	simBalance: { balance: number };
 	resistanceFloors: ResistanceFloor[];
 	abilities: ModifierSource[];
 	talents: ModifierSource[];
@@ -42,6 +45,16 @@ export interface SolveResult {
 	solverConfig: SolverConfiguration;
 	// Absolute TPS/DTPS/TMI-5 for this result's gear - only set for a "simWeighted" solve.
 	simMetrics?: SimMetricsSnapshot;
+	// The calibrated per-stat weight vector that produced this result - only set for a
+	// "simWeighted" solve. See solveSimMetric.ts's finalStatWeights.
+	statWeights?: Stat[];
+	// Per-stat uncertainty on statWeights (see solveSimMetric.ts's finalStatWeightStdevs) - only
+	// set for a "simWeighted" solve.
+	statWeightStdevs?: Stat[];
+	// The two real anchors the balance slider interpolates between - see
+	// solveBalancedSimMetric.ts. Only set for a "simWeighted" solve, so the UI can show e.g.
+	// "100% Threat: 5,200 TPS / 9.8 TMI-5" instead of a bare, uninterpretable balance value.
+	simBalanceEndpoints?: { threat: BalanceEndpoint; survival: BalanceEndpoint };
 }
 
 export interface BaseConfig {
@@ -73,7 +86,7 @@ export function createEmptyConfig(
 		uncrushabilitySetting: 1,
 		optimizeStats: [],
 		objectiveMode: "stats",
-		simMetricWeights: { tps: 0, dtps: 0, tmi5: 1 },
+		simBalance: { balance: 0.5 },
 		resistanceFloors: [],
 		abilities: [],
 		talents: [],

@@ -1,0 +1,734 @@
+package paladin
+
+import (
+	"slices"
+	"time"
+
+	"github.com/wowsims/tbc/sim/core"
+	"github.com/wowsims/tbc/sim/core/proto"
+	"github.com/wowsims/tbc/sim/core/stats"
+)
+
+func (paladin *Paladin) registerTalentSpells() {
+	// Holy Tree
+	if paladin.Talents.DivineFavor {
+		paladin.registerDivineFavor()
+	}
+	if paladin.Talents.HolyShock {
+		HolyShockRankMap.RegisterAll(paladin.registerHolyShock)
+	}
+	if paladin.Talents.DivineIllumination {
+		paladin.registerDivineIllumination()
+	}
+
+	// Protection Tree
+	if paladin.Talents.HolyShield {
+		HolyShieldRankMap.RegisterAll(paladin.registerHolyShield)
+	}
+	if paladin.Talents.AvengersShield {
+		AvengersShieldRankMap.RegisterAll(paladin.registerAvengersShield)
+	}
+
+	// Retribution Tree
+	if paladin.Talents.SealOfCommand {
+		SealOfCommandRanks.RegisterAll(paladin.registerSealOfCommandRank)
+	}
+	if paladin.Talents.SanctityAura {
+		paladin.registerSanctityAura()
+	}
+	// if paladin.Talents.Repentance {
+	// 	paladin.registerRepentance()
+	// }
+	if paladin.Talents.CrusaderStrike {
+		paladin.registerCrusaderStrike()
+	}
+}
+
+func (paladin *Paladin) ApplyTalents() {
+	paladin.registerTalentSpells()
+
+	// ==================
+	// Holy Talents
+	// ==================
+
+	// Divine Strength (Tier 1) - Increases your total Strength by 2/4/6/8/10%
+	if paladin.Talents.DivineStrength > 0 {
+		paladin.applyDivineStrength()
+	}
+
+	// Divine Intellect (Tier 1) - Increases your total Intellect by 2/4/6/8/10%
+	if paladin.Talents.DivineIntellect > 0 {
+		paladin.applyDivineIntellect()
+	}
+
+	// Spiritual Focus (Tier 1) - Gives your Flash of Light and Holy Light spells a 14/28/42/56/70% chance to not lose casting time when you take damage
+	// TODO: Implement pushback resistance
+
+	// Improved Seal of Righteousness (Tier 2) - Increases the damage done by your Seal of Righteousness and its Judgement by 3/6/9/12/15%
+	if paladin.Talents.ImprovedSealOfRighteousness > 0 {
+		paladin.applyImprovedSealOfRighteousness()
+	}
+
+	// Healing Light (Tier 2) - Increases the amount healed by your Holy Light and Flash of Light spells by 4/8/12%
+	if paladin.Talents.HealingLight > 0 {
+		paladin.applyHealingLight()
+	}
+
+	// Aura Mastery (Tier 3) - Increases the radius of your Auras to 40 yards
+	// TODO: Implement aura range increase
+
+	// Improved Lay on Hands (Tier 3) - Gives the target of your Lay on Hands spell a 15/30% bonus to their armor value from items for 2 min
+	// Also reduces cooldown by 10/20 min
+	// TODO: Implement
+
+	// Unyielding Faith (Tier 3) - Increases your chance to resist Fear and Disorient effects by an additional 5/10%
+	// TODO: Implement resistance
+
+	// Illumination (Tier 4) - After getting a critical effect from your Flash of Light, Holy Light, or Holy Shock heal spell,
+	// you have a 20/40/60/80/100% chance to gain mana equal to 60% of the base cost of the spell
+	if paladin.Talents.Illumination > 0 {
+		paladin.applyIllumination()
+	}
+
+	// Improved Blessing of Wisdom (Tier 4) - Increases the effect of your Blessing of Wisdom spell by 10/20%
+	if paladin.Talents.ImprovedBlessingOfWisdom > 0 {
+		paladin.applyImprovedBlessingOfWisdom()
+	}
+
+	// Pure of Heart (Tier 5) - Increases your resistance to Curse and Disease effects by 5/10/15%
+	// TODO: Implement resistance
+
+	// Sanctified Light (Tier 6) - Increases the critical effect chance of your Holy Light and Holy Shock spells by 2/4/6%
+	if paladin.Talents.SanctifiedLight > 0 {
+		paladin.applySanctifiedLight()
+	}
+
+	// Purifying Power (Tier 6) - Reduces the mana cost of your Cleanse and Consecration spells by 5/10%, and increases the critical strike chance of your Exorcism and Holy Wrath spells by 10/20%
+	if paladin.Talents.PurifyingPower > 0 {
+		paladin.applyPurifyingPower()
+	}
+
+	// Holy Power (Tier 7) - Increases the critical effect chance of your Holy spells by 1/2/3/4/5%
+	if paladin.Talents.HolyPower > 0 {
+		paladin.applyHolyPowerTalent()
+	}
+
+	// Light's Grace (Tier 7) - Your Holy Light spell reduces the cast time of your next Holy Light spell by 0.15/0.30/0.50 sec
+	// TODO: Implement
+
+	// Blessed Life (Tier 8) - All attacks against you have a 4/7/10% chance to cause half damage
+	// TODO: Implement damage reduction
+
+	// Holy Guidance (Tier 9) - Increases your spell damage and healing by 7/14/21/28/35% of your total Intellect
+	if paladin.Talents.HolyGuidance > 0 {
+		paladin.applyHolyGuidance()
+	}
+
+	// ==================
+	// Protection Talents
+	// ==================
+
+	// Improved Devotion Aura (Tier 1) - Increases the armor bonus of your Devotion Aura by 8/16/24/32/40%
+	if paladin.Talents.ImprovedDevotionAura > 0 {
+		paladin.applyImprovedDevotionAura()
+	}
+
+	// Redoubt (Tier 1) - Increases your chance to block by 6/12/18/24/30% after being the victim of a critical strike
+	if paladin.Talents.Redoubt > 0 {
+		paladin.applyRedoubt()
+	}
+
+	// Precision (Tier 2) - Increases your chance to hit with melee weapons and spells by 1/2/3%
+	if paladin.Talents.Precision > 0 {
+		paladin.applyPrecision()
+	}
+
+	// Guardian's Favor (Tier 2) - Reduces the cooldown of your Blessing of Protection by 60/120 sec and increases the duration by 1/2 sec
+	// TODO: Implement cooldown reduction
+
+	// Toughness (Tier 2) - Increases your armor value from items by 2/4/6/8/10%
+	if paladin.Talents.Toughness > 0 {
+		paladin.applyToughness()
+	}
+
+	// Improved Righteous Fury (Tier 3) - While Righteous Fury is active, all damage taken is reduced by 2/4/6% and threat generated by Righteous Fury is increased by 16/33/50%
+	if paladin.Talents.ImprovedRighteousFury > 0 {
+		paladin.applyImprovedRighteousFury()
+	}
+
+	// Shield Specialization (Tier 3) - Increases the amount of damage absorbed by your shield by 10/20/30%
+	if paladin.Talents.ShieldSpecialization > 0 {
+		paladin.applyShieldSpecialization()
+	}
+
+	// Anticipation (Tier 4) - Increases your Defense skill by 4/8/12/16/20
+	if paladin.Talents.Anticipation > 0 {
+		paladin.applyAnticipation()
+	}
+
+	// Stoicism (Tier 4) - Increases your resistance to Stun effects by an additional 2/4/6/8/10% and reduces the chance your spells will be dispelled by 6/12/18/24/30%
+	// TODO: Implement stun resistance / dispel resistance
+
+	// Improved Hammer of Justice (Tier 5) - Decreases the cooldown of your Hammer of Justice spell by 10/20/30 sec
+	// TODO: Implement cooldown reduction
+
+	// Improved Concentration Aura (Tier 5) - Increases the effect of your Concentration Aura by an additional 5/10/15% and reduces the duration of all Silence and Interrupt effects used against the group by 10/20/30%
+	// Implemented in auras.go
+
+	// Spell Warding (Tier 5) - All spell damage taken is reduced by 2/4%
+	if paladin.Talents.SpellWarding > 0 {
+		paladin.applySpellWarding()
+	}
+
+	// Reckoning (Tier 6) - Gives you a 2/4/6/8/10% chance after being hit by any damaging attack that the next 4 weapon swings within 8 sec will generate an additional attack
+	if paladin.Talents.Reckoning > 0 {
+		paladin.applyReckoning()
+	}
+
+	// Sacred Duty (Tier 7) - Increases your total Stamina by 3/6% and reduces the cooldown of your Divine Shield and Divine Protection by 30/60 sec
+	if paladin.Talents.SacredDuty > 0 {
+		paladin.applySacredDuty()
+	}
+
+	// One-Handed Weapon Specialization (Tier 7) - Increases all damage you deal when a one-handed melee weapon is equipped by 1/2/3/4/5%
+	if paladin.Talents.OneHandedWeaponSpecialization > 0 {
+		paladin.applyOneHandedWeaponSpecialization()
+	}
+
+	// Improved Holy Shield (Tier 8) - Increases damage caused by Holy Shield by 10/20% and increases the number of charges by 2/4
+	if paladin.Talents.HolyShield && paladin.Talents.ImprovedHolyShield > 0 {
+		paladin.applyImprovedHolyShield()
+	}
+
+	// Ardent Defender (Tier 8) - When you have less than 35% health, all damage taken is reduced by 6/12/18/24/30%
+	if paladin.Talents.ArdentDefender > 0 {
+		paladin.applyArdentDefender()
+	}
+
+	// Combat Expertise (Tier 9) - Increases your expertise by 1/2/3/4/5, total Stamina by 2/4/6/8/10% and spell critical strike chance by 1/2/3/4/5%
+	if paladin.Talents.CombatExpertise > 0 {
+		paladin.applyCombatExpertise()
+	}
+
+	// ==================
+	// Retribution Talents
+	// ==================
+
+	// Improved Blessing of Might (Tier 1) - Increases the melee attack power bonus of your Blessing of Might by 4/8/12/16/20%
+	if paladin.Talents.ImprovedBlessingOfMight > 0 {
+		paladin.applyImprovedBlessingOfMight()
+	}
+
+	// Benediction (Tier 1) - Reduces the mana cost of your Judgement and Seal spells by 3/6/9/12/15%
+	if paladin.Talents.Benediction > 0 {
+		paladin.applyBenediction()
+	}
+
+	// Improved Judgement (Tier 2) - Decreases the cooldown of your Judgement spell by 1/2 sec
+	if paladin.Talents.ImprovedJudgement > 0 {
+		paladin.applyImprovedJudgement()
+	}
+
+	// Improved Seal of the Crusader (Tier 2) - Increases the melee attack power bonus of your Seal of the Crusader and increases the Holy damage bonus of Judgement of the Crusader by 5/10/15%
+	// Handled in seals.go -> registerSealOfTheCrusader -> judgeSpell
+
+	// Deflection (Tier 2) - Increases your Parry chance by 1/2/3/4/5%
+	if paladin.Talents.Deflection > 0 {
+		paladin.applyDeflection()
+	}
+
+	// Vindication (Tier 3) - Gives the Paladin's damaging attacks a chance to reduce the target's attributes by 5/10/15% for 10 sec
+	// TODO: Implement debuff
+
+	// Conviction (Tier 3) - Increases your chance to get a critical strike with melee weapons by 1/2/3/4/5%
+	if paladin.Talents.Conviction > 0 {
+		paladin.applyConviction()
+	}
+
+	// Pursuit of Justice (Tier 4) - Increases movement and mounted movement speed by 5/10%. This does not stack with other movement speed increasing effects
+	// TODO: Implement movement speed
+
+	// Eye for an Eye (Tier 4) - All spell criticals against you cause 15/30% of the damage taken to the caster as well
+	// TODO: Implement reflect
+
+	// Improved Retribution Aura (Tier 5) - Increases the damage done by your Retribution Aura by 25/50%
+	if paladin.Talents.ImprovedRetributionAura > 0 {
+		paladin.applyImprovedRetributionAura()
+	}
+
+	// Crusade (Tier 5) - Increases all damage caused by 1/2/3% and all damage caused against Humanoids, Demons, Undead and Elementals by an additional 1/2/3%
+	if paladin.Talents.Crusade > 0 {
+		paladin.applyCrusade()
+	}
+
+	// Two-Handed Weapon Specialization (Tier 6) - Increases the damage you deal with two-handed melee weapons by 2/4/6%
+	if paladin.Talents.TwoHandedWeaponSpecialization > 0 {
+		paladin.applyTwoHandedWeaponSpecialization()
+	}
+
+	// Improved Sanctity Aura (Tier 7) - Increases the damage caused by all party members within 30 yards of the Paladin with Sanctity Aura active by 1/2%
+	// Note: This modifies Sanctity Aura if talented
+	if paladin.Talents.ImprovedSanctityAura > 0 {
+		paladin.applyImprovedSanctityAura()
+	}
+
+	// Vengeance (Tier 7) - Gives you a 1/2/3/4/5% bonus to Physical and Holy damage you deal for 30 sec after dealing a critical strike from a weapon swing, spell, or ability
+	if paladin.Talents.Vengeance > 0 {
+		paladin.applyVengeance()
+	}
+
+	// Sanctified Judgement (Tier 8) - Gives your Judgement spell a 33/66/100% chance to return 80% of the mana cost of the Judged Seal
+	if paladin.Talents.SanctifiedJudgement > 0 {
+		paladin.applySanctifiedJudgement()
+	}
+
+	// Sanctified Seals (Tier 8) - Increases your chance to critically hit with all spells and attacks by 1/2/3% and reduces the chance your Seals will be dispelled by 33/67/100%
+	if paladin.Talents.SanctifiedSeals > 0 {
+		paladin.applySanctifiedSeals()
+	}
+
+	// Divine Purpose (Tier 9) - Reduces your chance to be hit by spells and ranged attacks by 1/2/3%
+	if paladin.Talents.DivinePurpose > 0 {
+		paladin.applyDivinePurposeTalent()
+	}
+
+	// Fanaticism (Tier 9) - Increases the critical strike chance of all Judgements capable of a critical hit by 3/6/9/12/15% and reduces threat caused by all actions by 6/12/18/24/30% except when under the effects of Righteous Fury
+	if paladin.Talents.Fanaticism > 0 {
+		paladin.applyFanaticism()
+	}
+}
+
+// ==================
+// Holy Talent Implementations
+// ==================
+
+// Divine Strength - Increases your total Strength by 2/4/6/8/10%
+func (paladin *Paladin) applyDivineStrength() {
+	paladin.MultiplyStat(stats.Strength, 1+(float64(paladin.Talents.DivineStrength)*.02))
+}
+
+// Divine Intellect - Increases your total Intellect by 2/4/6/8/10%
+func (paladin *Paladin) applyDivineIntellect() {
+	bonus := 1.0 + 0.02*float64(paladin.Talents.DivineIntellect)
+	paladin.MultiplyStat(stats.Intellect, bonus)
+}
+
+// Improved Seal of Righteousness - Increases the damage done by your Seal of Righteousness and its Judgement by 3/6/9/12/15%
+func (paladin *Paladin) applyImprovedSealOfRighteousness() {
+	paladin.AddStaticMod(core.SpellModConfig{
+		Kind:       core.SpellMod_DamageDone_Pct,
+		FloatValue: 0.03 * float64(paladin.Talents.ImprovedSealOfRighteousness),
+		ClassMask:  SpellMaskSealOfRighteousness | SpellMaskJudgementOfRighteousness,
+	})
+}
+
+// Healing Light - Increases the amount healed by your Holy Light and Flash of Light spells by 4/8/12%
+func (paladin *Paladin) applyHealingLight() {
+	paladin.AddStaticMod(core.SpellModConfig{
+		Kind:       core.SpellMod_DamageDone_Pct,
+		FloatValue: 0.04 * float64(paladin.Talents.HealingLight),
+		ClassMask:  SpellMaskHolyLight | SpellMaskFlashOfLight,
+	})
+}
+
+// Illumination - After getting a critical effect from your Flash of Light, Holy Light, or Holy Shock heal spell, you have a 20/40/60/80/100% chance to gain mana equal to 60% of the base cost of the spell
+func (paladin *Paladin) applyIllumination() {
+	// TODO: Implement mana return on crit
+}
+
+// Improved Blessing of Wisdom - Increases the effect of your Blessing of Wisdom spell by 10/20%
+func (paladin *Paladin) applyImprovedBlessingOfWisdom() {
+	// TODO: Implement Blessing of Wisdom modifier
+}
+
+// Sanctified Light - Increases the critical effect chance of your Holy Light and Holy Shock spells by 2/4/6%
+func (paladin *Paladin) applySanctifiedLight() {
+	paladin.AddStaticMod(core.SpellModConfig{
+		Kind:       core.SpellMod_BonusCrit_Percent,
+		FloatValue: 2 * float64(paladin.Talents.SanctifiedLight),
+		ClassMask:  SpellMaskHolyLight | SpellMaskHolyShock,
+	})
+}
+
+// Purifying Power - Reduces the mana cost of your Cleanse and Consecration spells by 5/10%, and increases the critical strike chance of your Exorcism and Holy Wrath spells by 10/20%
+func (paladin *Paladin) applyPurifyingPower() {
+	paladin.AddStaticMod(core.SpellModConfig{
+		Kind:       core.SpellMod_PowerCost_Pct,
+		FloatValue: -0.05 * float64(paladin.Talents.PurifyingPower),
+		ClassMask:  SpellMaskConsecration, // Cleanse not modeled
+	})
+	paladin.AddStaticMod(core.SpellModConfig{
+		Kind:       core.SpellMod_BonusCrit_Percent,
+		FloatValue: 10 * float64(paladin.Talents.PurifyingPower),
+		ClassMask:  SpellMaskExorcism | SpellMaskHolyWrath,
+	})
+}
+
+// Holy Power (talent) - Increases the critical effect chance of your Holy spells by 1/2/3/4/5%
+func (paladin *Paladin) applyHolyPowerTalent() {
+	paladin.AddStaticMod(core.SpellModConfig{
+		Kind:       core.SpellMod_BonusCrit_Percent,
+		FloatValue: float64(paladin.Talents.HolyPower),
+		School:     core.SpellSchoolHoly,
+	})
+}
+
+// Holy Guidance - Increases your spell damage and healing by 7/14/21/28/35% of your total Intellect
+func (paladin *Paladin) applyHolyGuidance() {
+	paladin.AddStatDependency(stats.Intellect, stats.SpellDamage, 0.07*float64(paladin.Talents.HolyGuidance))
+}
+
+// ==================
+// Protection Talent Implementations
+// ==================
+
+// Improved Devotion Aura - Increases the armor bonus of your Devotion Aura by 8/16/24/32/40%
+func (paladin *Paladin) applyImprovedDevotionAura() {
+	// Handled in registerDevotionAura() where the talent points are read directly.
+}
+
+// Redoubt - Increases your chance to block by 6/12/18/24/30% after being the victim of a melee or ranged critical strike. Lasts 10 sec or 5 blocks.
+func (paladin *Paladin) applyRedoubt() {
+	bonusBlockPercent := 0.06 * float64(paladin.Talents.Redoubt)
+
+	procAura := paladin.RegisterAura(core.Aura{
+		Label:     "Redoubt Proc",
+		ActionID:  core.ActionID{SpellID: 20137},
+		Duration:  time.Second * 10,
+		MaxStacks: 5,
+	}).AttachStatBuff(stats.BlockPercent, bonusBlockPercent)
+
+	procAura.AttachProcTrigger(core.ProcTrigger{
+		Name:     "Redoubt Block Consume",
+		Callback: core.CallbackOnSpellHitTaken,
+		Outcome:  core.OutcomeBlock,
+		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			procAura.RemoveStack(sim)
+		},
+	})
+
+	paladin.MakeProcTriggerAura(core.ProcTrigger{
+		Name:       "Redoubt",
+		Callback:   core.CallbackOnSpellHitTaken,
+		ProcMask:   core.ProcMaskMeleeOrRanged,
+		Outcome:    core.OutcomeLanded,
+		ProcChance: 0.1,
+		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			procAura.Activate(sim)
+			procAura.SetStacks(sim, 5)
+		},
+	})
+}
+
+// Shield Specialization - Increases the amount of damage absorbed by your shield by 10/20/30%
+func (paladin *Paladin) applyShieldSpecialization() {
+	paladin.PseudoStats.BlockValueMultiplier *= 1 + 0.1*float64(paladin.Talents.ShieldSpecialization)
+}
+
+// Ardent Defender - When you have less than 35% health, all damage taken is reduced by 6/12/18/24/30%
+func (paladin *Paladin) applyArdentDefender() {
+	damageReduction := 1.0 - 0.06*float64(paladin.Talents.ArdentDefender)
+
+	procAura := paladin.RegisterAura(core.Aura{
+		Label:    "Ardent Defender",
+		ActionID: core.ActionID{SpellID: 31854},
+		Duration: core.NeverExpires,
+	}).AttachMultiplicativePseudoStatBuff(&paladin.PseudoStats.DamageTakenMultiplier, damageReduction)
+
+	paladin.MakeProcTriggerAura(core.ProcTrigger{
+		Name:     "Ardent Defender Talent",
+		Callback: core.CallbackOnSpellHitTaken,
+		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			if paladin.CurrentHealthPercent() < 0.35 {
+				procAura.Activate(sim)
+			} else {
+				procAura.Deactivate(sim)
+			}
+		},
+	})
+}
+
+// Precision - Increases your chance to hit with melee weapons and spells by 1/2/3%
+func (paladin *Paladin) applyPrecision() {
+	if float64(paladin.Talents.Precision) == 0 {
+		return
+	}
+
+	paladin.AddStat(stats.SpellHitPercent, float64(paladin.Talents.Precision))
+	paladin.AddStat(stats.PhysicalHitPercent, float64(paladin.Talents.Precision))
+	paladin.AddStaticMod(core.SpellModConfig{
+		Kind:       core.SpellMod_BonusHit_Percent,
+		FloatValue: -float64(paladin.Talents.Precision),
+		ClassMask:  SpellMaskAvengersShield | SpellMaskHammerOfWrath,
+	})
+}
+
+// Toughness - Increases your armor value from items by 2/4/6/8/10%
+func (paladin *Paladin) applyToughness() {
+	paladin.MultiplyStat(stats.Armor, 1+0.02*float64(paladin.Talents.Toughness))
+}
+
+// Improved Righteous Fury - While Righteous Fury is active, all damage taken is reduced by 2/4/6%
+// and threat generated by Righteous Fury is increased by 16/33/50%.
+// Threat bonus is combined with the base in registerRighteousFury() since it's additive on the base 60%.
+func (paladin *Paladin) applyImprovedRighteousFury() {
+	paladin.OnSpellRegistered(func(spell *core.Spell) {
+		if !spell.Matches(SpellMaskRighteousFury) {
+			return
+		}
+
+		spell.RelatedSelfBuff.AttachMultiplicativePseudoStatBuff(
+			&paladin.PseudoStats.DamageTakenMultiplier,
+			1-0.02*float64(paladin.Talents.ImprovedRighteousFury),
+		)
+	})
+}
+
+// Anticipation - Increases your Defense skill by 4/8/12/16/20
+func (paladin *Paladin) applyAnticipation() {
+	defenseBonus := float64(paladin.Talents.Anticipation) * 4 * core.DefenseRatingPerDefenseLevel
+	paladin.AddStat(stats.DefenseRating, defenseBonus)
+}
+
+// Spell Warding - All spell damage taken is reduced by 2/4%
+func (paladin *Paladin) applySpellWarding() {
+	reduction := 1 - 0.02*float64(paladin.Talents.SpellWarding)
+	for i := range paladin.PseudoStats.SchoolDamageTakenMultiplier {
+		if i == int(stats.SchoolIndexPhysical) || i == int(stats.SchoolIndexNone) {
+			continue
+		}
+		paladin.PseudoStats.SchoolDamageTakenMultiplier[i] *= reduction
+	}
+}
+
+// Reckoning - Gives you a 2/4/6/8/10% chance after being hit by any damaging attack that the next 4 weapon swings within 8 sec will generate an additional attack
+func (paladin *Paladin) applyReckoning() {
+	var reckoningSpell *core.Spell
+
+	procAura := paladin.RegisterAura(core.Aura{
+		Label:     "Reckoning Proc",
+		ActionID:  core.ActionID{SpellID: 20182},
+		Duration:  time.Second * 8,
+		MaxStacks: 4,
+		OnInit: func(aura *core.Aura, sim *core.Simulation) {
+			config := *paladin.AutoAttacks.MHConfig()
+			config.ActionID = config.ActionID.WithTag(20182)
+			config.Flags |= core.SpellFlagPassiveSpell
+			reckoningSpell = paladin.GetOrRegisterSpell(config)
+		},
+	})
+
+	procAura.AttachProcTrigger(core.ProcTrigger{
+		Name:     "Reckoning Extra Attack",
+		Callback: core.CallbackOnSpellHitDealt,
+		ProcMask: core.ProcMaskMeleeMHAuto,
+		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			if spell == reckoningSpell {
+				return
+			}
+			reckoningSpell.Cast(sim, result.Target)
+			procAura.RemoveStack(sim)
+		},
+	})
+
+	paladin.MakeProcTriggerAura(core.ProcTrigger{
+		Name:               "Reckoning",
+		Callback:           core.CallbackOnSpellHitTaken,
+		ProcChance:         0.02 * float64(paladin.Talents.Reckoning),
+		RequireDamageDealt: true,
+		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			procAura.Activate(sim)
+			procAura.SetStacks(sim, 4)
+		},
+	})
+}
+
+// Sacred Duty - Increases your total Stamina by 3/6% and reduces the cooldown of your Divine Shield and Divine Protection by 30/60 sec
+func (paladin *Paladin) applySacredDuty() {
+	bonus := 1.0 + 0.03*float64(paladin.Talents.SacredDuty)
+	paladin.MultiplyStat(stats.Stamina, bonus)
+	// TODO: Implement cooldown reduction
+}
+
+// One-Handed Weapon Specialization - Increases all damage you deal when a one-handed melee weapon is equipped by 1/2/3/4/5%
+func (paladin *Paladin) applyOneHandedWeaponSpecialization() {
+	paladin.AddStaticMod(core.SpellModConfig{
+		Kind:       core.SpellMod_DamageDone_Pct,
+		FloatValue: 0.01 * float64(paladin.Talents.OneHandedWeaponSpecialization),
+	})
+}
+
+// Improved Holy Shield - Increases damage caused by Holy Shield by 10/20% and increases the number of charges by 2/4
+func (paladin *Paladin) applyImprovedHolyShield() {
+	// Number of charges handled in holy_shield.go
+	paladin.AddStaticMod(core.SpellModConfig{
+		Kind:       core.SpellMod_DamageDone_Pct,
+		ClassMask:  SpellMaskHolyShieldProc,
+		FloatValue: 0.1 * float64(paladin.Talents.ImprovedHolyShield),
+	})
+}
+
+// Combat Expertise - Increases your expertise by 1/2/3/4/5, total Stamina by 2/4/6/8/10%
+func (paladin *Paladin) applyCombatExpertise() {
+	expertiseBonus := float64(paladin.Talents.CombatExpertise)
+	paladin.AddStat(stats.ExpertiseRating, expertiseBonus*core.ExpertisePerQuarterPercentReduction)
+
+	staminaBonus := 1.0 + 0.02*float64(paladin.Talents.CombatExpertise)
+	paladin.MultiplyStat(stats.Stamina, staminaBonus)
+}
+
+// ==================
+// Retribution Talent Implementations
+// ==================
+
+// Improved Blessing of Might - Increases the melee attack power bonus of your Blessing of Might by 4/8/12/16/20%
+func (paladin *Paladin) applyImprovedBlessingOfMight() {
+	// TODO: Implement Blessing of Might modifier
+}
+
+// Benediction - Reduces the mana cost of your Judgement and Seal spells by 3/6/9/12/15%
+func (paladin *Paladin) applyBenediction() {
+	paladin.AddStaticMod(core.SpellModConfig{
+		ClassMask:  SpellMaskAllSeals | SpellMaskJudgement,
+		Kind:       core.SpellMod_PowerCost_Pct,
+		FloatValue: -.03 * float64(paladin.Talents.Benediction),
+	})
+}
+
+// Improved Judgement - Decreases the cooldown of your Judgement spell by 1/2 sec
+func (paladin *Paladin) applyImprovedJudgement() {
+	paladin.AddStaticMod(core.SpellModConfig{
+		ClassMask: SpellMaskJudgement,
+		Kind:      core.SpellMod_Cooldown_Flat,
+		TimeValue: -time.Second * time.Duration(paladin.Talents.ImprovedJudgement),
+	})
+}
+
+// Deflection - Increases your Parry chance by 1/2/3/4/5%
+func (paladin *Paladin) applyDeflection() {
+	paladin.PseudoStats.BaseParryChance += 0.01 * float64(paladin.Talents.Deflection)
+}
+
+// Conviction - Increases your chance to get a critical strike with melee attacks by 1/2/3/4/5%
+func (paladin *Paladin) applyConviction() {
+	paladin.AddStat(stats.PhysicalCritPercent, float64(paladin.Talents.Conviction))
+}
+
+// Improved Retribution Aura - Increases the damage done by your Retribution Aura by 25/50%
+func (paladin *Paladin) applyImprovedRetributionAura() {
+	// Handled in registerRetributionAura() where the talent points are read directly.
+}
+
+// Crusade - Increases all damage caused by 1/2/3% against Humanoids, Demons, Undead and Elementals
+func (paladin *Paladin) applyCrusade() {
+	paladin.Env.RegisterPostFinalizeEffect(func() {
+		for _, at := range paladin.AttackTables {
+			if slices.Contains([]proto.MobType{proto.MobType_MobTypeDemon, proto.MobType_MobTypeHumanoid, proto.MobType_MobTypeUndead, proto.MobType_MobTypeElemental}, at.Defender.MobType) {
+				at.DamageDealtMultiplier *= 1 + .01*float64(paladin.Talents.Crusade)
+			}
+		}
+	})
+}
+
+// Two-Handed Weapon Specialization - Increases the damage you deal with two-handed melee weapons by 2/4/6%
+func (paladin *Paladin) applyTwoHandedWeaponSpecialization() {
+	paladin.AddStaticMod(core.SpellModConfig{
+		Kind:       core.SpellMod_DamageDone_Pct,
+		ProcMask:   core.ProcMaskMeleeOrMeleeProc,
+		FloatValue: 0.02 * float64(paladin.Talents.TwoHandedWeaponSpecialization),
+	})
+}
+
+// Improved Sanctity Aura - Increases the damage caused by all party members within 30 yards of the Paladin with Sanctity Aura active by 1/2%
+func (paladin *Paladin) applyImprovedSanctityAura() {
+	// Handled in registerSanctityAura() where the talent points are read directly.
+}
+
+// Vengeance - Gives you a 1/2/3/4/5% bonus to Physical and Holy damage you deal for 30 sec after dealing a critical strike from a weapon swing, spell, or ability
+func (paladin *Paladin) applyVengeance() {
+	bonusMod := .01 * float64(paladin.Talents.Vengeance)
+
+	dmgMod := paladin.AddDynamicMod(core.SpellModConfig{
+		Kind:       core.SpellMod_DamageDone_Pct,
+		FloatValue: bonusMod,
+		School:     core.SpellSchoolHoly | core.SpellSchoolPhysical,
+	})
+
+	aura := paladin.RegisterAura(core.Aura{
+		Label:     "Vengeance",
+		ActionID:  core.ActionID{SpellID: 20055},
+		Duration:  time.Second * 30,
+		MaxStacks: 3,
+		OnGain: func(aura *core.Aura, sim *core.Simulation) {
+			dmgMod.Activate()
+		},
+		OnExpire: func(aura *core.Aura, sim *core.Simulation) {
+			dmgMod.Deactivate()
+		},
+		OnStacksChange: func(aura *core.Aura, sim *core.Simulation, oldStacks, newStacks int32) {
+			stacks := float64(newStacks)
+			dmgMod.UpdateFloatValue(bonusMod * stacks)
+		},
+	})
+
+	paladin.MakeProcTriggerAura(core.ProcTrigger{
+		Name:       "Vengeance - Trigger",
+		Callback:   core.CallbackOnSpellHitDealt,
+		Outcome:    core.OutcomeCrit,
+		ProcChance: 1,
+		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			aura.Activate(sim)
+			aura.AddStack(sim)
+		},
+	})
+}
+
+// Sanctified Judgement - Gives your Judgement spell a 33/66/100% chance to return 80% of the mana cost of the Judged Seal
+func (paladin *Paladin) applySanctifiedJudgement() {
+	procChance := []float64{0, 0.33, 0.66, 1}[paladin.Talents.SanctifiedJudgement]
+	sancJudgementManaMetric := paladin.NewManaMetrics(core.ActionID{SpellID: 31930})
+
+	paladin.MakeProcTriggerAura(core.ProcTrigger{
+		Name:               "Sanctified Judgement - Trigger",
+		ClassSpellMask:     SpellMaskAllJudgements,
+		Callback:           core.CallbackOnSpellHitDealt,
+		ProcChance:         procChance,
+		TriggerImmediately: true,
+		Handler: func(sim *core.Simulation, spell *core.Spell, result *core.SpellResult) {
+			if paladin.PreviousSeal.IsActive() {
+				paladin.AddMana(sim, paladin.PreviousSealSpell.CurCast.Cost*.8, sancJudgementManaMetric)
+			} else {
+				paladin.AddMana(sim, paladin.CurrentSealSpell.CurCast.Cost*.8, sancJudgementManaMetric)
+			}
+		},
+	})
+}
+
+// Sanctified Seals - Increases your chance to critically hit with all spells and attacks by 1/2/3% and reduces the chance your Seals will be dispelled by 33/67/100%
+func (paladin *Paladin) applySanctifiedSeals() {
+	paladin.AddStat(stats.PhysicalCritPercent, float64(paladin.Talents.SanctifiedSeals))
+	paladin.AddStat(stats.SpellCritPercent, float64(paladin.Talents.SanctifiedSeals))
+}
+
+// Divine Purpose (talent) - Reduces your chance to be hit by spells and ranged attacks by 1/2/3%
+func (paladin *Paladin) applyDivinePurposeTalent() {
+	// TODO: Implement spell hit reduction
+}
+
+// Fanaticism - Increases the critical strike chance of all Judgements capable of a critical hit by 3/6/9/12/15% and reduces threat caused by all actions by 6/12/18/24/30%
+func (paladin *Paladin) applyFanaticism() {
+	critChance := 3 * float64(paladin.Talents.Fanaticism)
+	threatReduc := -.06 * float64(paladin.Talents.Fanaticism)
+
+	paladin.AddStaticMod(core.SpellModConfig{
+		Kind:       core.SpellMod_BonusCrit_Percent,
+		FloatValue: critChance,
+		ClassMask:  SpellMaskAllJudgements,
+	})
+
+	paladin.AddStaticMod(core.SpellModConfig{
+		Kind:       core.SpellMod_ThreatMultiplier_Pct,
+		FloatValue: threatReduc,
+		ProcMask:   core.ProcMaskDirect,
+	})
+}

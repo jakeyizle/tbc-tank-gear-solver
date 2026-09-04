@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { loadAppState } from "#/helpers/persistence";
 import {
 	DEFAULT_SIM_CALIBRATION_PROFILE,
@@ -17,9 +17,15 @@ export function useSimCalibrationProfile() {
 			return saved?.simCalibrationProfile ?? DEFAULT_SIM_CALIBRATION_PROFILE;
 		});
 
-	const updateSimCalibrationProfile = (profile: SimCalibrationProfile) => {
-		setSimCalibrationProfile(profile);
-	};
+	// Wrapped in useCallback (rather than passing setSimCalibrationProfile directly) so this stays
+	// a stable reference across unrelated re-renders (e.g. solveProgress ticks - see
+	// useSolverConfigs.ts's own note on why that matters for SimCalibrationPanel's React.memo).
+	const updateSimCalibrationProfile = useCallback(
+		(profile: SimCalibrationProfile) => {
+			setSimCalibrationProfile(profile);
+		},
+		[],
+	);
 
 	return { simCalibrationProfile, updateSimCalibrationProfile };
 }

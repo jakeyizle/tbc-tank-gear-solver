@@ -26,6 +26,7 @@ export const getConsumableLPItems = (
 			objectiveScore: scores.objectiveScore,
 			uncritabilityScore: scores.uncritabilityScore,
 			resistanceScores: scores.resistanceScores,
+			constraintScore: scores.constraintScore,
 		};
 	});
 };

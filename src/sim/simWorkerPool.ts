@@ -97,4 +97,11 @@ export class SimWorkerPool {
 			]);
 		});
 	}
+
+	/** Terminates every worker in the pool, freeing each one's wasm instance/memory immediately. */
+	terminate(): void {
+		for (const worker of this.workers) {
+			worker.terminate();
+		}
+	}
 }

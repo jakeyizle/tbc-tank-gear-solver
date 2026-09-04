@@ -1,4 +1,7 @@
 import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { clearRound1WeightsCache } from "#/sim/round1WeightsCache";
+import { clearSimBalanceCache } from "#/sim/simBalanceCache";
 import type { SimCalibrationProfile } from "#/types/SimCalibrationProfile";
 import NumberSpinner from "../input/NumberSpinner";
 
@@ -46,6 +49,17 @@ export default function CalibrationSettingsFields({
 					v != null && onChange({ ...calibration, workerCount: v })
 				}
 			/>
+			<Typography
+				variant="caption"
+				color="primary"
+				sx={{ alignSelf: "center", cursor: "pointer" }}
+				onClick={() => {
+					clearRound1WeightsCache();
+					clearSimBalanceCache();
+				}}
+			>
+				Clear cached baseline calibration
+			</Typography>
 		</Stack>
 	);
 }

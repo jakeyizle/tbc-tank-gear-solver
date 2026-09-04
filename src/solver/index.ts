@@ -1,8 +1,14 @@
 import { createTrailingThrottle } from "#/helpers/trailingThrottle";
+import {
+	getCachedBalanceEndpoints,
+	setCachedBalanceEndpoints,
+} from "#/sim/simBalanceCache";
+import type { BalanceEndpoint } from "#/sim/solveBalancedSimMetric";
 import type { SimMetricSolvePhase } from "#/sim/solveSimMetric";
-import type {
-	SimCalibrationProfile,
-	SimMetricsSnapshot,
+import {
+	DEFAULT_SIM_CALIBRATION_PROFILE,
+	type SimCalibrationProfile,
+	type SimMetricsSnapshot,
 } from "#/types/SimCalibrationProfile";
 import type {
 	BaseConfig,
@@ -22,7 +28,7 @@ interface SolveOptions {
 	uncritabilitySetting: number;
 	optimizeStats: Stat[];
 	objectiveMode?: "stats" | "ehp" | "simWeighted";
-	simMetricWeights?: { tps: number; dtps: number; tmi5: number };
+	simBalance?: { balance: number };
 	simCalibrationProfile?: SimCalibrationProfile;
 	resistanceFloors: ResistanceFloor[];
 	areEnchantsGemsLocked: boolean;
@@ -39,9 +45,11 @@ interface SolveOptions {
 // Every worker progress message carries at least iteration/maxIterations (the avoidance-
 // convergence LP sub-loop); sim-backed objectives (see solveSimMetric.ts) additionally carry
 // which calibration round it's on and whether that round is currently calibrating (running
-// the sim) or solving (running the LP). Plain "stats"/"ehp" solves simply never set the
-// optional fields, so this is an additive, backward-compatible superset of what was here
-// before, not a breaking shape change.
+// the sim) or solving (running the LP), plus (for a balance-slider solve - see
+// solveBalancedSimMetric.ts) which of the three underlying solves (the two endpoints, then the
+// balanced solve) is currently running. Plain "stats"/"ehp" solves simply never set the optional
+// fields, so this is an additive, backward-compatible superset of what was here before, not a
+// breaking shape change.
 export interface WorkerProgressDetail {
 	iteration: number;
 	maxIterations: number;
@@ -50,23 +58,71 @@ export interface WorkerProgressDetail {
 	phase?: SimMetricSolvePhase;
 	calibrationCompletedIterations?: number;
 	calibrationTotalIterations?: number;
+	stage?: "threatEndpoint" | "survivalEndpoint" | "balancing";
 }
 
 type WorkerMessage =
 	| ({ type: "progress" } & WorkerProgressDetail)
-	| { type: "result"; items: LPItem[]; simMetrics?: SimMetricsSnapshot }
+	| {
+			type: "result";
+			items: LPItem[];
+			simMetrics?: SimMetricsSnapshot;
+			statWeights?: Stat[];
+			statWeightStdevs?: Stat[];
+			simBalanceEndpoints?: {
+				threat: BalanceEndpoint;
+				survival: BalanceEndpoint;
+			};
+	  }
 	| { type: "error"; message: string };
+
+// Everything in `options` except simBalance's own balance value affects the two endpoint solves'
+// outcome (race/class/talents/buffs/consumables/resistance floors/etc - not just the item pool),
+// so the cache key hashes all of it except that one field - see simBalanceCache.ts's own header
+// comment on why `balance` itself must be excluded.
+function optionsForEndpointCacheKey(
+	options: SolveOptions,
+): Record<string, unknown> {
+	const { simBalance: _simBalance, ...rest } = options;
+	return rest;
+}
 
 export const solve = async (
 	items: InputItem[],
 	options: SolveOptions,
 	onProgress?: (progress: WorkerProgressDetail) => void,
 	// only ever set for a "simWeighted" solve's result - see solveSimMetric.ts's
-	// measureFinalSimMetrics. A callback (rather than widening this function's return type)
-	// keeps every existing `typeof solve`-typed callsite (tests substituting solveGearSet
-	// directly) compiling unchanged.
-	onSimMetrics?: (metrics: SimMetricsSnapshot) => void,
+	// measureFinalSimMetrics/finalStatWeights. A callback (rather than widening this function's
+	// return type) keeps every existing `typeof solve`-typed callsite (tests substituting
+	// solveGearSet directly) compiling unchanged.
+	onSimResult?: (result: {
+		simMetrics?: SimMetricsSnapshot;
+		statWeights?: Stat[];
+		statWeightStdevs?: Stat[];
+		simBalanceEndpoints?: {
+			threat: BalanceEndpoint;
+			survival: BalanceEndpoint;
+		};
+	}) => void,
 ): Promise<LPItem[]> => {
+	// A balance-slider solve's two single-metric endpoints only depend on the item pool/options/
+	// profile, never on `balance` itself (see solveBalancedSimMetric.ts) - safe to cache across
+	// solves/configs that share those inputs, and skip straight to the (much cheaper) final
+	// constrained solve on a hit. The cache lives on the main thread (localStorage isn't available
+	// inside a Worker), so it's read here before dispatching and written back once the worker's
+	// result carries simBalanceEndpoints - see simBalanceCache.ts.
+	const isSimWeighted =
+		options.objectiveMode === "simWeighted" && !!options.simBalance;
+	const resolvedProfile =
+		options.simCalibrationProfile ?? DEFAULT_SIM_CALIBRATION_PROFILE;
+	const cachedEndpoints = isSimWeighted
+		? getCachedBalanceEndpoints(
+				items,
+				optionsForEndpointCacheKey(options),
+				resolvedProfile,
+			)
+		: undefined;
+
 	return new Promise((resolve, reject) => {
 		const worker = new Worker(new URL("./solver.worker.ts", import.meta.url), {
 			type: "module",
@@ -98,7 +154,25 @@ export const solve = async (
 
 			console.log("worker result");
 			worker.terminate();
-			if (data.simMetrics) onSimMetrics?.(data.simMetrics);
+			if (data.simMetrics || data.statWeights) {
+				onSimResult?.({
+					simMetrics: data.simMetrics,
+					statWeights: data.statWeights,
+					statWeightStdevs: data.statWeightStdevs,
+					simBalanceEndpoints: data.simBalanceEndpoints,
+				});
+			}
+			// Written unconditionally (not just on a cache miss) - cheap, idempotent, and
+			// refreshes savedAt on a hit too, which doubles as an LRU touch for the cache's
+			// eviction policy rather than being dead weight.
+			if (isSimWeighted && data.simBalanceEndpoints) {
+				setCachedBalanceEndpoints(
+					items,
+					optionsForEndpointCacheKey(options),
+					resolvedProfile,
+					data.simBalanceEndpoints,
+				);
+			}
 			resolve(data.items);
 		};
 
@@ -108,7 +182,7 @@ export const solve = async (
 			reject(e);
 		};
 
-		worker.postMessage({ items, options });
+		worker.postMessage({ items, options, cachedEndpoints });
 	});
 };
 
@@ -151,6 +225,11 @@ export const solveAll = async (
 
 		let items: LPItem[];
 		let simMetrics: SimMetricsSnapshot | undefined;
+		let statWeights: Stat[] | undefined;
+		let statWeightStdevs: Stat[] | undefined;
+		let simBalanceEndpoints:
+			| { threat: BalanceEndpoint; survival: BalanceEndpoint }
+			| undefined;
 		try {
 			items = await solveFn(
 				currentInputItems,
@@ -166,8 +245,11 @@ export const solveAll = async (
 						innerFraction: progress.iteration / progress.maxIterations,
 						detail: progress,
 					}),
-				(metrics) => {
-					simMetrics = metrics;
+				(result) => {
+					simMetrics = result.simMetrics;
+					statWeights = result.statWeights;
+					statWeightStdevs = result.statWeightStdevs;
+					simBalanceEndpoints = result.simBalanceEndpoints;
 				},
 			);
 		} catch (error) {
@@ -177,6 +259,9 @@ export const solveAll = async (
 		solverResults.push({
 			items,
 			simMetrics,
+			statWeights,
+			statWeightStdevs,
+			simBalanceEndpoints,
 			id: solverConfig.id,
 			name: solverConfig.name,
 			baseConfig,

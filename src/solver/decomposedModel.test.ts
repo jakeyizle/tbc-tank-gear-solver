@@ -15,7 +15,9 @@ const makeBaseItem = (numSockets: number): Item => ({
 	id: "999",
 	type: "Chest",
 	stats: [],
-	sockets: Array.from({ length: numSockets }, () => ({ color: "Red" as const })),
+	sockets: Array.from({ length: numSockets }, () => ({
+		color: "Red" as const,
+	})),
 	socketBonus: [],
 });
 
@@ -29,7 +31,13 @@ const makeDecomposableItem = (
 	base: makeBaseItem(numSockets),
 	uniqueId,
 	processedType: "Chest",
-	itemScores: { avoidanceScore: 0, objectiveScore: 0, uncritabilityScore: 0, resistanceScores: {} },
+	itemScores: {
+		avoidanceScore: 0,
+		objectiveScore: 0,
+		uncritabilityScore: 0,
+		resistanceScores: {},
+		constraintScore: 0,
+	},
 	enchantCandidates: [],
 	sockets: socketIndexesWithCandidates.map((socketIndex) => ({
 		socketIndex,
@@ -38,7 +46,13 @@ const makeDecomposableItem = (
 			{
 				gem: makeGem(`gem-${socketIndex}`),
 				varName: `g_${uniqueId}_${socketIndex}_gem-${socketIndex}`,
-				scores: { avoidanceScore: 0, objectiveScore: 0, uncritabilityScore: 0, resistanceScores: {} },
+				scores: {
+					avoidanceScore: 0,
+					objectiveScore: 0,
+					uncritabilityScore: 0,
+					resistanceScores: {},
+					constraintScore: 0,
+				},
 			},
 		],
 	})),

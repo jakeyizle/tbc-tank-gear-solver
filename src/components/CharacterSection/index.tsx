@@ -3,7 +3,7 @@ import Paper from "@mui/material/Paper";
 import Popover from "@mui/material/Popover";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { ModifierSource } from "#/solver/types";
 import ClassSelect from "./ClassSelect";
 import RaceSelect from "./RaceSelect";
@@ -24,7 +24,10 @@ function talentSummary(talents: ModifierSource[]): string {
 	return spent.map((t) => `${t.name} ${t.rank}`).join(" · ");
 }
 
-export default function CharacterSection({
+// Memoized so a parent re-render that doesn't change these props (e.g. routes/index.tsx's
+// solveProgress ticks during a solve) skips reconciling this section entirely - see
+// useSolverConfigs.ts's note on why fresh handler identities would otherwise defeat this.
+function CharacterSection({
 	classValue,
 	setClassValue,
 	raceValue,
@@ -45,11 +48,19 @@ export default function CharacterSection({
 				py: 1.25,
 			}}
 		>
-			<Typography variant="body2" sx={{ fontWeight: 500, width: 78, flexShrink: 0 }}>
+			<Typography
+				variant="body2"
+				sx={{ fontWeight: 500, width: 78, flexShrink: 0 }}
+			>
 				Character
 			</Typography>
 
-			<Stack direction="row" spacing={1} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
+			<Stack
+				direction="row"
+				spacing={1}
+				alignItems="center"
+				sx={{ flex: 1, minWidth: 0 }}
+			>
 				<ClassSelect value={classValue} onChange={setClassValue} />
 				<RaceSelect value={raceValue} onChange={setRaceValue} />
 				<Typography
@@ -88,3 +99,5 @@ export default function CharacterSection({
 		</Paper>
 	);
 }
+
+export default memo(CharacterSection);

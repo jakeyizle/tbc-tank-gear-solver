@@ -1,0 +1,916 @@
+package core
+
+import "github.com/wowsims/tbc/sim/core/stats"
+
+// This function should do 3 things:
+//  1. Set the Outcome of the hit effect.
+//  2. Update spell outcome metrics.
+//  3. Modify the damage if necessary.
+type OutcomeApplier func(sim *Simulation, result *SpellResult, attackTable *AttackTable)
+
+func (spell *Spell) OutcomeAlwaysHit(sim *Simulation, result *SpellResult, _ *AttackTable) {
+	isPartialResist := result.DidResist()
+	result.Outcome = OutcomeHit
+	spell.SpellMetrics[result.Target.UnitIndex].Hits++
+	if isPartialResist {
+		spell.SpellMetrics[result.Target.UnitIndex].ResistedHits++
+	}
+}
+
+// Hit without Hits++ counter
+func (spell *Spell) OutcomeAlwaysHitNoHitCounter(_ *Simulation, result *SpellResult, _ *AttackTable) {
+	result.Outcome = OutcomeHit
+}
+
+func (spell *Spell) OutcomeAlwaysMiss(_ *Simulation, result *SpellResult, _ *AttackTable) {
+	result.Outcome = OutcomeMiss
+	result.Damage = 0
+	spell.SpellMetrics[result.Target.UnitIndex].Misses++
+}
+
+func (dot *Dot) OutcomeTick(sim *Simulation, result *SpellResult, _ *AttackTable) {
+	isPartialResist := result.DidResist()
+	result.Outcome = OutcomeHit
+	dot.Spell.SpellMetrics[result.Target.UnitIndex].Ticks++
+	if isPartialResist {
+		dot.Spell.SpellMetrics[result.Target.UnitIndex].ResistedTicks++
+	}
+}
+
+func (dot *Dot) OutcomeTickMagicHit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	if dot.Spell.MagicHitCheck(sim, attackTable) {
+		isPartialResist := result.DidResist()
+		result.Outcome = OutcomeHit
+		dot.Spell.SpellMetrics[result.Target.UnitIndex].Ticks++
+		if isPartialResist {
+			dot.Spell.SpellMetrics[result.Target.UnitIndex].ResistedTicks++
+		}
+	} else {
+		result.Outcome = OutcomeMiss
+		result.Damage = 0
+		dot.Spell.SpellMetrics[result.Target.UnitIndex].Misses++
+	}
+}
+
+func (spell *Spell) OutcomeMagicHitAndCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMagicHitAndCrit(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeMagicHitAndCritNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMagicHitAndCrit(sim, result, attackTable, false)
+}
+func (spell *Spell) outcomeMagicHitAndCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	if spell.CritMultiplier == 0 {
+		panic("Spell " + spell.ActionID.String() + " missing CritMultiplier")
+	}
+	if spell.MagicHitCheck(sim, attackTable) {
+		isPartialResist := result.DidResist()
+		if spell.MagicCritCheck(sim, result.Target) {
+			result.Outcome = OutcomeCrit
+			result.Damage *= spell.CritDamageMultiplier(attackTable)
+			if countHits {
+				spell.SpellMetrics[result.Target.UnitIndex].Crits++
+				if isPartialResist {
+					spell.SpellMetrics[result.Target.UnitIndex].ResistedCrits++
+				}
+			}
+		} else {
+			result.Outcome = OutcomeHit
+			if countHits {
+				spell.SpellMetrics[result.Target.UnitIndex].Hits++
+				if isPartialResist {
+					spell.SpellMetrics[result.Target.UnitIndex].ResistedHits++
+				}
+			}
+		}
+	} else {
+		result.Outcome = OutcomeMiss
+		result.Damage = 0
+		spell.SpellMetrics[result.Target.UnitIndex].Misses++
+	}
+}
+
+func (spell *Spell) OutcomeMagicCrit(sim *Simulation, result *SpellResult, at *AttackTable) {
+	spell.outcomeMagicCrit(sim, result, at, true)
+}
+func (spell *Spell) OutcomeMagicCritNoHitCounter(sim *Simulation, result *SpellResult, at *AttackTable) {
+	spell.outcomeMagicCrit(sim, result, at, false)
+}
+func (spell *Spell) outcomeMagicCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	if spell.CritMultiplier == 0 {
+		panic("Spell " + spell.ActionID.String() + " missing CritMultiplier")
+	}
+
+	isPartialResist := result.DidResist()
+	if spell.MagicCritCheck(sim, result.Target) {
+		result.Outcome = OutcomeCrit
+		result.Damage *= spell.CritDamageMultiplier(attackTable)
+		if countHits {
+			spell.SpellMetrics[result.Target.UnitIndex].Crits++
+			if isPartialResist {
+				spell.SpellMetrics[result.Target.UnitIndex].ResistedCrits++
+			}
+		}
+	} else {
+		result.Outcome = OutcomeHit
+		if countHits {
+			spell.SpellMetrics[result.Target.UnitIndex].Hits++
+			if isPartialResist {
+				spell.SpellMetrics[result.Target.UnitIndex].ResistedHits++
+			}
+		}
+	}
+}
+
+func (spell *Spell) OutcomeHealing(_ *Simulation, result *SpellResult, _ *AttackTable) {
+	spell.outcomeHealing(nil, result, nil, true)
+}
+func (spell *Spell) OutcomeHealingNoHitCounter(_ *Simulation, result *SpellResult, _ *AttackTable) {
+	spell.outcomeHealing(nil, result, nil, false)
+}
+func (spell *Spell) outcomeHealing(_ *Simulation, result *SpellResult, _ *AttackTable, countHits bool) {
+	result.Outcome = OutcomeHit
+	if countHits {
+		spell.SpellMetrics[result.Target.UnitIndex].Hits++
+	}
+}
+
+func (spell *Spell) OutcomeHealingCrit(sim *Simulation, result *SpellResult, _ *AttackTable) {
+	spell.outcomeHealingCrit(sim, result, nil, true)
+}
+func (spell *Spell) OutcomeHealingCritNoHitCounter(sim *Simulation, result *SpellResult, _ *AttackTable) {
+	spell.outcomeHealingCrit(sim, result, nil, false)
+}
+func (spell *Spell) outcomeHealingCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	if spell.CritMultiplier == 0 {
+		panic("Spell " + spell.ActionID.String() + " missing CritMultiplier")
+	}
+
+	if spell.HealingCritCheck(sim) {
+		result.Outcome = OutcomeCrit
+		result.Damage *= spell.CritDamageMultiplier(attackTable)
+		if countHits {
+			spell.SpellMetrics[result.Target.UnitIndex].Crits++
+		}
+	} else {
+		result.Outcome = OutcomeHit
+		if countHits {
+			spell.SpellMetrics[result.Target.UnitIndex].Hits++
+		}
+	}
+}
+
+func (spell *Spell) OutcomeTickMagicHitNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	if spell.MagicHitCheck(sim, attackTable) {
+		result.Outcome = OutcomeHit
+	} else {
+		result.Outcome = OutcomeMiss
+		result.Damage = 0
+	}
+}
+
+func (spell *Spell) OutcomeTickMagicHitAndCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	if spell.MagicHitCheck(sim, attackTable) {
+		isPartialResist := result.DidResist()
+		if spell.MagicCritCheck(sim, result.Target) {
+			result.Outcome = OutcomeCrit
+			result.Damage *= spell.CritDamageMultiplier(attackTable)
+			spell.SpellMetrics[result.Target.UnitIndex].CritTicks++
+			if isPartialResist {
+				spell.SpellMetrics[result.Target.UnitIndex].ResistedCritTicks++
+			}
+		} else {
+			result.Outcome = OutcomeHit
+			spell.SpellMetrics[result.Target.UnitIndex].Ticks++
+			if isPartialResist {
+				spell.SpellMetrics[result.Target.UnitIndex].ResistedTicks++
+			}
+		}
+	} else {
+		result.Outcome = OutcomeMiss
+		result.Damage = 0
+		spell.SpellMetrics[result.Target.UnitIndex].Misses++
+	}
+}
+
+func (spell *Spell) OutcomeMagicHit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMagicHit(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeMagicHitNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMagicHit(sim, result, attackTable, false)
+}
+func (spell *Spell) outcomeMagicHit(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	if spell.MagicHitCheck(sim, attackTable) {
+		isPartialResist := result.DidResist()
+		result.Outcome = OutcomeHit
+		if countHits {
+			spell.SpellMetrics[result.Target.UnitIndex].Hits++
+			if isPartialResist {
+				spell.SpellMetrics[result.Target.UnitIndex].ResistedHits++
+			}
+		}
+	} else {
+		result.Outcome = OutcomeMiss
+		result.Damage = 0
+		spell.SpellMetrics[result.Target.UnitIndex].Misses++
+	}
+}
+
+func (spell *Spell) OutcomeMeleeWhite(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeWhite(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeMeleeWhiteNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeWhite(sim, result, attackTable, false)
+}
+func (spell *Spell) outcomeMeleeWhite(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	unit := spell.Unit
+	roll := sim.RandomFloat("White Hit Table")
+	chance := 0.0
+	if unit.PseudoStats.InFrontOfTarget {
+		if !result.applyAttackTableMiss(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableDodge(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableParry(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableGlance(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableBlock(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableCrit(spell, attackTable, roll, &chance, countHits) {
+			result.applyAttackTableHit(spell, countHits)
+		}
+	} else {
+		if !result.applyAttackTableMiss(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableDodge(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableGlance(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableCrit(spell, attackTable, roll, &chance, countHits) {
+			result.applyAttackTableHit(spell, countHits)
+		}
+	}
+}
+
+func (spell *Spell) OutcomeMeleeWhiteNoGlance(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	unit := spell.Unit
+	roll := sim.RandomFloat("White Hit Table")
+	chance := 0.0
+	if unit.PseudoStats.InFrontOfTarget {
+		if !result.applyAttackTableMiss(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableDodge(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableParry(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableBlock(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableCrit(spell, attackTable, roll, &chance, true) {
+			result.applyAttackTableHit(spell, true)
+		} else {
+			if !result.applyAttackTableMiss(spell, attackTable, roll, &chance) &&
+				!result.applyAttackTableDodge(spell, attackTable, roll, &chance) &&
+				!result.applyAttackTableCrit(spell, attackTable, roll, &chance, true) {
+				result.applyAttackTableHit(spell, true)
+			}
+		}
+	}
+}
+
+func (spell *Spell) OutcomeMeleeSpecialHit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeSpecialHit(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeMeleeSpecialHitNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeSpecialHit(sim, result, attackTable, false)
+}
+func (spell *Spell) outcomeMeleeSpecialHit(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	unit := spell.Unit
+	roll := sim.RandomFloat("White Hit Table")
+	chance := 0.0
+
+	if unit.PseudoStats.InFrontOfTarget {
+		if !result.applyAttackTableMissNoDWPenalty(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableDodge(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableParry(spell, attackTable, roll, &chance) {
+			result.applyAttackTableHit(spell, countHits)
+		}
+	} else {
+		if !result.applyAttackTableMissNoDWPenalty(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableDodge(spell, attackTable, roll, &chance) {
+			result.applyAttackTableHit(spell, countHits)
+		}
+	}
+}
+
+func (spell *Spell) OutcomeMeleeSpecialHitAndCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeSpecialHitAndCrit(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeMeleeSpecialHitAndCritNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeSpecialHitAndCrit(sim, result, attackTable, false)
+}
+func (spell *Spell) outcomeMeleeSpecialHitAndCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	unit := spell.Unit
+	roll := sim.RandomFloat("White Hit Table")
+	chance := 0.0
+
+	if unit.PseudoStats.InFrontOfTarget {
+		if !result.applyAttackTableMissNoDWPenalty(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableDodge(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableParry(spell, attackTable, roll, &chance) {
+			if result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) {
+				result.applyAttackTableBlock(spell, attackTable, roll, &chance)
+			} else {
+				if !result.applyAttackTableBlock(spell, attackTable, roll, &chance) {
+					result.applyAttackTableHit(spell, countHits)
+				}
+			}
+		}
+	} else {
+		if !result.applyAttackTableMissNoDWPenalty(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableDodge(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) {
+			result.applyAttackTableHit(spell, countHits)
+		}
+	}
+}
+
+func (spell *Spell) OutcomeMeleeWeaponSpecialNoParry(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeWeaponSpecialNoParry(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeMeleeWeaponSpecialNoParryNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeWeaponSpecialNoParry(sim, result, attackTable, false)
+}
+
+func (spell *Spell) outcomeMeleeWeaponSpecialNoParry(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	if spell.Unit.PseudoStats.InFrontOfTarget {
+		roll := sim.RandomFloat("White Hit Table")
+		chance := 0.0
+
+		if !result.applyAttackTableMissNoDWPenalty(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableDodge(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableBlock(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) {
+			result.applyAttackTableHit(spell, countHits)
+		}
+	} else {
+		spell.outcomeMeleeSpecialHitAndCrit(sim, result, attackTable, countHits)
+	}
+}
+
+func (spell *Spell) OutcomeMeleeWeaponSpecialHitAndCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeWeaponSpecialHitAndCrit(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeMeleeWeaponSpecialHitAndCritNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeWeaponSpecialHitAndCrit(sim, result, attackTable, false)
+}
+
+// Like OutcomeMeleeSpecialHitAndCrit, but blocks prevent crits (all weapon damage based attacks).
+func (spell *Spell) outcomeMeleeWeaponSpecialHitAndCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	if spell.Unit.PseudoStats.InFrontOfTarget {
+		roll := sim.RandomFloat("White Hit Table")
+		chance := 0.0
+
+		if !result.applyAttackTableMissNoDWPenalty(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableDodge(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableParry(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableBlock(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) {
+			result.applyAttackTableHit(spell, countHits)
+		}
+	} else {
+		spell.outcomeMeleeSpecialHitAndCrit(sim, result, attackTable, countHits)
+	}
+}
+
+func (spell *Spell) OutcomeMeleeWeaponSpecialNoCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeWeaponSpecialNoCrit(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeMeleeWeaponSpecialNoCritNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeWeaponSpecialNoCrit(sim, result, attackTable, false)
+}
+func (spell *Spell) outcomeMeleeWeaponSpecialNoCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	unit := spell.Unit
+	roll := sim.RandomFloat("White Hit Table")
+	chance := 0.0
+
+	if unit.PseudoStats.InFrontOfTarget {
+		if !result.applyAttackTableMissNoDWPenalty(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableDodge(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableParry(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableBlock(spell, attackTable, roll, &chance) {
+			result.applyAttackTableHit(spell, countHits)
+		}
+	} else {
+		if !result.applyAttackTableMissNoDWPenalty(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableDodge(spell, attackTable, roll, &chance) {
+			result.applyAttackTableHit(spell, countHits)
+		}
+	}
+}
+
+func (spell *Spell) OutcomeMeleeSpecialNoBlockDodgeParry(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeSpecialNoBlockDodgeParry(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeMeleeSpecialNoBlockDodgeParryNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeSpecialNoBlockDodgeParry(sim, result, attackTable, false)
+}
+func (spell *Spell) outcomeMeleeSpecialNoBlockDodgeParry(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	roll := sim.RandomFloat("White Hit Table")
+	chance := 0.0
+
+	if !result.applyAttackTableMissNoDWPenalty(spell, attackTable, roll, &chance) &&
+		!result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) {
+		result.applyAttackTableHit(spell, countHits)
+	}
+}
+
+func (spell *Spell) OutcomeMeleeSpecialNoBlockDodgeParryNoCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeSpecialNoBlockDodgeParryNoCrit(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeMeleeSpecialNoBlockDodgeParryNoCritNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeSpecialNoBlockDodgeParryNoCrit(sim, result, attackTable, false)
+}
+func (spell *Spell) outcomeMeleeSpecialNoBlockDodgeParryNoCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	roll := sim.RandomFloat("White Hit Table")
+	chance := 0.0
+
+	if !result.applyAttackTableMissNoDWPenalty(spell, attackTable, roll, &chance) {
+		result.applyAttackTableHit(spell, countHits)
+	}
+}
+
+func (spell *Spell) OutcomeMeleeSpecialCritOnly(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeSpecialCritOnly(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeMeleeSpecialCritOnlyNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeSpecialCritOnly(sim, result, attackTable, false)
+}
+func (spell *Spell) outcomeMeleeSpecialCritOnly(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	if !result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) {
+		result.applyAttackTableHit(spell, countHits)
+	}
+}
+
+func (spell *Spell) OutcomeMeleeSpecialBlockAndCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeSpecialBlockAndCrit(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeMeleeSpecialBlockAndCritNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeMeleeSpecialBlockAndCrit(sim, result, attackTable, false)
+}
+func (spell *Spell) outcomeMeleeSpecialBlockAndCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+
+	if spell.Unit.PseudoStats.InFrontOfTarget {
+		roll := sim.RandomFloat("White Hit Table")
+		chance := 0.0
+
+		if !result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) &&
+			!result.applyAttackTableBlock(spell, attackTable, roll, &chance) {
+			result.applyAttackTableHit(spell, countHits)
+		}
+	} else {
+		if !result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) {
+			result.applyAttackTableHit(spell, countHits)
+		}
+	}
+}
+
+func (spell *Spell) OutcomeRangedHit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeRangedHit(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeRangedHitNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeRangedHit(sim, result, attackTable, false)
+}
+func (spell *Spell) outcomeRangedHit(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	roll := sim.RandomFloat("White Hit Table")
+	chance := 0.0
+
+	if !result.applyAttackTableMissNoDWPenalty(spell, attackTable, roll, &chance) {
+		result.applyAttackTableHit(spell, countHits)
+	}
+}
+
+func (spell *Spell) OutcomeRangedHitAndCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeRangedHitAndCrit(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeRangedHitAndCritNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeRangedHitAndCrit(sim, result, attackTable, false)
+}
+func (spell *Spell) outcomeRangedHitAndCrit(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	roll := sim.RandomFloat("White Hit Table")
+	chance := 0.0
+
+	if spell.Unit.PseudoStats.InFrontOfTarget {
+		if !result.applyAttackTableMissNoDWPenalty(spell, attackTable, roll, &chance) {
+			if result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) {
+				result.applyAttackTableBlock(spell, attackTable, roll, &chance)
+			} else {
+				if !result.applyAttackTableBlock(spell, attackTable, roll, &chance) {
+					result.applyAttackTableHit(spell, countHits)
+				}
+			}
+		}
+	} else {
+		if !result.applyAttackTableMissNoDWPenalty(spell, attackTable, roll, &chance) &&
+			!result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) {
+			result.applyAttackTableHit(spell, countHits)
+		}
+	}
+}
+
+func (spell *Spell) OutcomeRangedHitAndCritNoBlock(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeRangedHitAndCritNoBlock(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeRangedHitAndCritNoBlockNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeRangedHitAndCritNoBlock(sim, result, attackTable, false)
+}
+func (spell *Spell) outcomeRangedHitAndCritNoBlock(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	roll := sim.RandomFloat("White Hit Table")
+	chance := 0.0
+
+	if !result.applyAttackTableMissNoDWPenalty(spell, attackTable, roll, &chance) &&
+		!result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) {
+		result.applyAttackTableHit(spell, countHits)
+	}
+}
+
+func (spell *Spell) OutcomeRangedCritOnly(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeRangedCritOnly(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeRangedCritOnlyNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeRangedCritOnly(sim, result, attackTable, false)
+}
+func (spell *Spell) outcomeRangedCritOnly(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	// Block already checks for this, but we can skip the RNG roll which is expensive.
+	if spell.Unit.PseudoStats.InFrontOfTarget {
+		roll := sim.RandomFloat("White Hit Table")
+		chance := 0.0
+
+		if result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) {
+			result.applyAttackTableBlock(spell, attackTable, roll, &chance)
+		} else {
+			if !result.applyAttackTableBlock(spell, attackTable, roll, &chance) {
+				result.applyAttackTableHit(spell, countHits)
+			}
+		}
+	} else {
+		if !result.applyAttackTableCritSeparateRoll(sim, spell, attackTable, countHits) {
+			result.applyAttackTableHit(spell, countHits)
+		}
+	}
+}
+
+func (spell *Spell) OutcomeEnemyMeleeWhite(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeEnemyMeleeWhite(sim, result, attackTable, true)
+}
+func (spell *Spell) OutcomeEnemyMeleeWhiteNoHitCounter(sim *Simulation, result *SpellResult, attackTable *AttackTable) {
+	spell.outcomeEnemyMeleeWhite(sim, result, attackTable, false)
+}
+func (spell *Spell) outcomeEnemyMeleeWhite(sim *Simulation, result *SpellResult, attackTable *AttackTable, countHits bool) {
+	roll := sim.RandomFloat("Enemy White Hit Table")
+	chance := 0.0
+
+	if !result.applyEnemyAttackTableMiss(spell, attackTable, roll, &chance) &&
+		!result.applyEnemyAttackTableDodge(spell, attackTable, roll, &chance) &&
+		!result.applyEnemyAttackTableParry(spell, attackTable, roll, &chance) &&
+		!result.applyEnemyAttackTableBlock(sim, spell, attackTable, roll, &chance) &&
+		!result.applyEnemyAttackTableCrit(spell, attackTable, roll, &chance, countHits) &&
+		!result.applyEnemyAttackTableCrush(spell, attackTable, roll, &chance, countHits) {
+		result.applyAttackTableHit(spell, countHits)
+	}
+}
+
+func (spell *Spell) GetPhysicalMissChance(attackTable *AttackTable) float64 {
+	missChance := attackTable.BaseMissChance - spell.PhysicalHitChance(attackTable)
+
+	if spell.Unit.AutoAttacks.IsDualWielding && !spell.Unit.PseudoStats.DisableDWMissPenalty {
+		missChance += 0.19
+	}
+
+	return max(0, missChance)
+}
+
+func (result *SpellResult) applyAttackTableMiss(spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
+	*chance = spell.GetPhysicalMissChance(attackTable)
+	if roll < *chance {
+		result.Outcome = OutcomeMiss
+		spell.SpellMetrics[result.Target.UnitIndex].Misses++
+		result.Damage = 0
+		return true
+	}
+	return false
+}
+
+func (result *SpellResult) applyAttackTableMissNoDWPenalty(spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
+	missChance := attackTable.BaseMissChance - spell.PhysicalHitChance(attackTable)
+	*chance = max(0, missChance)
+
+	if roll < *chance {
+		result.Outcome = OutcomeMiss
+		spell.SpellMetrics[result.Target.UnitIndex].Misses++
+		result.Damage = 0
+		return true
+	}
+	return false
+}
+
+func (result *SpellResult) applyAttackTableBlock(spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
+	*chance += result.Target.GetTotalBlockChanceAsDefender(attackTable)
+	if roll < *chance {
+		isPartialResist := result.DidResist()
+		result.Outcome |= OutcomeBlock
+		if result.DidCrit() {
+			spell.SpellMetrics[result.Target.UnitIndex].Crits--
+			spell.SpellMetrics[result.Target.UnitIndex].BlockedCrits++
+
+			if isPartialResist {
+				spell.SpellMetrics[result.Target.UnitIndex].ResistedCrits--
+			}
+		} else {
+			spell.SpellMetrics[result.Target.UnitIndex].Blocks++
+		}
+		// Physical abilities tagged with "Completely Blocked" are fully blocked every time
+		if spell.Flags.Matches(SpellFlagBinary) {
+			result.Damage = 0
+		} else {
+			result.Damage = max(0, result.Damage-result.Target.BlockDamageReduction())
+		}
+		return true
+	}
+	return false
+}
+
+func (result *SpellResult) applyAttackTableDodge(spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
+	if spell.Flags.Matches(SpellFlagCannotBeDodged) {
+		return false
+	}
+
+	*chance += result.Target.GetTotalDodgeChanceAsDefender(spell, attackTable)
+
+	if roll < *chance {
+		result.Outcome = OutcomeDodge
+		spell.SpellMetrics[result.Target.UnitIndex].Dodges++
+		result.Damage = 0
+		return true
+	}
+	return false
+}
+
+func (result *SpellResult) applyAttackTableParry(spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
+	*chance += result.Target.GetTotalParryChanceAsDefender(spell, attackTable)
+
+	if roll < *chance {
+		result.Outcome = OutcomeParry
+		spell.SpellMetrics[result.Target.UnitIndex].Parries++
+		result.Damage = 0
+		return true
+	}
+	return false
+}
+
+func (result *SpellResult) applyAttackTableGlance(spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
+	*chance += attackTable.BaseGlanceChance
+
+	if roll < *chance {
+		result.Outcome = OutcomeGlance
+		spell.SpellMetrics[result.Target.UnitIndex].Glances++
+		// TODO glancing blow damage reduction is actually a range ([65%, 85%] vs. +3, [80%, 90%] vs. +2, [91%, 99%] vs. +1 and +0)
+		result.Damage *= attackTable.GlanceMultiplier
+		return true
+	}
+	return false
+}
+
+func (result *SpellResult) applyAttackTableCrit(spell *Spell, attackTable *AttackTable, roll float64, chance *float64, countHits bool) bool {
+	if spell.CritMultiplier == 0 {
+		panic("Spell " + spell.ActionID.String() + " missing CritMultiplier")
+	}
+	*chance += spell.PhysicalCritChance(attackTable)
+
+	if roll < *chance {
+		isPartialResist := result.DidResist()
+		result.Outcome = OutcomeCrit
+		if countHits {
+			spell.SpellMetrics[result.Target.UnitIndex].Crits++
+			if isPartialResist {
+				spell.SpellMetrics[result.Target.UnitIndex].ResistedCrits++
+			}
+		}
+		result.Damage *= spell.CritDamageMultiplier(attackTable)
+		return true
+	}
+	return false
+}
+
+func (result *SpellResult) applyAttackTableCritSeparateRoll(sim *Simulation, spell *Spell, attackTable *AttackTable, countHits bool) bool {
+	if spell.CritMultiplier == 0 {
+		panic("Spell " + spell.ActionID.String() + " missing CritMultiplier")
+	}
+	if spell.PhysicalCritCheck(sim, attackTable) {
+		isPartialResist := result.DidResist()
+		result.Outcome = OutcomeCrit
+		if countHits {
+			spell.SpellMetrics[result.Target.UnitIndex].Crits++
+			if isPartialResist {
+				spell.SpellMetrics[result.Target.UnitIndex].ResistedCrits++
+			}
+		}
+		result.Damage *= spell.CritDamageMultiplier(attackTable)
+		return true
+	}
+	return false
+}
+
+func (result *SpellResult) applyAttackTableHit(spell *Spell, countHits bool) {
+	isPartialResist := result.DidResist()
+	result.Outcome = OutcomeHit
+	if countHits {
+		spell.SpellMetrics[result.Target.UnitIndex].Hits++
+		if isPartialResist {
+			spell.SpellMetrics[result.Target.UnitIndex].ResistedHits++
+		}
+	}
+}
+
+func (result *SpellResult) applyEnemyAttackTableMiss(spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
+	missChance := result.Target.GetTotalChanceToBeMissedAsDefender(attackTable) - spell.Unit.GetStat(stats.PhysicalHitPercent)/100
+
+	if spell.Unit.AutoAttacks.IsDualWielding && !spell.Unit.PseudoStats.DisableDWMissPenalty {
+		missChance += 0.19
+	}
+	*chance += max(0, missChance)
+
+	if roll < *chance {
+		result.Outcome = OutcomeMiss
+		spell.SpellMetrics[result.Target.UnitIndex].Misses++
+		result.Damage = 0
+		return true
+	}
+	return false
+}
+
+func (result *SpellResult) applyEnemyAttackTableBlock(sim *Simulation, spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
+	if !result.Target.PseudoStats.CanBlock || result.Target.PseudoStats.Stunned || !spell.SpellSchool.Matches(SpellSchoolPhysical) {
+		return false
+	}
+
+	*chance += result.Target.GetTotalBlockChanceAsDefender(attackTable)
+	if roll < *chance {
+		result.Outcome |= OutcomeBlock
+		spell.SpellMetrics[result.Target.UnitIndex].Blocks++
+
+		if result.Target.Blockhandler != nil {
+			result.Target.Blockhandler(sim, spell, result)
+			return true
+		}
+
+		result.Damage = max(0, result.Damage-result.Target.BlockDamageReduction())
+
+		return true
+	}
+	return false
+}
+
+func (result *SpellResult) applyEnemyAttackTableDodge(spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
+	if result.Target.PseudoStats.Stunned {
+		return false
+	}
+
+	*chance += max(result.Target.GetTotalDodgeChanceAsDefender(spell, attackTable), 0.0)
+
+	if roll < *chance {
+		result.Outcome = OutcomeDodge
+		spell.SpellMetrics[result.Target.UnitIndex].Dodges++
+		result.Damage = 0
+		return true
+	}
+	return false
+}
+
+func (result *SpellResult) applyEnemyAttackTableParry(spell *Spell, attackTable *AttackTable, roll float64, chance *float64) bool {
+	if !result.Target.PseudoStats.CanParry || result.Target.PseudoStats.Stunned {
+		return false
+	}
+
+	*chance += result.Target.GetTotalParryChanceAsDefender(spell, attackTable)
+
+	if roll < *chance {
+		result.Outcome = OutcomeParry
+		spell.SpellMetrics[result.Target.UnitIndex].Parries++
+		result.Damage = 0
+		return true
+	}
+	return false
+}
+
+func (result *SpellResult) applyEnemyAttackTableCrit(spell *Spell, attackTable *AttackTable, roll float64, chance *float64, countHits bool) bool {
+	critPercent := spell.Unit.stats[stats.PhysicalCritPercent] + spell.BonusCritPercent
+	if spell.ProcMask.Matches(ProcMaskRanged) {
+		critPercent += spell.Unit.stats[stats.RangedCritPercent]
+	}
+	chances := getCritChances(critPercent/100-attackTable.MeleeCritSuppression, result.Target)
+	*chance += chances.suppressed
+	if roll < *chance {
+		result.Outcome = OutcomeSuppressedCrit
+		if countHits {
+			spell.SpellMetrics[result.Target.UnitIndex].Hits++
+			if result.DidResist() {
+				spell.SpellMetrics[result.Target.UnitIndex].ResistedHits++
+			}
+		}
+		return true
+	}
+
+	*chance += chances.actual
+
+	if roll < *chance {
+		isPartialResist := result.DidResist()
+		result.Outcome = OutcomeCrit
+		if countHits {
+			spell.SpellMetrics[result.Target.UnitIndex].Crits++
+			if isPartialResist {
+				spell.SpellMetrics[result.Target.UnitIndex].ResistedCrits++
+			}
+		}
+		resilCritMultiplier := 1 - (max(0, result.Target.GetResilienceReduction()/2))
+		result.Damage *= 2 * resilCritMultiplier
+		return true
+	}
+	return false
+}
+
+func (result *SpellResult) applyEnemyAttackTableCrush(spell *Spell, at *AttackTable, roll float64, chance *float64, countHits bool) bool {
+	if !at.Attacker.PseudoStats.CanCrush {
+		return false
+	}
+
+	crushChance := at.BaseCrushChance
+	*chance += max(0, crushChance)
+
+	if roll < *chance {
+		result.Outcome = OutcomeCrush
+		if countHits {
+			spell.SpellMetrics[result.Target.UnitIndex].Crushes++
+		}
+		result.Damage *= 1.5
+		return true
+	}
+	return false
+}
+
+func (spell *Spell) OutcomeExpectedTick(_ *Simulation, _ *SpellResult, _ *AttackTable) {
+	// result.Damage *= 1
+}
+func (spell *Spell) OutcomeExpectedMagicAlwaysHit(_ *Simulation, _ *SpellResult, _ *AttackTable) {
+	// result.Damage *= 1
+}
+func (spell *Spell) OutcomeExpectedMagicHit(_ *Simulation, result *SpellResult, attackTable *AttackTable) {
+	averageMultiplier := 1.0
+	averageMultiplier -= spell.SpellChanceToMiss(attackTable)
+
+	result.Damage *= averageMultiplier
+}
+
+func (spell *Spell) OutcomeExpectedMagicCrit(_ *Simulation, result *SpellResult, attackTable *AttackTable) {
+	if spell.CritMultiplier == 0 {
+		panic("Spell " + spell.ActionID.String() + " missing CritMultiplier")
+	}
+
+	averageMultiplier := 1.0
+	averageMultiplier += spell.SpellCritChance(result.Target) * (spell.CritDamageMultiplier(attackTable) - 1)
+
+	result.Damage *= averageMultiplier
+}
+
+func (spell *Spell) OutcomeExpectedMagicHitAndCrit(_ *Simulation, result *SpellResult, attackTable *AttackTable) {
+	if spell.CritMultiplier == 0 {
+		panic("Spell " + spell.ActionID.String() + " missing CritMultiplier")
+	}
+
+	averageMultiplier := 1.0
+	averageMultiplier -= spell.SpellChanceToMiss(attackTable)
+	averageMultiplier += averageMultiplier * spell.SpellCritChance(result.Target) * (spell.CritDamageMultiplier(attackTable) - 1)
+
+	result.Damage *= averageMultiplier
+}
+
+func (spell *Spell) OutcomeExpectedPhysicalCrit(_ *Simulation, result *SpellResult, attackTable *AttackTable) {
+	if spell.CritMultiplier == 0 {
+		panic("Spell " + spell.ActionID.String() + " missing CritMultiplier")
+	}
+
+	averageMultiplier := 1.0
+	averageMultiplier += spell.PhysicalCritChance(attackTable) * (spell.CritDamageMultiplier(attackTable) - 1)
+
+	result.Damage *= averageMultiplier
+}
+
+func (spell *Spell) OutcomeExpectedMeleeWhite(_ *Simulation, result *SpellResult, attackTable *AttackTable) {
+	missChance := spell.GetPhysicalMissChance(attackTable)
+	dodgeChance := TernaryFloat64(spell.Flags.Matches(SpellFlagCannotBeDodged), 0, max(0, attackTable.BaseDodgeChance-spell.DodgeParrySuppression()-spell.Unit.PseudoStats.DodgeReduction))
+	parryChance := TernaryFloat64(spell.Unit.PseudoStats.InFrontOfTarget, max(0, attackTable.BaseParryChance-spell.DodgeParrySuppression()), 0)
+	glanceChance := attackTable.BaseGlanceChance
+	blockChance := TernaryFloat64(spell.Unit.PseudoStats.InFrontOfTarget, attackTable.BaseBlockChance, 0)
+	whiteCritCap := 1.0 - missChance - dodgeChance - parryChance - glanceChance - blockChance
+	critChance := min(spell.PhysicalCritChance(attackTable), whiteCritCap)
+	averageMultiplier := 1.0 - missChance - dodgeChance - parryChance + (spell.CritDamageMultiplier(attackTable)-1)*critChance - glanceChance*(1.0-attackTable.GlanceMultiplier) - (blockChance * (result.Target.BlockDamageReduction() / result.Damage))
+	result.Damage *= averageMultiplier
+}
+
+func (spell *Spell) OutcomeExpectedMeleeWeaponSpecialHitAndCrit(_ *Simulation, result *SpellResult, attackTable *AttackTable) {
+	missChance := max(0, attackTable.BaseMissChance-spell.PhysicalHitChance(attackTable))
+	dodgeChance := TernaryFloat64(spell.Flags.Matches(SpellFlagCannotBeDodged), 0, max(0, attackTable.BaseDodgeChance-spell.DodgeParrySuppression()-spell.Unit.PseudoStats.DodgeReduction))
+	parryChance := TernaryFloat64(spell.Unit.PseudoStats.InFrontOfTarget, max(0, attackTable.BaseParryChance-spell.DodgeParrySuppression()), 0)
+	blockChance := TernaryFloat64(spell.Unit.PseudoStats.InFrontOfTarget, attackTable.BaseBlockChance, 0)
+	critChance := spell.PhysicalCritChance(attackTable)
+	averageMultiplier := (1.0 - missChance - dodgeChance - parryChance) * (1.0 + (spell.CritDamageMultiplier(attackTable)-1)*critChance)
+	averageMultiplier -= (((spell.CritDamageMultiplier(attackTable) - 1) * critChance) * (blockChance * (result.Target.BlockDamageReduction() / result.Damage)))
+	result.Damage *= averageMultiplier
+}

@@ -24,8 +24,13 @@ export interface LPItem extends Omit<ItemVariation, "type"> {
 	type: ProcessedItemType;
 	avoidanceScore: number;
 	objectiveScore: number;
-    uncritabilityScore: number;
-    resistanceScores: Partial<Record<StatName, number>>;
+	uncritabilityScore: number;
+	resistanceScores: Partial<Record<StatName, number>>;
+	// Dot-product against a second, independent weight vector (SolverConfiguration's
+	// constraintStats) - only meaningful when a secondary sim-metric constraint is active, 0
+	// otherwise. Mirrors objectiveScore's own computation (calculateObjectiveScore), just against
+	// a different Stat[] vector - see SolveOptions.secondaryConstraint.
+	constraintScore: number;
 }
 
 export interface ScoreSet {
@@ -33,9 +38,14 @@ export interface ScoreSet {
 	objectiveScore: number;
 	uncritabilityScore: number;
 	resistanceScores: Partial<Record<StatName, number>>;
+	constraintScore: number;
 }
 
-export type ScoreAxis = "avoidanceScore" | "objectiveScore" | "uncritabilityScore";
+export type ScoreAxis =
+	| "avoidanceScore"
+	| "objectiveScore"
+	| "uncritabilityScore"
+	| "constraintScore";
 
 export interface EnchantCandidate {
 	enchant: Enchant;
@@ -76,7 +86,7 @@ export interface ResistanceFloor {
 export interface Stat {
 	name: StatName;
 	value: number;
-	type: 'flat' | 'multiplier';
+	type: "flat" | "multiplier";
 }
 
 interface Socket {
@@ -84,50 +94,50 @@ interface Socket {
 }
 
 export const STAT_NAMES = [
-  "Strength",
-  "Agility",
-  "Stamina",
-  "Intellect",
-  "SpellPower",
-  "HealingPower",
-  "SpellCrit",
-  "Armor",
-  "Resilience",
-  "Defense",
-  "AttackPower",
-  "RangedAttackPower",
-  "SpellHaste",
-  "MeleeCrit",
-  "MeleeHit",
-  "Dodge",
-  "MP5",
-  "Spirit",
-  "BlockValue",
-  "MeleeHaste",
-  "SpellHit",
-  "ShadowResistance",
-  "FireResistance",
-  "ShadowSpellPower",
-  "ArmorPenetration",
-  "Parry",
-  "Block",
-  "ArcaneSpellPower",
-  "SpellPenetration",
-  "ArcaneResistance",
-  "FeralAttackPower",
-  "Expertise",
-  "FrostSpellPower",
-  "NatureSpellPower",
-  "FrostResistance",
-  "NatureResistance",
-  "HolySpellPower",
-  "FireSpellPower",
-  "Health",
-  "Mana",
-  "Miss",
+	"Strength",
+	"Agility",
+	"Stamina",
+	"Intellect",
+	"SpellPower",
+	"HealingPower",
+	"SpellCrit",
+	"Armor",
+	"Resilience",
+	"Defense",
+	"AttackPower",
+	"RangedAttackPower",
+	"SpellHaste",
+	"MeleeCrit",
+	"MeleeHit",
+	"Dodge",
+	"MP5",
+	"Spirit",
+	"BlockValue",
+	"MeleeHaste",
+	"SpellHit",
+	"ShadowResistance",
+	"FireResistance",
+	"ShadowSpellPower",
+	"ArmorPenetration",
+	"Parry",
+	"Block",
+	"ArcaneSpellPower",
+	"SpellPenetration",
+	"ArcaneResistance",
+	"FeralAttackPower",
+	"Expertise",
+	"FrostSpellPower",
+	"NatureSpellPower",
+	"FrostResistance",
+	"NatureResistance",
+	"HolySpellPower",
+	"FireSpellPower",
+	"Health",
+	"Mana",
+	"Miss",
 ] as const;
 
-export type StatName = typeof STAT_NAMES[number];
+export type StatName = (typeof STAT_NAMES)[number];
 
 export const RESISTANCE_STAT_NAMES: StatName[] = [
 	"ArcaneResistance",
@@ -261,18 +271,18 @@ export interface InputItem {
 }
 
 export interface ModifierSource {
-    id: string;
-    name: string;
-    type: 'talent' | 'buff' | 'ability' | 'gear' | 'consumable'
-    maxRank?: number
-    rank?: number
-    classId?: string
-    stats: Stat[];
+	id: string;
+	name: string;
+	type: "talent" | "buff" | "ability" | "gear" | "consumable";
+	maxRank?: number;
+	rank?: number;
+	classId?: string;
+	stats: Stat[];
 }
 
 export type Buff = ModifierSource & {
 	checked: boolean;
-}
+};
 
 export type DisplayStatName =
 	| StatName

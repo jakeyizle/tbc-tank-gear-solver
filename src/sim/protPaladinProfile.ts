@@ -26,6 +26,11 @@ export const PROT_PALADIN_CLASS_OPTIONS = {
 
 export const PROT_PALADIN_CONSUMABLES = {
 	flaskId: 22861, // Flask of Blinding Light
+	// 0 = none - the manual fallback profile always uses the flask above, never elixirs (see
+	// SimCalibrationProfile.ts's ConsumableSettings comment); solveSimMetric.ts overrides these
+	// with a solved battle+guardian elixir combo when the gear set solves for consumables.
+	battleElixirId: 0,
+	guardianElixirId: 0,
 	foodId: 27657, // Blackened Basilisk
 	potId: 22849, // Ironshield Potion
 	conjuredId: 12662, // Dark Rune

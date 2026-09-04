@@ -71,7 +71,9 @@ const gearPath = path.join(
 	"vendor/tbc-sim/ui/paladin/protection/gear_sets/p3.gear.json",
 );
 
-const canRun = [wasmGzPath, wasmExecPath, dbPath, gearPath].every(fs.existsSync);
+const canRun = [wasmGzPath, wasmExecPath, dbPath, gearPath].every(
+	fs.existsSync,
+);
 
 function fakeItem(
 	id: string,
@@ -136,6 +138,57 @@ describe.skipIf(!canRun)("statWeights wasm integration", () => {
 			expect(result.tmi?.weights?.stats[idx]).toBeLessThanOrEqual(0);
 			expect(result.dtps?.weights?.stats[idx]).toBeLessThanOrEqual(0);
 		}
+	}, 30000);
+
+	// Regression guard for the StatWeightsResult.baseline field (statweight.go's
+	// computeStatWeights echoing swcr.BaseResult back onto the proto result): a caller should be
+	// able to read the gear set's absolute TPS/DTPS/TMI-5 straight off a calibration batch's
+	// result, without a second sim call, and get exactly the same numbers a direct raidSim call
+	// against the same baseRequest would produce (same pinned seed - see buildTestRequestBytes).
+	it("echoes the calibration batch's own baseline sim, matching a direct raidSim call on the same request", async () => {
+		const requestBytes = buildTestRequestBytes();
+
+		const wasmGlobals = await loadFreshWasmInstance();
+		if (
+			!wasmGlobals.statWeights ||
+			!wasmGlobals.statWeightRequests ||
+			!wasmGlobals.raidSim
+		) {
+			throw new Error(
+				"statWeights/statWeightRequests/raidSim globals not registered",
+			);
+		}
+
+		const result = StatWeightsResult.fromBinary(
+			wasmGlobals.statWeights(requestBytes),
+		);
+		expect(result.error).toBeUndefined();
+		expect(result.baseline).toBeDefined();
+
+		const reqData = StatWeightRequestsData.fromBinary(
+			wasmGlobals.statWeightRequests(requestBytes),
+		);
+		if (!reqData.baseRequest) {
+			throw new Error("statWeightRequests returned no baseRequest");
+		}
+		const directResult = RaidSimResult.fromBinary(
+			wasmGlobals.raidSim(RaidSimRequest.toBinary(reqData.baseRequest)),
+		);
+
+		const baselinePlayer = result.baseline?.raidMetrics?.parties[0]?.players[0];
+		const directPlayer = directResult.raidMetrics?.parties[0]?.players[0];
+		expect(baselinePlayer?.threat?.avg).toBeCloseTo(
+			directPlayer?.threat?.avg ?? NaN,
+			6,
+		);
+		expect(baselinePlayer?.dtps?.avg).toBeCloseTo(
+			directPlayer?.dtps?.avg ?? NaN,
+			6,
+		);
+		expect(baselinePlayer?.tmi?.avg).toBeCloseTo(
+			directPlayer?.tmi?.avg ?? NaN,
+			6,
+		);
 	}, 30000);
 
 	it("statWeightsAsync reports progress before resolving, and agrees with the sync result", async () => {

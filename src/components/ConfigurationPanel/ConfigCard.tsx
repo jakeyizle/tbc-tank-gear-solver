@@ -25,9 +25,7 @@ import type { SolverConfiguration } from "#/types/SolverConfig";
 import BuffSection from "./BuffSection";
 import ConstraintsSection from "./ConstraintsSection";
 import ConsumablesSection from "./ConsumablesSection";
-import SimMetricWeightsEntry, {
-	type SimMetricWeights,
-} from "./SimMetricWeightsEntry";
+import SimBalanceSlider from "./SimBalanceSlider";
 import StatsEntry from "./StatsEntry";
 
 const CRIT_TAGS: Record<number, string> = {
@@ -48,12 +46,6 @@ const NON_STATS_OBJECTIVE_LABELS: Record<string, string> = {
 	simWeighted: "Weighted Sim Metrics",
 };
 
-const METRIC_SUMMARY_LABELS: Record<keyof SimMetricWeights, string> = {
-	tps: "TPS",
-	dtps: "DTPS",
-	tmi5: "TMI-5",
-};
-
 interface ConfigCardProps {
 	config: SolverConfiguration;
 	index: number;
@@ -69,7 +61,7 @@ interface ConfigCardProps {
 	onUpdateConstraints: (uncritability: number, uncrushability: number) => void;
 	onUpdateOptimizeStats: (stats: Stat[]) => void;
 	onUpdateObjectiveMode: (mode: "stats" | "ehp" | "simWeighted") => void;
-	onUpdateSimMetricWeights: (weights: SimMetricWeights) => void;
+	onUpdateSimBalance: (balance: number) => void;
 	onUpdateResistanceFloors: (floors: ResistanceFloor[]) => void;
 	onBuffChange: (buffId: string) => void;
 	onConsumableChange: (consumableId: string) => void;
@@ -129,18 +121,13 @@ function ConfigBand({
 	);
 }
 
-function simMetricWeightsSummary(weights: SimMetricWeights): string {
-	const shown = (
-		Object.keys(METRIC_SUMMARY_LABELS) as (keyof SimMetricWeights)[]
-	)
-		.filter((key) => weights[key] !== 0)
-		.map((key) => `${METRIC_SUMMARY_LABELS[key]} ${weights[key].toFixed(2)}`);
-	return shown.length > 0 ? shown.join(" · ") : "no metrics weighted";
+function simBalanceSummary(balance: number): string {
+	return `${Math.round(balance * 100)}% Threat / ${Math.round((1 - balance) * 100)}% Survivability`;
 }
 
 function statsSummary(config: SolverConfiguration): string {
 	if (config.objectiveMode === "simWeighted") {
-		return simMetricWeightsSummary(config.simMetricWeights);
+		return simBalanceSummary(config.simBalance.balance);
 	}
 	if (config.objectiveMode !== "stats") {
 		return NON_STATS_OBJECTIVE_LABELS[config.objectiveMode];
@@ -170,7 +157,7 @@ export default function ConfigCard({
 	onUpdateConstraints,
 	onUpdateOptimizeStats,
 	onUpdateObjectiveMode,
-	onUpdateSimMetricWeights,
+	onUpdateSimBalance,
 	onUpdateResistanceFloors,
 	onBuffChange,
 	onConsumableChange,
@@ -452,8 +439,8 @@ export default function ConfigCard({
 							fontStyle="italic"
 						>
 							Solver maximizes armor-mitigated Effective HP directly. Stat
-							weights below are unused in this mode but kept in case you switch
-							back.
+							weights below are unused in this mode, but kept for when you
+							switch back.
 						</Typography>
 					)}
 					{config.objectiveMode === "simWeighted" && (
@@ -462,20 +449,17 @@ export default function ConfigCard({
 							color="text.secondary"
 							fontStyle="italic"
 						>
-							Solver recalibrates a weight vector against a real combat
-							simulation each round, blending TPS/DTPS/TMI-5 by the ratios below
-							— expect this to take longer than the instant modes above.
-							Protection Paladin only for now, optimized against the encounter,
-							healing model, and raid buffs/talents/consumables set in the
-							"Advanced: Sim Calibration Profile" panel below. Stat weights and
-							the character Assumptions above are unused in this mode but kept
-							in case you switch back.
+							Runs a real combat simulation each round instead of an instant
+							formula, so this is much slower than the other modes. The slider
+							below balances Threat (TPS) against Survivability (TMI-5).
+							Encounter, buffs, and consumables settings live in the Advanced Sim
+							Calibration panel below.
 						</Typography>
 					)}
 					{config.objectiveMode === "simWeighted" && (
-						<SimMetricWeightsEntry
-							weights={config.simMetricWeights}
-							onChange={onUpdateSimMetricWeights}
+						<SimBalanceSlider
+							balance={config.simBalance.balance}
+							onChange={onUpdateSimBalance}
 						/>
 					)}
 					{config.objectiveMode === "stats" && (

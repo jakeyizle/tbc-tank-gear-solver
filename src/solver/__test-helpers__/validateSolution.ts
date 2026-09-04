@@ -3,8 +3,18 @@ import type { SolverConfiguration } from "../SolverConfiguration";
 import type { LPItem, ProcessedItemType } from "../types";
 
 const MANDATORY_SLOTS: ProcessedItemType[] = [
-	"Head", "Neck", "Shoulder", "Back", "Chest", "Wrist", "Hands",
-	"Waist", "Legs", "Feet", "Weapon", "Ranged",
+	"Head",
+	"Neck",
+	"Shoulder",
+	"Back",
+	"Chest",
+	"Wrist",
+	"Hands",
+	"Waist",
+	"Legs",
+	"Feet",
+	"Weapon",
+	"Ranged",
 ];
 const MULTI_SLOTS: ProcessedItemType[] = ["Finger", "Trinket"];
 
@@ -13,6 +23,9 @@ interface AchievedStats {
 	uncritability: number;
 	objective: number;
 	resistances: Partial<Record<string, number>>;
+	// Only meaningful when config.secondaryConstraint is set - see calculateObjectiveScore's own
+	// dot-product logic, independently recomputed here the same way `objective` is.
+	secondaryConstraintValue: number;
 }
 
 // Independently recomputes achieved stats for a solved item set the same way the app's own
@@ -23,7 +36,10 @@ export const computeAchievedStats = (
 	items: LPItem[],
 	config: SolverConfiguration,
 ): AchievedStats => {
-	const modifierSources = [...config.flatModifierSources, ...config.multiplierModifierSources];
+	const modifierSources = [
+		...config.flatModifierSources,
+		...config.multiplierModifierSources,
+	];
 	const baseStats = config.baseStats;
 
 	const avoidance = calculateStatValue({
@@ -42,7 +58,14 @@ export const computeAchievedStats = (
 	});
 	const objective = config.optimizeStats.reduce(
 		(sum, stat) =>
-			sum + calculateStatValue({ items, modifierSources, baseStats, statName: stat.name }) * stat.value,
+			sum +
+			calculateStatValue({
+				items,
+				modifierSources,
+				baseStats,
+				statName: stat.name,
+			}) *
+				stat.value,
 		0,
 	);
 	const resistances: Partial<Record<string, number>> = {};
@@ -55,12 +78,36 @@ export const computeAchievedStats = (
 		});
 	}
 
-	return { avoidance, uncritability, objective, resistances };
+	const secondaryConstraintValue = (
+		config.secondaryConstraint?.statWeights ?? []
+	).reduce(
+		(sum, stat) =>
+			sum +
+			calculateStatValue({
+				items,
+				modifierSources,
+				baseStats,
+				statName: stat.name,
+			}) *
+				stat.value,
+		0,
+	);
+
+	return {
+		avoidance,
+		uncritability,
+		objective,
+		resistances,
+		secondaryConstraintValue,
+	};
 };
 
 // Structural invariants a broken model (especially a mis-linearized socket-bonus constraint)
 // could silently violate. Returns a list of violation descriptions; empty = valid.
-export const validateSolution = (items: LPItem[], config: SolverConfiguration): string[] => {
+export const validateSolution = (
+	items: LPItem[],
+	config: SolverConfiguration,
+): string[] => {
 	const issues: string[] = [];
 
 	for (const slot of MANDATORY_SLOTS) {
@@ -73,7 +120,8 @@ export const validateSolution = (items: LPItem[], config: SolverConfiguration): 
 	}
 
 	const idCounts = new Map<string, number>();
-	for (const item of items) idCounts.set(item.id, (idCounts.get(item.id) ?? 0) + 1);
+	for (const item of items)
+		idCounts.set(item.id, (idCounts.get(item.id) ?? 0) + 1);
 	for (const [id, count] of idCounts) {
 		if (count > 1) issues.push(`base item ${id} used ${count} times`);
 	}
@@ -90,18 +138,28 @@ export const validateSolution = (items: LPItem[], config: SolverConfiguration): 
 	}
 
 	const hasFlask = items.some((item) => item.type === "Flask");
-	const hasGuardianElixir = items.some((item) => item.type === "GuardianElixir");
+	const hasGuardianElixir = items.some(
+		(item) => item.type === "GuardianElixir",
+	);
 	const hasBattleElixir = items.some((item) => item.type === "BattleElixir");
-	if (hasFlask && hasGuardianElixir) issues.push("flask co-selected with a guardian elixir");
-	if (hasFlask && hasBattleElixir) issues.push("flask co-selected with a battle elixir");
+	if (hasFlask && hasGuardianElixir)
+		issues.push("flask co-selected with a guardian elixir");
+	if (hasFlask && hasBattleElixir)
+		issues.push("flask co-selected with a battle elixir");
 
 	const achieved = computeAchievedStats(items, config);
-	if (config.avoidanceTarget > 0 && achieved.avoidance < config.avoidanceTarget) {
+	if (
+		config.avoidanceTarget > 0 &&
+		achieved.avoidance < config.avoidanceTarget
+	) {
 		issues.push(
 			`avoidance floor not met: achieved ${achieved.avoidance}, target ${config.avoidanceTarget}`,
 		);
 	}
-	if (config.uncritabilityTarget > 0 && achieved.uncritability < config.uncritabilityTarget) {
+	if (
+		config.uncritabilityTarget > 0 &&
+		achieved.uncritability < config.uncritabilityTarget
+	) {
 		issues.push(
 			`uncrit floor not met: achieved ${achieved.uncritability}, target ${config.uncritabilityTarget}`,
 		);
@@ -111,6 +169,18 @@ export const validateSolution = (items: LPItem[], config: SolverConfiguration): 
 		if (achievedValue < floor.value) {
 			issues.push(
 				`resistance floor not met for ${floor.stat}: achieved ${achievedValue}, target ${floor.value}`,
+			);
+		}
+	}
+	if (config.secondaryConstraint) {
+		const { bound, kind } = config.secondaryConstraint;
+		const value = achieved.secondaryConstraintValue;
+		if (kind === "floor" && value < bound) {
+			issues.push(`secondary floor not met: achieved ${value}, bound ${bound}`);
+		}
+		if (kind === "ceiling" && value > bound) {
+			issues.push(
+				`secondary ceiling exceeded: achieved ${value}, bound ${bound}`,
 			);
 		}
 	}

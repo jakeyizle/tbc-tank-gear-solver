@@ -1,4 +1,5 @@
 import Paper from "@mui/material/Paper";
+import { memo } from "react";
 import type { ResistanceFloor, Stat } from "#/solver/types";
 import type { SolverConfiguration } from "#/types/SolverConfig";
 import ConfigManager from "./ConfigManager";
@@ -21,7 +22,10 @@ interface ConfigurationPanelProps {
 	updateConfig: (id: string, updates: Partial<SolverConfiguration>) => void;
 }
 
-export default function ConfigurationPanel({
+// Memoized so a parent re-render that doesn't change these props (e.g. routes/index.tsx's
+// solveProgress ticks during a solve) skips reconciling the whole ConfigManager/ConfigCard tree -
+// see useSolverConfigs.ts's note on why fresh handler identities would otherwise defeat this.
+function ConfigurationPanel({
 	configs,
 	activeConfigId,
 	setActiveConfigId,
@@ -54,3 +58,5 @@ export default function ConfigurationPanel({
 		</Paper>
 	);
 }
+
+export default memo(ConfigurationPanel);

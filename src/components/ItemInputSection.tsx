@@ -12,7 +12,7 @@ import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { CLASS_LABELS } from "#/data/classes";
 import { RACE_LABELS } from "#/data/races";
 import type { DetectedCharacter } from "#/helpers/parseItemInput";
@@ -103,7 +103,10 @@ const PLACEHOLDER = `Paste your WowSims Exporter output here, e.g.
 A full character export (with class/race/talents) also works, and will
 pre-fill the Character section above.`;
 
-export default function ItemInputSection({
+// Memoized so a parent re-render that doesn't change these props (e.g. routes/index.tsx's
+// solveProgress ticks during a solve) skips reconciling this section's large textarea entirely -
+// see useSolverConfigs.ts's note on why fresh handler identities would otherwise defeat this.
+function ItemInputSection({
 	itemInput,
 	setItemInput,
 	areEnchantsGemsLocked,
@@ -288,7 +291,7 @@ export default function ItemInputSection({
 						sx={{ cursor: "pointer" }}
 						onClick={() => setManualEdit(true)}
 					>
-						Edit Gear Pool
+						Edit gear pool
 					</Typography>
 				</Stack>
 			</Paper>
@@ -422,7 +425,7 @@ export default function ItemInputSection({
 								<Stack direction="row" spacing={0.5} alignItems="center">
 									<LockIcon fontSize="inherit" />
 									<Typography variant="body2">
-										Lock enchants and gems
+										Lock enchants &amp; gems
 									</Typography>
 								</Stack>
 							}
@@ -459,3 +462,5 @@ export default function ItemInputSection({
 		</Paper>
 	);
 }
+
+export default memo(ItemInputSection);

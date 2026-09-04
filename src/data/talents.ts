@@ -13,6 +13,10 @@ export const getTalentsByClass = (classId: string): ModifierSource[] => {
 // order - see vendor/tbc-sim/ui/core/talents/trees/paladin.json. Trailing zero
 // characters are trimmed by the exporter, so a segment may be shorter than its
 // tree's talent count.
+//
+// holy-shield/avengers-shield/sanctity-aura have no stat effect (not in the TALENTS array
+// below) - they're only decoded for the Sim Calibration Profile's rotation-option talent
+// gating (see protPaladinSimpleRotation.ts and RaidProfileFields.tsx).
 const TALENT_STRING_POSITIONS: Record<
 	string,
 	Record<string, { segment: number; index: number }>
@@ -22,8 +26,11 @@ const TALENT_STRING_POSITIONS: Record<
 		toughness: { segment: 1, index: 4 },
 		anticipation: { segment: 1, index: 8 },
 		"sacred-duty": { segment: 1, index: 15 },
+		"holy-shield": { segment: 1, index: 18 },
 		"combat-expertise": { segment: 1, index: 20 },
+		"avengers-shield": { segment: 1, index: 21 },
 		deflection: { segment: 2, index: 4 },
+		"sanctity-aura": { segment: 2, index: 13 },
 	},
 };
 

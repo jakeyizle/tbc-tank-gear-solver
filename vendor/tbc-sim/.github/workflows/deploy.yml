@@ -1,0 +1,77 @@
+name: Build and Deploy
+on:
+    push:
+        branches:
+            - master
+jobs:
+    tests:
+        uses: ./.github/workflows/run_tests.yml
+
+    build-and-deploy:
+        needs: tests
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            pull-requests: write
+        steps:
+            - name: Checkout 🛎️
+              uses: actions/checkout@v5
+              with:
+                  persist-credentials: false
+
+            - name: Install Go
+              uses: actions/setup-go@v6
+              with:
+                  go-version: 1.25.x
+
+            - name: Install Protoc
+              uses: arduino/setup-protoc@v3
+              with:
+                  version: 3.x
+                  repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Install Protoc Go plugin
+              run: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+
+            - name: Install Node
+              uses: actions/setup-node@v5
+              with:
+                  node-version: 22
+                  cache: npm
+
+            - name: Install npm dependencies
+              run: npm ci
+
+            - name: Build 🔧
+              run: |
+                  make dist/tbc/.dirstamp
+
+            - name: Update proto version file
+              run: |
+                  cp sim/core/TestProtoVersioning.results .deployedprotoversion
+
+            - name: Commit updated version file
+              run: |
+                  git config --local user.name "github-actions[bot]"
+                  git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  if ! git diff --exit-code; then
+                      git checkout -b github-actions
+                      git add .deployedprotoversion
+                      git commit -m "Auto-update .deployedprotoversion file due to API version increase"
+                      git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git
+                      git push --set-upstream origin github-actions
+                      gh pr create --fill
+                      gh pr merge --merge --delete-branch
+                  fi
+              env:
+                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Deploy 🚀
+              uses: JamesIves/github-pages-deploy-action@v4
+              with:
+                  repository-name: wowsims/pages-deploy
+                  branch: main
+                  folder: dist/tbc
+                  target-folder: tbc
+                  single-commit: true
+                  token: ${{ secrets.DEPLOY_REPO_TOKEN }}

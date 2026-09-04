@@ -99,7 +99,10 @@ export function buildStatWeightsRequest(
 			protectionPaladin: PROT_PALADIN_CLASS_OPTIONS,
 			// The Go/wasm sim only understands a precompiled APL, never the simple-rotation
 			// booleans directly - see protPaladinSimpleRotation.ts's header comment.
-			rotation: buildProtPaladinRotation(raidProfile.simpleRotation),
+			rotation: buildProtPaladinRotation(
+				raidProfile.simpleRotation,
+				raidProfile.talentsString,
+			),
 		},
 		raidBuffs: raidProfile.raidBuffs,
 		partyBuffs: raidProfile.partyBuffs,

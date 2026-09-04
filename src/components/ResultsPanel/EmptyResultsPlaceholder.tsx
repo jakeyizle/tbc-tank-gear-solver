@@ -21,8 +21,8 @@ export default function EmptyResultsPlaceholder() {
 				No results yet
 			</Typography>
 			<Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>
-				Configure your gear sets on the left, then click "Solve All" to see
-				optimized gear here.
+				Configure your gear sets on the left, then click "Solve all" to see
+				results here.
 			</Typography>
 		</Box>
 	);

@@ -150,7 +150,7 @@ describe("solveConfigForEHP", () => {
 			uncrushabilitySetting: 0,
 			optimizeStats: [],
 			objectiveMode: "ehp" as const,
-			simMetricWeights: { tps: 0, dtps: 0, tmi5: 0 },
+			simBalance: { balance: 0.5 },
 			resistanceFloors: [],
 			abilities: [],
 			talents: [],

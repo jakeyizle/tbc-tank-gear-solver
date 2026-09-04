@@ -4,8 +4,7 @@
 // only rotation form the Go/wasm sim engine understands. protPaladinDefaultApl.ts's
 // PROT_PALADIN_DEFAULT_APL is exactly this transform's output for `DefaultSimpleRotation`
 // (see its own header comment), and - since every default boolean is a structural no-op against
-// the base APL (matching spell ranks/ids already baked in, and this app's fixed talent build
-// already having the Holy Shield talent but not Avenger's Shield) - it also doubles as the
+// the base APL (matching spell ranks/ids already baked in) - it also doubles as the
 // untransformed base template the original code mutates, so no separate "pre-transform" APL
 // needs to be vendored.
 //
@@ -14,15 +13,13 @@
 // objects - the object paths below are the flattened-oneof equivalent of the original's
 // `as any` traversal.
 //
-// Known simplification (see the "Talent gating" decision in this session): tbc-new's own code
-// also forces `useAvengersShield`/`precastAvengersShield` to false unless the character's
-// talent string actually has the Avenger's Shield talent - re-deriving that from an arbitrary
-// user-edited talent string would require porting a second subsystem (a talent-string decoder).
-// Since this app's fixed reference talent build doesn't have that talent either, both settings
-// are hardcoded to `false` (matching today's actual behavior) rather than exposed as editable -
-// see SimpleRotationSettings/RaidProfileFields.tsx. For the same reason, "Sanctity Aura" (which
-// tbc-new falls back from when the Sanctity Aura talent is missing) is excluded from the aura
-// picker's options entirely instead of being silently overridden.
+// Talent gating: tbc-new's own code forces prioritizeHolyShield/useAvengersShield/
+// precastAvengersShield to false, and falls the aura back from Sanctity Aura to None, whenever
+// the character's talent string doesn't actually have the corresponding talent
+// (sim.ts:234-245). We derive talent presence from the same user-editable talentsString via
+// parseTalentsString() (src/data/talents.ts) rather than porting tbc-new's own talent-string
+// decoder - see that function and TALENT_STRING_POSITIONS["2"] for the position lookup.
+import { parseTalentsString } from "#/data/talents";
 import { PROT_PALADIN_DEFAULT_APL } from "./protPaladinDefaultApl";
 
 export type SimpleRotationInput = {
@@ -30,6 +27,8 @@ export type SimpleRotationInput = {
 	consecrationRank: number;
 	useExorcism: boolean;
 	useHammerOfWrath: boolean;
+	useAvengersShield: boolean;
+	precastAvengersShield: boolean;
 	maintainJudgement: "JudgementNone" | "JudgementOfLight" | "JudgementOfWisdom";
 	aura:
 		| "AuraNone"
@@ -38,12 +37,16 @@ export type SimpleRotationInput = {
 		| "ConcentrationAura"
 		| "FireResistanceAura"
 		| "FrostResistanceAura"
-		| "ShadowResistanceAura";
+		| "ShadowResistanceAura"
+		| "SanctityAura";
 };
 
 // Fixed indices into PROT_PALADIN_DEFAULT_APL - see that file's own comment on why reordering
 // it requires updating these (copied from sim.ts's identical constants).
 const PREPULL_AURA_INDEX = 1;
+const PREPULL_SEAL_INDEX = 2;
+const PREPULL_HOLY_SHIELD_INDEX = 3;
+const PREPULL_AVENGERS_SHIELD_INDEX = 4;
 const PRIORITY_JUDGE_ON_SEAL_INDEX = 1;
 const PRIORITY_SWAP_SEAL_INDEX = 4;
 const PRIORITY_CONSECRATION_INDEX = 6;
@@ -66,6 +69,7 @@ const AURA_SPELL_IDS: Record<SimpleRotationInput["aura"], number | null> = {
 	FireResistanceAura: 27153,
 	FrostResistanceAura: 27152,
 	ShadowResistanceAura: 27151,
+	SanctityAura: 20218,
 };
 
 const AURA_TAGS: Record<SimpleRotationInput["aura"], number> = {
@@ -76,6 +80,7 @@ const AURA_TAGS: Record<SimpleRotationInput["aura"], number> = {
 	FireResistanceAura: 1,
 	FrostResistanceAura: 1,
 	ShadowResistanceAura: 1,
+	SanctityAura: 0,
 };
 
 interface JudgementSpec {
@@ -109,23 +114,32 @@ const JUDGEMENT_CONFIG: Record<
 // biome-ignore lint/suspicious/noExplicitAny: plain JSON shape, no generated type available.
 type PlainApl = any;
 
-/** Builds the APL rotation JSON to send in a calibration request from the simple-rotation UI settings. */
+/**
+ * Builds the APL rotation JSON to send in a calibration request from the simple-rotation UI
+ * settings, gated against `talentsString` (see this file's header comment on talent gating).
+ */
 export function buildProtPaladinRotation(
 	simple: SimpleRotationInput,
+	talentsString: string,
 ): PlainApl {
 	const rotation: PlainApl = structuredClone(PROT_PALADIN_DEFAULT_APL);
 
-	const {
-		prioritizeHolyShield,
-		consecrationRank,
-		useExorcism,
-		useHammerOfWrath,
-		maintainJudgement,
-		aura,
-	} = simple;
+	const { consecrationRank, useExorcism, useHammerOfWrath, maintainJudgement } =
+		simple;
 
-	// Fixed per this session's talent-gating simplification - see this file's header comment.
-	const useAvengersShield = false;
+	const talentRanks = parseTalentsString("2", talentsString);
+	const hasHolyShield = (talentRanks["holy-shield"] ?? 0) > 0;
+	const hasAvengersShield = (talentRanks["avengers-shield"] ?? 0) > 0;
+	const hasSanctityAura = (talentRanks["sanctity-aura"] ?? 0) > 0;
+
+	const prioritizeHolyShield = simple.prioritizeHolyShield && hasHolyShield;
+	const useAvengersShield = simple.useAvengersShield && hasAvengersShield;
+	const precastAvengersShield =
+		simple.precastAvengersShield && hasAvengersShield;
+	const aura =
+		simple.aura === "SanctityAura" && !hasSanctityAura
+			? "AuraNone"
+			: simple.aura;
 
 	const judgementConfig = JUDGEMENT_CONFIG[maintainJudgement];
 
@@ -198,6 +212,16 @@ export function buildProtPaladinRotation(
 		if (tag !== 0) {
 			auraCast.tag = tag;
 		}
+	}
+
+	// Avenger's Shield prepull is disabled in the default APL; flip it on when precast is
+	// enabled, and slide the seal and Holy Shield casts earlier so AS can land at the pull
+	// without clipping them (mirrors sim.ts:260-264).
+	if (precastAvengersShield) {
+		rotation.prepullActions[PREPULL_AVENGERS_SHIELD_INDEX].hide = false;
+		rotation.prepullActions[PREPULL_SEAL_INDEX].doAtValue.const.val = "-4s";
+		rotation.prepullActions[PREPULL_HOLY_SHIELD_INDEX].doAtValue.const.val =
+			"-2.5s";
 	}
 
 	rotation.priorityList = rotation.priorityList.filter(

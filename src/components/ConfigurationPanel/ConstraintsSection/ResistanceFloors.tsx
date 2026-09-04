@@ -18,9 +18,14 @@ interface ResistanceFloorsProps {
 	onChange: (floors: ResistanceFloor[]) => void;
 }
 
-export default function ResistanceFloors({ floors, onChange }: ResistanceFloorsProps) {
+export default function ResistanceFloors({
+	floors,
+	onChange,
+}: ResistanceFloorsProps) {
 	const usedStats = new Set(floors.map((f) => f.stat));
-	const availableStats = RESISTANCE_STAT_NAMES.filter((stat) => !usedStats.has(stat));
+	const availableStats = RESISTANCE_STAT_NAMES.filter(
+		(stat) => !usedStats.has(stat),
+	);
 
 	const addFloor = () => {
 		const nextStat = availableStats[0];
@@ -35,7 +40,9 @@ export default function ResistanceFloors({ floors, onChange }: ResistanceFloorsP
 	const updateFloorValue = (index: number, newValue: string) => {
 		if (newValue.length > 0 && Number(newValue) < 0) return;
 		onChange(
-			floors.map((f, i) => (i === index ? { ...f, value: Number(newValue) || 0 } : f)),
+			floors.map((f, i) =>
+				i === index ? { ...f, value: Number(newValue) || 0 } : f,
+			),
 		);
 	};
 
@@ -76,7 +83,9 @@ export default function ResistanceFloors({ floors, onChange }: ResistanceFloorsP
 						<Box key={floor.stat} display="flex" alignItems="center" gap={0.75}>
 							<Select
 								value={floor.stat}
-								onChange={(e) => updateFloorStat(index, e.target.value as StatName)}
+								onChange={(e) =>
+									updateFloorStat(index, e.target.value as StatName)
+								}
 								size="small"
 								sx={{ width: 165, fontSize: 13 }}
 							>
@@ -95,7 +104,10 @@ export default function ResistanceFloors({ floors, onChange }: ResistanceFloorsP
 									htmlInput: { min: 0 },
 									input: {
 										startAdornment: (
-											<Box component="span" sx={{ color: "text.disabled", mr: 0.5, fontSize: 13 }}>
+											<Box
+												component="span"
+												sx={{ color: "text.disabled", mr: 0.5, fontSize: 13 }}
+											>
 												≥
 											</Box>
 										),

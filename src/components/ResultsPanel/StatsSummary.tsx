@@ -4,7 +4,8 @@ import { getBaseStats } from "#/data/baseStats";
 import { convertStatToPercentageOrSkill } from "#/helpers/convertStat";
 import { buildStatInputs } from "#/helpers/resultStats";
 import { calculateStatValue } from "#/helpers/stats";
-import type { LPItem } from "#/solver/types";
+import type { BalanceEndpoint } from "#/sim/solveBalancedSimMetric";
+import { type LPItem, STAT_LABELS, type Stat } from "#/solver/types";
 import type { SimMetricsSnapshot } from "#/types/SimCalibrationProfile";
 import type { BaseConfig, SolverConfiguration } from "#/types/SolverConfig";
 import StatsGroup from "./StatsGroup";
@@ -15,6 +16,16 @@ interface StatsSummaryProps {
 	solverConfig: SolverConfiguration;
 	includeBuffsConsumables: boolean;
 	simMetrics?: SimMetricsSnapshot;
+	statWeights?: Stat[];
+	statWeightStdevs?: Stat[];
+	// The balance slider's two real anchors - see solveBalancedSimMetric.ts and
+	// SimBalanceSlider.tsx. Only set for a "simWeighted" solve.
+	simBalanceEndpoints?: { threat: BalanceEndpoint; survival: BalanceEndpoint };
+}
+
+function formatEndpointAnchor(endpoint: BalanceEndpoint): string {
+	const { tps, tmi5 } = endpoint.simMetrics;
+	return `${tps.toLocaleString(undefined, { maximumFractionDigits: 0 })} TPS / ${tmi5.toLocaleString(undefined, { maximumFractionDigits: 2 })} TMI-5`;
 }
 
 export default function StatsSummary({
@@ -23,6 +34,9 @@ export default function StatsSummary({
 	solverConfig,
 	includeBuffsConsumables,
 	simMetrics,
+	statWeights,
+	statWeightStdevs,
+	simBalanceEndpoints,
 }: StatsSummaryProps) {
 	if (!rawItems || rawItems.length === 0) {
 		return null;
@@ -157,6 +171,24 @@ export default function StatsSummary({
 				{ name: "TMI-5", value: simMetrics.tmi5 },
 			]
 		: [];
+	const stdevByStat = new Map(
+		(statWeightStdevs ?? []).map((s) => [s.name, s.value]),
+	);
+	const statWeightRows = showSimMetrics
+		? [...(statWeights ?? [])]
+				.sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+				.map((s) => {
+					const stdev = stdevByStat.get(s.name);
+					return {
+						name: STAT_LABELS[s.name],
+						value: s.value,
+						detail:
+							stdev !== undefined
+								? `± ${stdev.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+								: undefined,
+					};
+				})
+		: [];
 
 	return (
 		<Box
@@ -240,6 +272,33 @@ export default function StatsSummary({
 						</Box>
 					))}
 				</Box>
+			)}
+
+			{showSimMetrics && simBalanceEndpoints && (
+				<Box
+					sx={{
+						display: "flex",
+						justifyContent: "space-between",
+						gap: 2,
+						px: 0.5,
+					}}
+				>
+					<Typography variant="caption" color="text.disabled">
+						100% Survivability:{" "}
+						{formatEndpointAnchor(simBalanceEndpoints.survival)}
+					</Typography>
+					<Typography variant="caption" color="text.disabled">
+						100% Threat: {formatEndpointAnchor(simBalanceEndpoints.threat)}
+					</Typography>
+				</Box>
+			)}
+
+			{statWeightRows.length > 0 && (
+				<StatsGroup
+					header="Calculated Stat Weights (TPS rel. to Spell Power, DTPS/TMI rel. to Armor, ± 1 stdev)"
+					stats={statWeightRows}
+					defaultExpanded={false}
+				/>
 			)}
 
 			<StatsGroup header="Mitigation" stats={mitigationStats} showRating />

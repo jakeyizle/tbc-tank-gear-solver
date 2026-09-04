@@ -129,20 +129,37 @@ export interface CalibratedWeights {
 	optimizeStats: Stat[];
 	/** Per-stat uncertainty on `optimizeStats` - see blendMetricEpValueStdevs. */
 	stdevStats: Stat[];
+	// The gear's absolute TPS/DTPS/TMI-5 at calibration time, read off this same batch's
+	// unperturbed baseline sim (StatWeightsResult.baseline - see statweight.go's
+	// computeStatWeights echoing swcr.BaseResult back onto the result) instead of a second,
+	// separate sim call. Undefined only if the wasm build predates that field (e.g. a stale
+	// lib.wasm.gz) - callers that need it should treat a missing value as "not yet available"
+	// rather than throwing.
+	baselineMetrics?: SimMetricsSnapshot;
+}
+
+export interface CalibrationBatch {
+	result: StatWeightsResult;
+	// See CalibratedWeights.baselineMetrics - same value, exposed here too so a caller that needs
+	// a second blend (e.g. a secondary sim-metric constraint - see solveSimMetric.ts) doesn't have
+	// to re-derive it from `result.baseline` itself.
+	baselineMetrics?: SimMetricsSnapshot;
 }
 
 /**
- * Calibrates and blends `metricRatios`' per-stat marginal weights (and their uncertainty) around
- * `gear` via the real sim, for every stat in `statsToWeigh` that has a translation entry.
+ * Runs one real sim calibration batch around `gear` - the expensive, only-do-this-once-per-round
+ * part of calibrateWeights() below, pulled out so a caller that needs more than one blend of the
+ * same batch (e.g. an objective vector AND an independent secondary-constraint vector) can call
+ * `blendMetricEpValues`/`blendMetricEpValueStdevs` against the same `result` twice, at no extra
+ * sim cost, instead of running this twice.
  */
-export async function calibrateWeights(
+export async function runCalibrationBatch(
 	gear: GearPiece[],
 	db: TbcUiDatabase,
 	statsToWeigh: StatName[],
-	metricRatios: Partial<Record<SimMetric, number>>,
 	profile: SimCalibrationProfile,
 	onProgress?: (progress: CalibrationProgress) => void,
-): Promise<CalibratedWeights> {
+): Promise<CalibrationBatch> {
 	const requestJson = buildStatWeightsRequest(
 		gear,
 		db,
@@ -172,8 +189,37 @@ export async function calibrateWeights(
 	);
 
 	return {
+		result,
+		baselineMetrics: result.baseline
+			? extractSimMetrics(result.baseline)
+			: undefined,
+	};
+}
+
+/**
+ * Calibrates and blends `metricRatios`' per-stat marginal weights (and their uncertainty) around
+ * `gear` via the real sim, for every stat in `statsToWeigh` that has a translation entry.
+ */
+export async function calibrateWeights(
+	gear: GearPiece[],
+	db: TbcUiDatabase,
+	statsToWeigh: StatName[],
+	metricRatios: Partial<Record<SimMetric, number>>,
+	profile: SimCalibrationProfile,
+	onProgress?: (progress: CalibrationProgress) => void,
+): Promise<CalibratedWeights> {
+	const { result, baselineMetrics } = await runCalibrationBatch(
+		gear,
+		db,
+		statsToWeigh,
+		profile,
+		onProgress,
+	);
+
+	return {
 		optimizeStats: blendMetricEpValues(result, statsToWeigh, metricRatios),
 		stdevStats: blendMetricEpValueStdevs(result, statsToWeigh, metricRatios),
+		baselineMetrics,
 	};
 }
 

@@ -35,9 +35,14 @@ export default function ConstraintsSection({
 }: ConstraintsSectionProps) {
 	return (
 		<Stack spacing={2}>
-			<Stack direction="row" spacing={3.5} useFlexGap sx={{ flexWrap: "wrap", rowGap: 2 }}>
+			<Stack
+				direction="row"
+				spacing={3.5}
+				useFlexGap
+				sx={{ flexWrap: "wrap", rowGap: 2 }}
+			>
 				<SegmentedControl
-					label="Crit reduction"
+					label="Crit cap"
 					options={CRIT_OPTIONS}
 					value={uncritabilitySetting}
 					onChange={(val) => onUpdateConstraints(val, uncrushabilitySetting)}
@@ -49,7 +54,10 @@ export default function ConstraintsSection({
 					onChange={(val) => onUpdateConstraints(uncritabilitySetting, val)}
 				/>
 			</Stack>
-			<ResistanceFloors floors={resistanceFloors} onChange={onUpdateResistanceFloors} />
+			<ResistanceFloors
+				floors={resistanceFloors}
+				onChange={onUpdateResistanceFloors}
+			/>
 		</Stack>
 	);
 }

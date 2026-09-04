@@ -1,0 +1,98 @@
+import { stat } from 'fs';
+import { IndividualSimUI } from '../../../individual_sim_ui';
+import { PseudoStat, Spec, Stat } from '../../../proto/common';
+import { UnitStat } from '../../../proto_utils/stats';
+import { IndividualExporter } from './individual_exporter';
+
+export class Individual60UEPExporter<SpecType extends Spec> extends IndividualExporter<SpecType> {
+	constructor(parent: HTMLElement, simUI: IndividualSimUI<SpecType>) {
+		super(parent, simUI, { title: 'Sixty Upgrades EP Export', allowDownload: true });
+	}
+
+	getData(): string {
+		const player = this.simUI.player;
+		const epValues = player.getEpWeights();
+		const allUnitStats = UnitStat.getAll();
+
+		const namesToWeights: Record<string, number> = {};
+		allUnitStats.forEach(stat => {
+			const statName = Individual60UEPExporter.getName(stat);
+			const weight = epValues.getUnitStat(stat);
+			if (weight == 0 || statName == '') {
+				return;
+			}
+
+			// Need to add together stats with the same name (e.g. hit/crit/haste).
+			if (namesToWeights[statName]) {
+				namesToWeights[statName] += weight;
+			} else {
+				namesToWeights[statName] = weight;
+			}
+		});
+
+		return (
+			`https://sixtyupgrades.com/tbc/ep/import?name=${encodeURIComponent(`${player.getPlayerSpec().friendlyName} WoWSims Weights`)}` +
+			Object.keys(namesToWeights)
+				.map(statName => `&${statName}=${namesToWeights[statName].toFixed(3)}`)
+				.join('')
+		);
+	}
+
+	static getName(stat: UnitStat): string {
+		if (stat.isStat()) {
+			return Individual60UEPExporter.statNames[stat.getStat()];
+		} else {
+			return Individual60UEPExporter.pseudoStatNames[stat.getPseudoStat()] || '';
+		}
+	}
+
+	static statNames: Record<Stat, string> = {
+		[Stat.StatStrength]: 'strength',
+		[Stat.StatAgility]: 'agility',
+		[Stat.StatStamina]: 'stamina',
+		[Stat.StatIntellect]: 'intellect',
+		[Stat.StatSpirit]: 'spirit',
+		[Stat.StatMP5]: 'mp5',
+		[Stat.StatAttackPower]: 'attackPower',
+		[Stat.StatExpertiseRating]: 'expertiseRating',
+		// TODO: Change PVP Resilience and Power once 60U exists for MoP
+		[Stat.StatMana]: 'mana',
+		[Stat.StatArmor]: 'armor',
+		[Stat.StatRangedAttackPower]: 'attackPower',
+		[Stat.StatDodgeRating]: 'dodgeRating',
+		[Stat.StatParryRating]: 'parryRating',
+		[Stat.StatHealth]: 'health',
+		[Stat.StatBonusArmor]: 'armorBonus',
+		[Stat.StatHealingPower]: 'healingPower',
+		[Stat.StatSpellDamage]: 'spellDamage',
+		[Stat.StatArcaneDamage]: 'arcaneDamage',
+		[Stat.StatFireDamage]: 'fireDamage',
+		[Stat.StatFrostDamage]: 'frostDamage',
+		[Stat.StatHolyDamage]: 'holyDamage',
+		[Stat.StatNatureDamage]: 'natureDamage',
+		[Stat.StatShadowDamage]: 'shadowDamage',
+		[Stat.StatPhysicalDamage]: 'physicalDamage',
+		[Stat.StatSpellHitRating]: 'spellHitRating',
+		[Stat.StatSpellCritRating]: 'spellCritRating',
+		[Stat.StatSpellHasteRating]: 'spellHasteRating',
+		[Stat.StatSpellPenetration]: 'spellPenetration',
+		[Stat.StatFeralAttackPower]: '',
+		[Stat.StatMeleeHitRating]: 'hitRating',
+		[Stat.StatMeleeCritRating]: 'critRating',
+		[Stat.StatMeleeHasteRating]: 'hasteRating',
+		[Stat.StatArmorPenetration]: 'armorPen',
+		[Stat.StatDefenseRating]: 'defense',
+		[Stat.StatBlockRating]: 'block',
+		[Stat.StatBlockValue]: 'blockValueBonus',
+		[Stat.StatResilienceRating]: 'resilienceRating',
+		[Stat.StatArcaneResistance]: 'arcaneResistance',
+		[Stat.StatFireResistance]: 'fireResistance',
+		[Stat.StatFrostResistance]: 'frostResistance',
+		[Stat.StatNatureResistance]: 'natureResistance',
+		[Stat.StatShadowResistance]: 'shadowResistance',
+	};
+	static pseudoStatNames: Partial<Record<PseudoStat, string>> = {
+		[PseudoStat.PseudoStatMainHandDps]: 'dps',
+		[PseudoStat.PseudoStatRangedDps]: 'rangedDps',
+	};
+}

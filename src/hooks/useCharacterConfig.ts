@@ -5,7 +5,9 @@ export function useCharacterConfig() {
 	const context = useContext(CharacterConfigContext);
 
 	if (!context) {
-		throw new Error("useCharacterConfig must be used within CharacterConfigProvider");
+		throw new Error(
+			"useCharacterConfig must be used within CharacterConfigProvider",
+		);
 	}
 
 	return context;

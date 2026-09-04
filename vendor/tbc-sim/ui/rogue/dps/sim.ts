@@ -1,0 +1,194 @@
+import * as OtherInputs from '../../core/components/inputs/other_inputs';
+import { IndividualSimUI, registerSpecConfig } from '../../core/individual_sim_ui';
+import { Player } from '../../core/player';
+import { PlayerClasses } from '../../core/player_classes';
+import { APLRotation } from '../../core/proto/apl';
+import {
+	Debuffs,
+	Drums,
+	Faction,
+	IndividualBuffs,
+	ItemSlot,
+	PartyBuffs,
+	PseudoStat,
+	Race,
+	RaidBuffs,
+	Spec,
+	Stat,
+	TristateEffect,
+} from '../../core/proto/common';
+import { StatCap, Stats, UnitStat } from '../../core/proto_utils/stats';
+import { defaultExposeWeaknessSettings, defaultRaidBuffMajorDamageCooldowns } from '../../core/proto_utils/utils';
+
+import * as Presets from './presets';
+import * as Mechanics from '../../core/constants/mechanics';
+import { StatCapType } from '../../core/proto/ui';
+import { ReforgeOptimizer } from '../../core/components/suggest_reforges_action';
+
+const SPEC_CONFIG = registerSpecConfig(Spec.SpecRogue, {
+	cssClass: 'rogue-sim-ui',
+	cssScheme: PlayerClasses.getCssClass(PlayerClasses.Rogue),
+	// List any known bugs / issues here and they'll be shown on the site.
+	knownIssues: [
+		'The APL is in constant flux due to bug fixes and new findings; if your DPS drops dramatically, reset it back to "Auto" in the Rotation tab!',
+		'Mutilate does not have a default APL currently. It will not be automatically used when talented.',
+	],
+
+	// All stats for which EP should be calculated.
+	epStats: [
+		Stat.StatStamina,
+		Stat.StatAgility,
+		Stat.StatStrength,
+		Stat.StatMeleeCritRating,
+		Stat.StatMeleeHasteRating,
+		Stat.StatMeleeHitRating,
+		Stat.StatArmorPenetration,
+		Stat.StatExpertiseRating,
+		Stat.StatAttackPower,
+		Stat.StatPhysicalDamage,
+	],
+	epPseudoStats: [PseudoStat.PseudoStatMainHandDps, PseudoStat.PseudoStatOffHandDps],
+	// Reference stat against which to calculate EP.
+	epReferenceStat: Stat.StatAttackPower,
+	// Which stats to display in the Character Stats section, at the bottom of the left-hand sidebar.
+	displayStats: UnitStat.createDisplayStatArray(
+		[
+			Stat.StatHealth,
+			Stat.StatStamina,
+			Stat.StatAgility,
+			Stat.StatStrength,
+			Stat.StatAttackPower,
+			Stat.StatArmorPenetration,
+			Stat.StatExpertiseRating,
+			Stat.StatArcaneResistance,
+			Stat.StatFireResistance,
+			Stat.StatFrostResistance,
+			Stat.StatNatureResistance,
+			Stat.StatShadowResistance,
+		],
+		[PseudoStat.PseudoStatMeleeHitPercent, PseudoStat.PseudoStatMeleeCritPercent, PseudoStat.PseudoStatMeleeHastePercent],
+	),
+
+	defaults: {
+		// Default equipped gear.
+		gear: Presets.P3_SWORDS_GEAR.gear,
+		// Default EP weights for sorting gear in the gear picker.
+		epWeights: Presets.P1_EP_PRESET.epWeights,
+		statCaps: (() => {
+			const expCap = new Stats().withStat(Stat.StatExpertiseRating, 6.5 * 4 * Mechanics.EXPERTISE_PER_QUARTER_PERCENT_REDUCTION);
+			return expCap;
+		})(),
+		softCapBreakpoints: (() => {
+			const meleeHitSoftCapConfig = StatCap.fromPseudoStat(PseudoStat.PseudoStatMeleeHitPercent, {
+				breakpoints: [9, 28],
+				capType: StatCapType.TypeSoftCap,
+				postCapEPs: [3.06 * Mechanics.PHYSICAL_HIT_RATING_PER_HIT_PERCENT, 0],
+			});
+
+			return [meleeHitSoftCapConfig];
+		})(),
+		other: Presets.OtherDefaults,
+		// Default consumes settings.
+		consumables: Presets.DefaultConsumables,
+		// Default talents.
+		talents: Presets.Talents.data,
+		// Default spec-specific settings.
+		specOptions: Presets.DefaultOptions,
+		// Default raid/party buffs settings.
+		raidBuffs: RaidBuffs.create({
+			...defaultRaidBuffMajorDamageCooldowns(),
+			giftOfTheWild: TristateEffect.TristateEffectImproved,
+		}),
+		partyBuffs: PartyBuffs.create({
+			battleShout: TristateEffect.TristateEffectImproved,
+			ferociousInspiration: 1,
+			strengthOfEarthTotem: TristateEffect.TristateEffectImproved,
+			graceOfAirTotem: TristateEffect.TristateEffectImproved,
+			windfuryTotem: TristateEffect.TristateEffectImproved,
+			leaderOfThePack: TristateEffect.TristateEffectRegular,
+			totemTwisting: true,
+			drums: Drums.LesserDrumsOfBattle,
+		}),
+		individualBuffs: IndividualBuffs.create({
+			blessingOfKings: true,
+			blessingOfMight: TristateEffect.TristateEffectImproved,
+			unleashedRage: true,
+		}),
+		debuffs: Debuffs.create({
+			...defaultExposeWeaknessSettings(),
+			bloodFrenzy: true,
+			huntersMark: TristateEffect.TristateEffectImproved,
+			improvedSealOfTheCrusader: TristateEffect.TristateEffectImproved,
+			mangle: true,
+			misery: true,
+			curseOfRecklessness: true,
+			faerieFire: TristateEffect.TristateEffectImproved,
+			giftOfArthas: true,
+			sunderArmor: true,
+		}),
+	},
+
+	playerInputs: {
+		inputs: [],
+	},
+	// IconInputs to include in the 'Player' section on the settings tab.
+	playerIconInputs: [],
+	// Buff and Debuff inputs to include/exclude, overriding the EP-based defaults.
+	includeBuffDebuffInputs: [Stat.StatSpellHitRating],
+	excludeBuffDebuffInputs: [],
+	// Inputs to include in the 'Other' section on the settings tab.
+	otherInputs: {
+		inputs: [OtherInputs.TotemTwisting, OtherInputs.InFrontOfTarget, OtherInputs.InputDelay],
+	},
+	itemSwapSlots: [ItemSlot.ItemSlotTrinket1, ItemSlot.ItemSlotTrinket2, ItemSlot.ItemSlotMainHand, ItemSlot.ItemSlotOffHand],
+	encounterPicker: {
+		// Whether to include 'Execute Duration (%)' in the 'Encounter' section of the settings tab.
+		showExecuteProportion: false,
+	},
+
+	presets: {
+		epWeights: [Presets.P1_EP_PRESET],
+		// Preset talents that the user can quickly select.
+		talents: [Presets.Talents],
+		// Preset rotations that the user can quickly select.
+		rotations: [Presets.SINSITER_APL],
+		// Preset gear configurations that the user can quickly select.
+		gear: [Presets.PREARAID_SWORDS_GEAR, Presets.P1_SWORDS_GEAR, Presets.P2_SWORDS_GEAR, Presets.P3_SWORDS_GEAR],
+	},
+
+	autoRotation: (player: Player<Spec.SpecRogue>): APLRotation => {
+		return Presets.SINSITER_APL.rotation.rotation!;
+	},
+
+	raidSimPresets: [
+		{
+			spec: Spec.SpecRogue,
+			talents: Presets.Talents.data,
+			specOptions: Presets.DefaultOptions,
+			consumables: Presets.DefaultConsumables,
+			defaultFactionRaces: {
+				[Faction.Unknown]: Race.RaceUnknown,
+				[Faction.Alliance]: Race.RaceHuman,
+				[Faction.Horde]: Race.RaceOrc,
+			},
+			defaultGear: {
+				[Faction.Unknown]: {},
+				[Faction.Alliance]: {
+					1: Presets.P3_SWORDS_GEAR.gear,
+				},
+				[Faction.Horde]: {
+					1: Presets.P3_SWORDS_GEAR.gear,
+				},
+			},
+			otherDefaults: Presets.OtherDefaults,
+		},
+	],
+});
+
+export class RogueSimUI extends IndividualSimUI<Spec.SpecRogue> {
+	constructor(parentElem: HTMLElement, player: Player<Spec.SpecRogue>) {
+		super(parentElem, player, SPEC_CONFIG);
+
+		this.reforger = new ReforgeOptimizer(this, {});
+	}
+}

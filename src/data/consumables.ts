@@ -56,7 +56,7 @@ export const CONSUMABLES: ConsumableItem[] = [
 		wowheadId: 32062,
 		stats: [
 			{
-				name: "Armor",
+				name: "Health",
 				value: 250,
 				type: "flat",
 			},

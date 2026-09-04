@@ -38,6 +38,7 @@ const makeItem = (
 	objectiveScore: 0,
 	uncritabilityScore: 0,
 	resistanceScores: {},
+	constraintScore: 0,
 	...overrides,
 });
 
@@ -171,8 +172,11 @@ describe("parseCharacterExport", () => {
 				toughness: 5,
 				anticipation: 5,
 				"sacred-duty": 2,
+				"holy-shield": 1,
 				"combat-expertise": 5,
+				"avengers-shield": 0,
 				deflection: 5,
+				"sanctity-aura": 1,
 			},
 			supported: true,
 		});

@@ -49,9 +49,7 @@ export const SLOT_LABELS: Record<string, string> = {
 	Ranged: "Ranged",
 };
 
-export const groupItemsBySlot = (
-	items: LPItem[],
-): Record<string, LPItem> => {
+export const groupItemsBySlot = (items: LPItem[]): Record<string, LPItem> => {
 	const result: Record<string, LPItem> = {};
 	const counters: Record<string, number> = {};
 

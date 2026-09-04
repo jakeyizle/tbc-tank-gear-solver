@@ -1,0 +1,108 @@
+@use 'sass:map';
+
+.settings-tab {
+	.tab-pane-content-container {
+		.tab-panel-left {
+			grid-template-columns: 2fr 2fr 3fr;
+		}
+	}
+
+	.rotation-settings,
+	.other-settings {
+		.input-root {
+			label {
+				width: 60%;
+				padding-right: 0.5rem;
+			}
+
+			input:not(.form-check-input),
+			select,
+			.picker-group {
+				min-width: 40%;
+			}
+		}
+	}
+
+	.other-settings {
+		.icon-picker {
+			&:has(label) {
+				width: 100% !important;
+				flex-direction: row-reverse !important;
+
+				label {
+					margin-left: 0;
+				}
+			}
+		}
+	}
+
+	.cooldown-settings {
+		.cooldown-timings-picker {
+			min-width: 40%;
+			width: 40%;
+		}
+	}
+
+	.buffs-settings,
+	.assigned-curse-settings,
+	.debuffs-settings {
+		.content-block-header {
+			flex-direction: column;
+		}
+
+		.icon-enum-picker-root {
+			flex-direction: row-reverse !important;
+			justify-content: flex-end;
+		}
+	}
+
+	.buffs-settings,
+	.debuffs-settings {
+		.content-block-body {
+			--column-count: 3;
+			display: grid;
+			grid-template-columns: repeat(var(--column-count), minmax(0, 1fr));
+			grid-gap: var(--block-spacer);
+
+			@include media-breakpoint-down(xxxl) {
+				--column-count: 2;
+			}
+
+			@include media-breakpoint-down(lg) {
+				--column-count: 3;
+			}
+
+			@include media-breakpoint-down(md) {
+				--column-count: 2;
+			}
+
+			& > .icon-picker {
+				.form-label {
+					white-space: normal;
+				}
+			}
+		}
+	}
+}
+
+@include media-breakpoint-down(xxl) {
+	.settings-tab {
+		.tab-pane-content-container {
+			flex-direction: column;
+		}
+	}
+}
+
+@include media-breakpoint-down(xl) {
+	.settings-tab {
+		.tab-pane-content-container {
+			.tab-panel-left {
+				flex-wrap: wrap;
+
+				.tab-panel-col {
+					flex-basis: 100%;
+				}
+			}
+		}
+	}
+}

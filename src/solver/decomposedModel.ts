@@ -1,5 +1,9 @@
 import type { GLPK as GLPKType } from "glpk.js";
-import { gemColorMatches, type GemColor, type SocketColor } from "./socketBonus";
+import {
+	type GemColor,
+	gemColorMatches,
+	type SocketColor,
+} from "./socketBonus";
 import type {
 	DecomposableItem,
 	Enchant,
@@ -33,7 +37,11 @@ export const allItemHeaders = (
 	fixedItems: LPItem[],
 	decomposableItems: DecomposableItem[],
 ): ItemHeader[] => [
-	...fixedItems.map((item) => ({ uniqueId: item.uniqueId, id: item.id, type: item.type })),
+	...fixedItems.map((item) => ({
+		uniqueId: item.uniqueId,
+		id: item.id,
+		type: item.type,
+	})),
 	...decomposableItems.map((item) => ({
 		uniqueId: item.uniqueId,
 		id: item.base.id,
@@ -96,17 +104,29 @@ export const buildResistanceVars = (
 		vars.push({ name: item.uniqueId, coef: item.resistanceScores[stat] ?? 0 });
 	}
 	for (const item of decomposableItems) {
-		vars.push({ name: item.uniqueId, coef: item.itemScores.resistanceScores[stat] ?? 0 });
+		vars.push({
+			name: item.uniqueId,
+			coef: item.itemScores.resistanceScores[stat] ?? 0,
+		});
 		for (const enchant of item.enchantCandidates) {
-			vars.push({ name: enchant.varName, coef: enchant.scores.resistanceScores[stat] ?? 0 });
+			vars.push({
+				name: enchant.varName,
+				coef: enchant.scores.resistanceScores[stat] ?? 0,
+			});
 		}
 		for (const socket of item.sockets) {
 			for (const gem of socket.candidates) {
-				vars.push({ name: gem.varName, coef: gem.scores.resistanceScores[stat] ?? 0 });
+				vars.push({
+					name: gem.varName,
+					coef: gem.scores.resistanceScores[stat] ?? 0,
+				});
 			}
 		}
 		if (item.bonusVarName && item.bonusScores) {
-			vars.push({ name: item.bonusVarName, coef: item.bonusScores.resistanceScores[stat] ?? 0 });
+			vars.push({
+				name: item.bonusVarName,
+				coef: item.bonusScores.resistanceScores[stat] ?? 0,
+			});
 		}
 	}
 	return vars;
@@ -160,7 +180,10 @@ export const buildDecomposedLinkingConstraints = (
 			rows.push({
 				name: `enchant_link_${item.uniqueId}`,
 				vars: [
-					...item.enchantCandidates.map((enchant) => ({ name: enchant.varName, coef: 1 })),
+					...item.enchantCandidates.map((enchant) => ({
+						name: enchant.varName,
+						coef: 1,
+					})),
 					{ name: item.uniqueId, coef: -1 },
 				],
 				bnds: { type: glpk.GLP_FX, lb: 0, ub: 0 },
@@ -226,7 +249,9 @@ export const resolveChosenDecomposableItems = (
 		// gem placed in socket 2 while socket 1 is skipped doesn't shift into slot 1
 		const gemSlots: string[] = new Array(item.base.sockets.length).fill("0");
 		for (const socket of item.sockets) {
-			const chosenGem = socket.candidates.find((gem) => varValues[gem.varName] === 1);
+			const chosenGem = socket.candidates.find(
+				(gem) => varValues[gem.varName] === 1,
+			);
 			if (chosenGem) {
 				gems.push(chosenGem.gem);
 				gemSlots[socket.socketIndex] = chosenGem.gem.id;

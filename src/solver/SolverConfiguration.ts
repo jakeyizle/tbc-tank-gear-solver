@@ -7,6 +7,18 @@ import {
 import { calculateScores } from "./scores";
 import type { ModifierSource, ResistanceFloor, Stat } from "./types";
 
+// A hard floor/ceiling on a second, independently-weighted linear metric (e.g. a sim-calibrated
+// TMI-5 ceiling alongside a TPS-maximizing objective) - see decomposedModel.ts's
+// buildScoreVars(..., "constraintScore") and solveConfig.ts's makeMetricConstraint. `bound` is
+// already expressed in the same marginal/relative units `statWeights` produces (a caller has
+// already netted out the metric's current absolute value against its own baseline - see
+// solveSimMetric.ts), not a raw absolute threshold.
+export interface SecondaryConstraint {
+	statWeights: Stat[];
+	bound: number;
+	kind: "floor" | "ceiling";
+}
+
 /**
  * Centralized configuration object that encapsulates all solver settings
  * and provides derived calculations. Eliminates the need to pass multiple
@@ -17,6 +29,7 @@ export class SolverConfiguration {
 	readonly uncritabilitySetting: number;
 	readonly optimizeStats: Stat[];
 	readonly resistanceFloors: ResistanceFloor[];
+	readonly secondaryConstraint?: SecondaryConstraint;
 	readonly baseStats: Stat[];
 	readonly flatModifierSources: ModifierSource[];
 	readonly multiplierModifierSources: ModifierSource[];
@@ -30,13 +43,17 @@ export class SolverConfiguration {
 	readonly baseAvoidance: number;
 	readonly baseUncritability: number;
 	// resistance floors converted to LP targets (floor minus what base stats/talents/buffs already provide)
-	readonly resistanceTargets: { stat: ResistanceFloor["stat"]; target: number }[];
+	readonly resistanceTargets: {
+		stat: ResistanceFloor["stat"];
+		target: number;
+	}[];
 
 	constructor(options: {
 		uncrushabilitySetting: number;
 		uncritabilitySetting: number;
 		optimizeStats: Stat[];
 		resistanceFloors?: ResistanceFloor[];
+		secondaryConstraint?: SecondaryConstraint;
 		talentSources: ModifierSource[];
 		buffs: ModifierSource[];
 		abilitySources: ModifierSource[];
@@ -50,6 +67,7 @@ export class SolverConfiguration {
 		this.excludeUniqueGems = options.excludeUniqueGems;
 		this.phase = options.phase;
 		this.resistanceFloors = options.resistanceFloors ?? [];
+		this.secondaryConstraint = options.secondaryConstraint;
 		this.avoidanceStatName =
 			options.uncrushabilitySetting === 2 ? "ShearAvoidance" : "Avoidance";
 		this.optimizeStats = options.optimizeStats;
@@ -127,12 +145,17 @@ export class SolverConfiguration {
 		const hasRelevantResistance = Object.values(scores.resistanceScores).some(
 			(value) => (value ?? 0) > 0,
 		);
+		// A stat that only ever helps the secondary constraint (not the objective/avoidance/
+		// uncrit/resistance) would otherwise be pruned here before the LP ever gets a chance to
+		// use it to satisfy that constraint - see getEnchants/getGems in items.ts.
+		const hasRelevantConstraint = scores.constraintScore !== 0;
 
 		return (
 			hasRelevantAvoidance ||
 			hasRelevantUncritability ||
 			hasRelevantObjective ||
-			hasRelevantResistance
+			hasRelevantResistance ||
+			hasRelevantConstraint
 		);
 	}
 
@@ -141,6 +164,7 @@ export class SolverConfiguration {
 		uncritabilityScore: number;
 		objectiveScore: number;
 		resistanceScores: Partial<Record<ResistanceFloor["stat"], number>>;
+		constraintScore: number;
 	} {
 		return calculateScores(
 			stats,
@@ -148,6 +172,7 @@ export class SolverConfiguration {
 			this.multiplierModifierSources,
 			this.avoidanceStatName,
 			this.resistanceFloors.map((floor) => floor.stat),
+			this.secondaryConstraint?.statWeights ?? [],
 		);
 	}
 

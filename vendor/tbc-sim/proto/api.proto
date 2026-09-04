@@ -1,0 +1,615 @@
+syntax = "proto3";
+package proto;
+
+option go_package = "./proto";
+
+import "common.proto";
+import "apl.proto";
+import "db.proto";
+import "spell.proto";
+import "druid.proto";
+import "hunter.proto";
+import "mage.proto";
+import "paladin.proto";
+import "priest.proto";
+import "rogue.proto";
+import "shaman.proto";
+import "warlock.proto";
+import "warrior.proto";
+
+// NextIndex: 59
+message Player {
+	// Proto version at the time Player were saved.
+	// A "breaking change" here is defined as anything that will break saved
+	// browser data or old sim links; the version need not be incremented if
+	// you simply append a new rarely-used PseudoStat to the end of the
+	// array, for example.
+	int32 api_version = 54;
+	// Label used for logging.
+	string name = 51;
+
+	Race race = 1;
+	Class class = 2;
+
+	EquipmentSpec equipment = 3;
+
+	ConsumesSpec consumables = 4;
+
+	UnitStats bonus_stats = 5;
+
+	bool enable_item_swap = 6;
+	ItemSwap item_swap = 7;
+
+	IndividualBuffs buffs = 8;
+
+	oneof spec {
+		BalanceDruid balance_druid = 12;
+		FeralCatDruid feral_cat_druid = 13;
+		FeralBearDruid feral_bear_druid = 53;
+		RestorationDruid restoration_druid = 14;
+
+		Hunter hunter = 17;
+
+		Mage mage = 20;
+
+		HolyPaladin holy_paladin = 21;
+		ProtectionPaladin protection_paladin = 22;
+		RetributionPaladin retribution_paladin = 23;
+
+		Priest priest = 24;
+
+		Rogue rogue = 29;
+
+		ElementalShaman elemental_shaman = 30;
+		EnhancementShaman enhancement_shaman = 31;
+		RestorationShaman restoration_shaman = 32;
+
+		Warlock warlock = 35;
+
+		DpsWarrior dps_warrior = 37;
+		ProtectionWarrior protection_warrior = 38;
+	}
+
+	// Talents in wowhead format, e.g. '000000'
+	string talents_string = 39;
+	Profession profession1 = 41;
+	Profession profession2 = 42;
+	Cooldowns cooldowns = 43;
+
+	APLRotation rotation = 44;
+
+	// TODO: Move most of the remaining fields into a 'MiscellaneousPlayerOptions' message.
+	// This will remove a lot of the boilerplate code in the UI for each new field.
+
+	int32 reaction_time_ms = 45;
+	int32 channel_clip_delay_ms = 46;
+	bool in_front_of_target = 47;
+	double distance_from_target = 48;
+	double dark_intent_uptime = 52;
+	bool challenge_mode = 58;
+
+	HealingModel healing_model = 49;
+
+	// Items/enchants/gems/etc to include in the database.
+	SimDatabase database = 50;
+}
+
+message Party {
+	repeated Player players = 1;
+
+	PartyBuffs buffs = 2;
+}
+
+message Raid {
+	repeated Party parties = 1;
+
+	// The number of parties in the raid who participate in the sim, e.g.
+	// 10-man vs 25-man raids. The remaining parties are unused but can hold
+	// bench players.
+	//
+	// If this value is 0, all parties are included.
+	int32 num_active_parties = 2;
+
+	RaidBuffs buffs = 7;
+
+	// Extra debuffs provided by buff bots in this raid.
+	// This is also used for debuffs in the individual sims.
+	Debuffs debuffs = 5;
+
+	// Players who will be tanking mobs.
+	repeated UnitReference tanks = 4;
+
+	// Staggers Stormstrike casts across Enhance Shaman to maximize charge usage.
+	bool stagger_stormstrikes = 3;
+
+	// Extra fake players to add. Currently only used by healing sims.
+	int32 target_dummies = 6;
+}
+
+message SimOptions {
+	int32 iterations = 1;
+	int64 random_seed = 2;
+	bool debug = 3; // Enables debug logging.
+	bool debug_first_iteration = 6;
+	bool is_test = 5; // Only used internally.
+	bool save_all_values = 7; // Only used internally.
+	bool interactive = 8; // Enables interactive mode.
+	bool use_labeled_rands = 9; // Use test level RNG.
+}
+
+// The aggregated results from all uses of a particular action.
+message ActionMetrics {
+	ActionID id = 1;
+
+	// True if a melee action, false if a spell action.
+	bool is_melee = 2;
+
+	// Metrics for this action for each target.
+	// Note that some spells are untargeted, these will always have a single
+	// element in this array.
+	repeated TargetedActionMetrics targets = 3;
+
+	int32 spell_school = 4;
+
+	// True if action is applied/cast as a result of another action
+	bool is_passive = 5;
+}
+
+// Metrics for a specific action, when cast at a particular target.
+message TargetedActionMetrics {
+	// Raid/Target Index of the unit these metrics are targeted at.
+	int32 unit_index = 1;
+
+	// # of times this action was used by the agent.
+	int32 casts = 2;
+
+	// # of times this action hit a target. For cleave spells this can be larger than casts.
+	int32 hits = 3;
+
+	// # of times this action resisted hit a target.
+	int32 resisted_hits = 27;
+
+	// # of times this action was a critical strike.
+	int32 crits = 4;
+
+	// # of times this action resisted crit a target.
+	int32 resisted_crits = 28;
+
+	// # of times this action ticked on a target.
+	int32 ticks = 5;
+
+	// # of times this action resisted ticked a target.
+	int32 resisted_ticks = 29;
+
+	// # of times this action was a critical tick on a target.
+	int32 crit_ticks = 6;
+
+	// # of times this action was a resisted critical tick on a target.
+	int32 resisted_crit_ticks = 30;
+
+	// # of times this action was a Miss.
+	int32 misses = 7;
+
+	// # of times this action was a Dodge.
+	int32 dodges = 8;
+
+	// # of times this action was a Parry.
+	int32 parries = 9;
+
+	// # of times this action was a Block.
+	int32 blocks = 10;
+
+	// # of times this action was a Critical Block.
+	int32 blocked_crits = 11;
+
+	// # of times this action was a Glance.
+	int32 glances = 12;
+
+	// # of times this action was a Glancing Block.
+	int32 glance_blocks = 13;
+
+	// # of times this action was a Crush.
+	int32 crushes = 36;
+
+	// Total damage done to this target by this action.
+	double damage = 14;
+
+	// Total resisted damage done to this target by this action.
+	double resisted_damage = 31;
+
+	// Total critical damage done to this target by this action.
+	double crit_damage = 15;
+
+	// Total resisted critical damage done to this target by this action.
+	double resisted_crit_damage = 32;
+
+	// Total tick damage done to this target by this action.
+	double tick_damage = 16;
+
+	// Total resisted tick damage done to this target by this action.
+	double resisted_tick_damage = 33;
+
+	// Total critical tick damage done to this target by this action.
+	double crit_tick_damage = 17;
+
+	// Total resisted critical tick damage done to this target by this action.
+	double resisted_crit_tick_damage = 34;
+
+	// Total glancing damage done to this target by this action.
+	double glance_damage = 18;
+
+	// Total glancing block damage done to this target by this action.
+	double glance_block_damage = 19;
+
+	// Total crushing damage done to this target by this action.
+	double crush_damage = 35;
+
+	// Total block damage done to this target by this action.
+	double block_damage = 20;
+
+	// Total critical block damage done to this target by this action.
+	double blocked_crit_damage = 21;
+
+	// Total threat done to this target by this action.
+	double threat = 22;
+
+	// Total healing done to this target by this action.
+	double healing = 23;
+
+	// Total critical healing done to this target by this action.
+	double crit_healing = 24;
+
+	// Total shielding done to this target by this action.
+	double shielding = 25;
+
+	// Total time spent casting this action, in milliseconds, either from hard casts, GCD, or channeling.
+	double cast_time_ms = 26;
+}
+
+message AggregatorData {
+	int32 n = 1;
+	double sumSq = 2;
+}
+
+message AuraMetrics {
+	ActionID id = 1;
+
+	double uptime_seconds_avg = 2;
+	double uptime_seconds_stdev = 3;
+
+	double procs_avg = 4;
+
+	AggregatorData aggregator_data = 5;
+}
+
+message ResourceMetrics {
+	ActionID id = 1;
+
+	ResourceType type = 2;
+
+	// # of times this action was used by the agent.
+	int32 events = 3;
+
+	// Total resource gain from this action. Will be negative for spend actions.
+	double gain = 4;
+
+	// Like gain, but doesn't include gains over resource cap.
+	double actual_gain = 5;
+}
+
+message DistributionMetrics {
+	double avg     = 1;
+	double stdev   = 2;
+	double max     = 3;
+	int64 max_seed = 5;
+	double min     = 6;
+	int64 min_seed = 7;
+	map<int32, int32> hist = 4;
+	repeated double all_values = 8;
+	AggregatorData aggregator_data = 9;
+}
+
+// All the results for a single Unit (player, target, or pet).
+message UnitMetrics {
+	string name = 9;
+	int32 unit_index = 13;
+
+	DistributionMetrics dps = 1;
+	DistributionMetrics threat = 8;
+	DistributionMetrics dtps = 11;
+	DistributionMetrics tmi = 16;
+	DistributionMetrics hps = 14;
+	DistributionMetrics tto = 15; // Time To OOM, in seconds.
+
+	// average seconds spent oom per iteration
+	double seconds_oom_avg = 3;
+
+	// Chance (0-1) representing probability of death. Used for tank sims.
+	double chance_of_death = 12;
+       repeated int64 death_seeds = 2;
+
+	repeated ActionMetrics actions = 5;
+	repeated AuraMetrics auras = 6;
+	repeated ResourceMetrics resources = 10;
+
+	repeated UnitMetrics pets = 7;
+}
+
+// Results for a whole raid.
+message PartyMetrics {
+	DistributionMetrics dps = 1;
+	DistributionMetrics hps = 3;
+
+	repeated UnitMetrics players = 2;
+}
+
+// Results for a whole raid.
+message RaidMetrics {
+	DistributionMetrics dps = 1;
+	DistributionMetrics hps = 3;
+
+	repeated PartyMetrics parties = 2;
+}
+
+message EncounterMetrics {
+	repeated UnitMetrics targets = 1;
+}
+
+enum SimType {
+	SimTypeUnknown = 0;
+	SimTypeIndividual = 1;
+	SimTypeRaid = 2;
+}
+
+enum ErrorOutcomeType {
+	ErrorOutcomeError = 0;
+	ErrorOutcomeAborted = 1;
+}
+
+message ErrorOutcome {
+	ErrorOutcomeType type = 1; // ErrorOutcomeError by default
+	string message = 2;
+}
+
+// RPC RaidSim
+message RaidSimRequest {
+	string request_id = 5;
+	Raid raid = 1;
+	Encounter encounter = 2;
+	SimOptions sim_options = 3;
+	SimType type = 4;
+}
+
+// Result from running the raid sim.
+message RaidSimResult {
+	RaidMetrics raid_metrics = 1;
+	EncounterMetrics encounter_metrics = 2;
+
+	string logs = 3;
+
+	// Needed for displaying the timeline properly when the duration +/- option
+	// is used.
+	double first_iteration_duration = 4;
+	double avg_iteration_duration = 6;
+
+	ErrorOutcome error = 5;
+
+	int32 iterations_done = 7;
+}
+
+message RaidSimRequestSplitRequest {
+	int32 split_count = 1;
+	RaidSimRequest request = 2;
+}
+
+message RaidSimRequestSplitResult {
+	// The actual split amount made
+	int32 splits_done = 1;
+	repeated RaidSimRequest requests = 2;
+	string error_result = 3;
+}
+
+message RaidSimResultCombinationRequest {
+	repeated RaidSimResult results = 1;
+}
+
+message AbortRequest {
+	string request_id = 1; // The request that should be aborted.
+}
+
+message AbortResponse {
+	string request_id = 1;
+	bool was_triggered = 2; // Id was known and abort signal was triggered.
+}
+
+// RPC ComputeStats
+message ComputeStatsRequest {
+	Raid raid = 1;
+	Encounter encounter = 2;
+}
+message AuraStats {
+	ActionID id = 1;
+	int32 max_stacks = 2;
+	bool has_icd = 3;
+	bool has_exclusive_effect = 4;
+}
+message SpellStats {
+	ActionID id = 1;
+
+	bool is_castable = 2; // Whether this spell may be cast by the APL logic.
+	bool is_channeled = 7; // Whether this spell is a channeled spell (Mind Flay, Drain Soul, etc).
+	bool is_major_cooldown = 3; // Whether this spell is a major cooldown.
+	bool has_dot = 4; // Whether this spell applies a DoT effect.
+	bool has_shield = 6; // Whether this spell applies a shield effect.
+	bool prepull_only = 5; // Whether this spell may only be cast during prepull.
+	bool encounter_only = 8; // Whether this spell may only be cast during the encounter (not prepull).
+	bool has_cast_time = 9; // Whether this spell has a cast time or not.
+	bool is_friendly = 10; // Whether this spell should be cast on player units
+	bool has_expected_tick = 11; // Whether this spell supports expected damage calculations
+	bool has_missile_speed = 12; // Whether this spell has a missile speed
+	bool has_ranks = 13; // Whether this spell has a rank
+	bool is_potion = 14; // Whether this spell is a potion
+	bool is_conjured = 15; // Whether this spell is a conjured item
+}
+message APLValidation {
+	LogLevel log_level = 1;
+	string validation = 2;
+}
+message APLActionStats {
+	repeated APLValidation validations = 1;
+}
+message UUIDValidations {
+	UUID uuid = 1;
+	repeated APLValidation validations = 2;
+}
+message APLGroupStats {
+	repeated APLActionStats actions = 1;
+}
+message APLStats {
+	repeated APLActionStats prepull_actions = 1;
+	repeated APLActionStats priority_list = 2;
+	repeated UUIDValidations uuid_validations = 3;
+	repeated APLGroupStats groups = 4;
+}
+message UnitMetadata {
+	string name = 3;
+	repeated SpellStats spells = 1;
+	repeated AuraStats auras = 2;
+}
+message PetStats {
+	UnitMetadata metadata = 1;
+}
+message PlayerStats {
+	// Stats
+	UnitStats base_stats = 6;
+	UnitStats gear_stats = 1;
+	UnitStats talents_stats = 7;
+	UnitStats buffs_stats = 8;
+	UnitStats consumes_stats = 9;
+	UnitStats final_stats = 2;
+
+	repeated string sets = 3;
+	IndividualBuffs buffs = 4;
+
+	UnitMetadata metadata = 10;
+	APLStats rotation_stats = 12;
+
+	repeated PetStats pets = 11;
+}
+message PartyStats {
+	repeated PlayerStats players = 1;
+}
+message RaidStats {
+	repeated PartyStats parties = 1;
+}
+message TargetStats {
+	UnitMetadata metadata = 1;
+}
+message EncounterStats {
+	repeated TargetStats targets = 1;
+}
+message ComputeStatsResult {
+	RaidStats raid_stats = 1;
+	EncounterStats encounter_stats = 3;
+	string error_result = 2;
+}
+
+// RPC StatWeights
+message StatWeightsRequest {
+	Player player = 1;
+	RaidBuffs raid_buffs = 2;
+	PartyBuffs party_buffs = 3;
+	Debuffs debuffs = 9;
+	Encounter encounter = 4;
+	SimOptions sim_options = 5;
+	repeated UnitReference tanks = 8;
+
+	repeated Stat stats_to_weigh = 6;
+	repeated PseudoStat pseudo_stats_to_weigh = 10;
+	Stat ep_reference_stat = 7;
+}
+
+message StatWeightsStatData {
+	int32 unit_stat = 1;
+	double mod_low = 2;
+	double mod_high = 3;
+}
+
+message StatWeightsStatRequestData {
+	StatWeightsStatData stat_data = 1;
+	RaidSimRequest request_low = 2;
+	RaidSimRequest request_high = 3;
+}
+message StatWeightRequestsData {
+	RaidSimRequest base_request = 1;
+	Stat ep_reference_stat = 2;
+	repeated StatWeightsStatRequestData stat_sim_requests = 3;
+}
+
+message StatWeightsStatResultData {
+	StatWeightsStatData stat_data = 1;
+	RaidSimResult result_low = 2;
+	RaidSimResult result_high = 3;
+}
+message StatWeightsCalcRequest {
+	RaidSimResult base_result = 1;
+	Stat ep_reference_stat = 2;
+	repeated StatWeightsStatResultData stat_sim_results = 3;
+}
+
+message StatWeightsResult {
+	StatWeightValues dps = 1;
+	StatWeightValues hps = 4;
+	StatWeightValues tps = 2;
+	StatWeightValues dtps = 3;
+	StatWeightValues tmi = 5;
+	StatWeightValues p_death = 6;
+	ErrorOutcome error = 7;
+	// The unperturbed baseline sim run this calibration batch already computes internally
+	// (see runStatWeights in sim/core/statweight.go) - echoed back here so a caller can read the
+	// gear set's absolute TPS/DTPS/TMI-5 without paying for a second sim call.
+	RaidSimResult baseline = 8;
+}
+message StatWeightValues {
+	UnitStats weights = 1;
+	UnitStats weights_stdev = 2;
+	UnitStats ep_values = 3;
+	UnitStats ep_values_stdev = 4;
+}
+
+message AsyncAPIResult {
+	string progress_id = 1;
+}
+
+// ProgressMetrics are used by all async APIs
+message ProgressMetrics {
+	int32 completed_iterations = 1;
+	int32 total_iterations = 2;
+	int32 completed_sims = 3;
+	int32 total_sims = 4;
+	bool presim_running = 8;
+
+	// Partial Results
+	double dps = 5;
+	double hps = 9;
+
+	// Final Results
+	RaidSimResult final_raid_result = 6; // only set when completed
+	StatWeightsResult final_weight_result = 7;
+}
+
+message BulkSettings {
+	repeated ItemSpec items = 1;
+	int32 iterations_per_combo = 2;
+	int32 default_red_gem = 3;
+	int32 default_blue_gem = 4;
+	int32 default_yellow_gem = 5;
+	int32 default_meta_gem = 6;
+	int32 default_prismatic_gem = 7;
+
+	int32 freeze_ring_slot = 8;
+	int32 freeze_trinket_slot = 9;
+	int32 freeze_weapon_slot = 10;
+	repeated WeaponType freeze_mainhand_weapon_slots = 11;
+	repeated WeaponType freeze_offhand_weapon_slots = 12;
+}

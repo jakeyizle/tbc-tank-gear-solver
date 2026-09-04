@@ -1,3 +1,0 @@
-[submodule "vendor/tbc-sim"]
-	path = vendor/tbc-sim
-	url = https://github.com/wowsims/tbc-new.git

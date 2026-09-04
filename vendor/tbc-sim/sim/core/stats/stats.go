@@ -1,0 +1,640 @@
+package stats
+
+import (
+	"fmt"
+	"math"
+	"strings"
+	"time"
+
+	"github.com/wowsims/tbc/sim/core/proto"
+)
+
+type Stats [SimStatsLen]float64
+
+type Stat byte
+
+// Use internal representation instead of proto.Stat so we can add functions
+// and use 'byte' as the data type.
+//
+// This needs to stay synced with proto.Stat: it is okay for SimStatsLen to
+// exceed ProtoStatsLen, but the shared indices between the two must match 1:1 .
+const (
+	Strength Stat = iota
+	Agility
+	Stamina
+	Intellect
+	HealingPower
+	SpellDamage
+	ArcaneDamage
+	FireDamage
+	FrostDamage
+	HolyDamage
+	NatureDamage
+	ShadowDamage
+	SpellHitRating
+	SpellCritRating
+	SpellHasteRating
+	SpellPenetration
+	Spirit
+	AttackPower
+	RangedAttackPower
+	FeralAttackPower
+	MeleeHitRating
+	MeleeCritRating
+	MeleeHasteRating
+	ArmorPenetration
+	ExpertiseRating
+	DefenseRating
+	BlockRating
+	BlockValue
+	DodgeRating
+	ParryRating
+	ResilienceRating
+	Armor
+	BonusArmor
+	Health
+	Mana
+	MP5
+	ArcaneResistance
+	FireResistance
+	FrostResistance
+	NatureResistance
+	ShadowResistance
+	PhysicalDamage
+	// end of Stat enum in proto/common.proto
+
+	// The remaining stats below are stored as PseudoStats rather than as
+	// Stats in UnitStats proto messages, since they are not required in the
+	// database files. However, it is valuable to keep these as proper Stats
+	// in the back-end, since they are used in various stat dependencies.
+	// The units for all 7 of these are percentages (between 0 and 100).
+	PhysicalHitPercent
+	SpellHitPercent
+	PhysicalCritPercent
+	SpellCritPercent
+	BlockPercent
+	RangedHitPercent
+	RangedCritPercent
+	// DO NOT add new stats here without discussing it first; new stats come
+	// with a performance penalty.
+
+	SimStatsLen
+)
+
+var ProtoStatsLen = len(proto.Stat_name)
+var PseudoStatsLen = len(proto.PseudoStat_name)
+var UnitStatsLen = ProtoStatsLen + PseudoStatsLen
+
+type SchoolIndex byte
+
+const (
+	SchoolIndexNone     SchoolIndex = 0
+	SchoolIndexPhysical SchoolIndex = iota
+	SchoolIndexArcane
+	SchoolIndexFire
+	SchoolIndexFrost
+	SchoolIndexHoly
+	SchoolIndexNature
+	SchoolIndexShadow
+
+	SchoolLen
+)
+
+func NewSchoolFloatArray() [SchoolLen]float64 {
+	return [SchoolLen]float64{
+		1, 1, 1, 1, 1, 1, 1, 1,
+	}
+}
+
+func ProtoArrayToStatsList(protoStats []proto.Stat) []Stat {
+	stats := make([]Stat, len(protoStats))
+	for i, v := range protoStats {
+		stats[i] = Stat(v)
+	}
+	return stats
+}
+
+func IntTupleToStatsList(statType1 int32, statType2 int32, statType3 int32) []Stat {
+	statTypes := make([]Stat, 0, 3)
+
+	for _, statIdx := range []int32{statType1, statType2, statType3} {
+		if statIdx >= 0 {
+			statTypes = append(statTypes, Stat(statIdx))
+		}
+	}
+
+	return statTypes
+}
+
+func (s Stat) StatName() string {
+	switch s {
+	case Strength:
+		return "Strength"
+	case Agility:
+		return "Agility"
+	case Stamina:
+		return "Stamina"
+	case Intellect:
+		return "Intellect"
+	case Spirit:
+		return "Spirit"
+	case SpellHitRating:
+		return "SpellHitRating"
+	case SpellCritRating:
+		return "SpellCritRating"
+	case SpellHasteRating:
+		return "SpellHasteRating"
+	case SpellPenetration:
+		return "SpellPenetration"
+	case MeleeHitRating:
+		return "MeleeHitRating"
+	case MeleeCritRating:
+		return "MeleeCritRating"
+	case MeleeHasteRating:
+		return "MeleeHasteRating"
+	case ExpertiseRating:
+		return "ExpertiseRating"
+	case ArmorPenetration:
+		return "ArmorPenetration"
+	case DodgeRating:
+		return "DodgeRating"
+	case ParryRating:
+		return "ParryRating"
+	case AttackPower:
+		return "AttackPower"
+	case RangedAttackPower:
+		return "RangedAttackPower"
+	case FeralAttackPower:
+		return "FeralAttackPower"
+	case HealingPower:
+		return "HealingPower"
+	case SpellDamage:
+		return "SpellDamage"
+	case ArcaneDamage:
+		return "ArcaneDamage"
+	case FireDamage:
+		return "FireDamage"
+	case FrostDamage:
+		return "FrostDamage"
+	case HolyDamage:
+		return "HolyDamage"
+	case NatureDamage:
+		return "NatureDamage"
+	case ShadowDamage:
+		return "ShadowDamage"
+	case ResilienceRating:
+		return "ResilienceRating"
+	case Armor:
+		return "Armor"
+	case BonusArmor:
+		return "BonusArmor"
+	case Health:
+		return "Health"
+	case Mana:
+		return "Mana"
+	case MP5:
+		return "MP5"
+	case PhysicalHitPercent:
+		return "PhysicalHitPercent"
+	case SpellHitPercent:
+		return "SpellHitPercent"
+	case PhysicalCritPercent:
+		return "PhysicalCritPercent"
+	case SpellCritPercent:
+		return "SpellCritPercent"
+	case BlockPercent:
+		return "BlockPercent"
+	case DefenseRating:
+		return "DefenseRating"
+	case BlockRating:
+		return "BlockRating"
+	case BlockValue:
+		return "BlockValue"
+	case ArcaneResistance:
+		return "ArcaneResistance"
+	case FireResistance:
+		return "FireResistance"
+	case FrostResistance:
+		return "FrostResistance"
+	case NatureResistance:
+		return "NatureResistance"
+	case ShadowResistance:
+		return "ShadowResistance"
+	case PhysicalDamage:
+		return "PhysicalDamage"
+	}
+
+	return "none"
+}
+
+func FromProtoArray(values []float64) Stats {
+	// SimStatsLen can be larger than ProtoStatsLen, but the built-in copy
+	// function will only import the shared indices between the two.
+	var stats Stats
+	copy(stats[:], values)
+	return stats
+}
+
+// Runs FromProtoArray() on the stats array embedded in the UnitStats message, but additionally imports any
+// PseudoStats that we want to model as proper Stats in the back-end. This allows us to include only essential
+// basic properties in database stats arrays, while still letting the back-end Stat enum include derived
+// properties when it is computationally convenient to do so (such as for automatically applying stat
+// dependencies). Make sure to update this function if you add any back-end Stat entries that are modeled as
+// PseudoStats in the front-end.
+func FromUnitStatsProto(unitStatsMessage *proto.UnitStats) Stats {
+	simStats := FromProtoArray(unitStatsMessage.Stats)
+
+	if unitStatsMessage.PseudoStats != nil {
+		pseudoStatsMessage := unitStatsMessage.PseudoStats
+		simStats[PhysicalHitPercent] = pseudoStatsMessage[proto.PseudoStat_PseudoStatMeleeHitPercent]
+		simStats[SpellHitPercent] = pseudoStatsMessage[proto.PseudoStat_PseudoStatSpellHitPercent]
+		simStats[PhysicalCritPercent] = pseudoStatsMessage[proto.PseudoStat_PseudoStatMeleeCritPercent]
+		simStats[SpellCritPercent] = pseudoStatsMessage[proto.PseudoStat_PseudoStatSpellCritPercent]
+		simStats[BlockPercent] = pseudoStatsMessage[proto.PseudoStat_PseudoStatBlockPercent]
+		simStats[RangedHitPercent] = pseudoStatsMessage[proto.PseudoStat_PseudoStatRangedHitPercent] - pseudoStatsMessage[proto.PseudoStat_PseudoStatMeleeHitPercent]
+		simStats[RangedCritPercent] = pseudoStatsMessage[proto.PseudoStat_PseudoStatRangedCritPercent] - pseudoStatsMessage[proto.PseudoStat_PseudoStatMeleeCritPercent]
+	}
+
+	return simStats
+}
+
+// Adds two Stats together, returning the new Stats.
+func (stats Stats) Add(other Stats) Stats {
+	for k := range stats {
+		stats[k] += other[k]
+	}
+	return stats
+}
+
+// Adds another to Stats to this, in-place. For performance, only.
+func (stats *Stats) AddInplace(other *Stats) {
+	for k := range stats {
+		stats[k] += other[k]
+	}
+}
+
+// Subtracts another Stats from this one, returning the new Stats.
+func (stats Stats) Subtract(other Stats) Stats {
+	for k := range stats {
+		stats[k] -= other[k]
+	}
+	return stats
+}
+
+func (stats Stats) Invert() Stats {
+	for k, v := range stats {
+		stats[k] = -v
+	}
+	return stats
+}
+
+// Rounds all stat values down to the nearest integer, returning the new Stats.
+// Used for random suffix stats currently.
+func (stats Stats) Floor() Stats {
+	for k, v := range stats {
+		stats[k] = math.Floor(v)
+	}
+	return stats
+}
+
+// Stats the game stores as rounded-down integers on the unit: the five
+// attributes. The game floors these after resolving percentage multipliers
+// (e.g. Blessing of Kings), and derived values consume the floored integers
+// (health from floored Stamina, dodge from floored Agility). Verified against
+// live character sheets.
+//
+// Unlike attributes, combat ratings must NOT be floored here: the sim uses
+// rating stats as mixed accumulators that include fractional conversions from
+// talents and racials (e.g. dodge% talents stored as DodgeRating), and TBC has
+// no rating multipliers, so real rating totals are already integers.
+var flooredGameStats = []Stat{
+	Strength, Agility, Stamina, Intellect, Spirit,
+}
+
+var isFlooredGameStat = func() [SimStatsLen]bool {
+	var m [SimStatsLen]bool
+	for _, s := range flooredGameStats {
+		m[s] = true
+	}
+	return m
+}()
+
+// Rounds attributes down to integers, matching how the game stores them.
+// Must be applied after stat dependencies are resolved.
+func (stats Stats) FloorGameStats() Stats {
+	for _, k := range flooredGameStats {
+		stats[k] = math.Floor(stats[k])
+	}
+	return stats
+}
+
+func (stats Stats) Multiply(multiplier float64) Stats {
+	for k := range stats {
+		stats[k] *= multiplier
+	}
+	return stats
+}
+
+// Multiplies two Stats together by multiplying the values of corresponding
+// stats, like a dot product operation.
+func (stats Stats) DotProduct(other Stats) Stats {
+	for k := range stats {
+		stats[k] *= other[k]
+	}
+	return stats
+}
+
+// Higher performance variant of the above.
+func (stats Stats) ApplyMultipliers(multipliers map[Stat]float64) Stats {
+	for k, v := range multipliers {
+		stats[k] *= v
+	}
+	return stats
+}
+
+func (stats Stats) Equals(other Stats) bool {
+	return stats == other
+}
+
+func (stats Stats) EqualsWithTolerance(other Stats, tolerance float64) bool {
+	for k, v := range stats {
+		if v < other[k]-tolerance || v > other[k]+tolerance {
+			return false
+		}
+	}
+	return true
+}
+
+// Given an array of Stat types, return the Stat whose value is largest within
+// this Stats array.
+func (stats Stats) GetHighestStatType(statTypeOptions []Stat) Stat {
+	if len(statTypeOptions) < 1 {
+		panic("Must supply at least one Stat type option!")
+	}
+
+	var highestStatType Stat
+	var highestStatValue float64
+
+	for idx, statType := range statTypeOptions {
+		if (idx == 0) || (stats[statType] > highestStatValue) {
+			highestStatType = statType
+			highestStatValue = stats[statType]
+		}
+	}
+
+	return highestStatType
+}
+
+// Returns all Stat types with positive representation in this Stats array.
+func (stats Stats) GetBuffedStatTypes() []Stat {
+	buffedStatTypes := make([]Stat, 0, SimStatsLen)
+
+	for statIdx, statValue := range stats {
+		if statValue > 0 {
+			buffedStatTypes = append(buffedStatTypes, Stat(statIdx))
+		}
+	}
+
+	return buffedStatTypes
+}
+
+func (stats Stats) String() string {
+	var sb strings.Builder
+	sb.WriteString("\n{\n")
+
+	for statIdx, statValue := range stats {
+		if statValue == 0 {
+			continue
+		}
+		if name := Stat(statIdx).StatName(); name != "none" {
+			_, _ = fmt.Fprintf(&sb, "\t%s: %0.3f,\n", name, statValue)
+		}
+	}
+
+	sb.WriteString("\n}")
+	return sb.String()
+}
+
+// Like String() but without the newlines.
+func (stats Stats) FlatString() string {
+	var sb strings.Builder
+	sb.WriteString("{")
+
+	for statIdx, statValue := range stats {
+		if statValue == 0 {
+			continue
+		}
+		if name := Stat(statIdx).StatName(); name != "none" {
+			_, _ = fmt.Fprintf(&sb, "\"%s\": %0.3f,", name, statValue)
+		}
+	}
+
+	sb.WriteString("}")
+	return sb.String()
+}
+
+func (stats Stats) ToProtoArray() []float64 {
+	// SimStatsLen can be larger than ProtoStatsLen, so export only the
+	// shared indices between the two.
+	return stats[:ProtoStatsLen]
+}
+func (stats Stats) ToProtoMap() map[int32]float64 {
+	m := make(map[int32]float64, ProtoStatsLen)
+	for i := 0; i < int(ProtoStatsLen); i++ {
+		if stats[i] != 0 {
+			m[int32(i)] = stats[i]
+		}
+	}
+	return m
+}
+
+func FromProtoMap(m map[int32]float64) Stats {
+	var stats Stats
+	for k, v := range m {
+		stats[k] = v
+	}
+	return stats
+}
+
+type PseudoStats struct {
+	///////////////////////////////////////////////////
+	// Effects that apply when this unit is the attacker.
+	///////////////////////////////////////////////////
+
+	SpellCostPercentModifier int32 // Multiplies spell cost.
+
+	CastSpeedMultiplier   float64
+	MeleeSpeedMultiplier  float64
+	RangedSpeedMultiplier float64
+	RangedHasteMultiplier float64
+	AttackSpeedMultiplier float64 // Used for real haste effects like Bloodlust that modify resoruce regen and are used for RPPM effects
+
+	FiveSecondRuleRefreshTime time.Duration // last time a spell was cast
+	SpiritRegenRateCasting    float64       // percentage of spirit regen allowed during casting
+
+	// Both of these are currently only used for innervate.
+	ForceFullSpiritRegen  bool    // If set, automatically uses full spirit regen regardless of FSR refresh time.
+	SpiritRegenMultiplier float64 // Multiplier on spirit portion of mana regen.
+
+	// If true, allows block/parry.
+	InFrontOfTarget bool
+
+	BonusMHDps     float64
+	BonusOHDps     float64
+	BonusRangedDps float64
+
+	DisableDWMissPenalty bool // Used by Heroic Strike and Cleave
+
+	IncreasedMissChance float64 // Insect Swarm and Scorpid Sting
+	DodgeReduction      float64 // Used by Warrior talent 'Weapon Mastery' and SWP boss auras.
+
+	ThreatMultiplier float64 // Modulates the threat generated. Affected by things like salv.
+
+	DamageDealtMultiplier          float64            // All damage
+	SchoolDamageDealtMultiplier    [SchoolLen]float64 // For specific spell schools (arcane, fire, shadow, etc).
+	DotDamageMultiplierAdditive    float64            // All periodic damage
+	HealingDealtMultiplier         float64            // All non-shield healing
+	PeriodicHealingDealtMultiplier float64            // All periodic healing (on top of HealingDealtMultiplier)
+	CritDamageMultiplier           float64            // All multiplicative crit damage
+
+	BonusRangedAttackPower float64 // Hunter's mark
+	BonusAttackPower       float64 // Also Hunter's Mark
+
+	// Important when unit is attacker or target
+	BlockValueMultiplier float64
+
+	// Only used for NPCs, governs variance in enemy auto-attack damage
+	DamageSpread float64
+
+	///////////////////////////////////////////////////
+	// Crowd control effects. See sim/core/incapacitate.go.
+	///////////////////////////////////////////////////
+
+	Incapacitated bool // Under crowd control (e.g. Archimonde's Fear); cannot cast or queue any spell. Procs still fire.
+	Stunned       bool // Prevents blocks, dodges, and parries. Read while this unit is the target.
+	FearImmune    bool // Fear effects cannot be applied to this unit. (ie. Berserker Rage)
+	StunImmune    bool // Stun effects cannot be applied to this unit.
+
+	///////////////////////////////////////////////////
+	// Effects that apply when this unit is the target.
+	///////////////////////////////////////////////////
+
+	CanBlock bool
+	CanParry bool
+	CanCrush bool
+
+	ParryHaste bool
+
+	// Avoidance % not affected by Diminishing Returns, represented as
+	// probabilities (between 0 and 1).
+	BaseDodgeChance float64
+	BaseParryChance float64
+	BaseBlockChance float64
+
+	BaseReducedCritTakenPercent float64 // Base crit reduction from talents/auras (before Defense/Resilience contributions).
+	ReducedCritTakenPercent     float64 // Total crit reduction including Defense and Resilience contributions.
+
+	BonusHealingTaken          float64 // Talisman of Troll Divinity
+	BonusSpellCritPercentTaken float64 // Imp Shadow Bolt / Imp Scorch / Winter's Chill debuff
+	BonusPhysicalDamageTaken   float64 // Hemo, Gift of Arthas, etc
+	BonusSpellDamageTaken      float64 // Amp Magic
+
+	DamageTakenMultiplier       float64            // All damage
+	SchoolDamageTakenMultiplier [SchoolLen]float64 // For specific spell schools (arcane, fire, shadow, etc.)
+	SchoolBonusSpellDamage      [SchoolLen]float64 // Bonus SpellDamage against Target, ex: Judgement Of The Crusader + HolySpellDamage
+	SchoolBonusHitChance        [SchoolLen]float64 // Spell school-specific hit bonuses such as Arcane Focus or Elemental Precision - only applied to spells with a non-zero class spell mask
+
+	DiseaseDamageTakenMultiplier          float64
+	PeriodicPhysicalDamageTakenMultiplier float64
+
+	ArmorMultiplier float64 // Major/minor/special multiplicative armor modifiers
+
+	ReducedPhysicalHitTakenChance float64
+	ReducedArcaneHitTakenChance   float64
+	ReducedFireHitTakenChance     float64
+	ReducedFrostHitTakenChance    float64
+	ReducedNatureHitTakenChance   float64
+	ReducedShadowHitTakenChance   float64
+
+	HealingTakenMultiplier         float64 // All healing sources including self-healing
+	ExternalHealingTakenMultiplier float64 // Modulates the output of the individual tank sim healing model
+	MovementSpeedMultiplier        float64 // Multiplier for movement speed, default to 1. Player base movement 7 yards/s. All effects affecting movements are multipliers.
+	SelfHealingMultiplier          float64 // Healing from spells and abilities, only-self
+	PushbackChance                 float64 // Chance of being pushed back by a spell cast, defaults to 1.
+}
+
+func NewPseudoStats() PseudoStats {
+	return PseudoStats{
+		SpellCostPercentModifier: 100,
+
+		CastSpeedMultiplier:   1,
+		MeleeSpeedMultiplier:  1,
+		RangedSpeedMultiplier: 1,
+		RangedHasteMultiplier: 1,
+		AttackSpeedMultiplier: 1,
+		SpiritRegenMultiplier: 1,
+
+		ThreatMultiplier: 1,
+
+		DamageDealtMultiplier:          1,
+		SchoolDamageDealtMultiplier:    NewSchoolFloatArray(),
+		DotDamageMultiplierAdditive:    1,
+		HealingDealtMultiplier:         1,
+		PeriodicHealingDealtMultiplier: 1,
+		CritDamageMultiplier:           1,
+
+		BlockValueMultiplier:        1,
+		BaseReducedCritTakenPercent: 0,
+		ReducedCritTakenPercent:     0,
+
+		DamageSpread: 0.3333,
+
+		// Target effects.
+		DamageTakenMultiplier:       1,
+		SchoolDamageTakenMultiplier: NewSchoolFloatArray(),
+
+		DiseaseDamageTakenMultiplier:          1,
+		PeriodicPhysicalDamageTakenMultiplier: 1,
+
+		ArmorMultiplier: 1,
+
+		HealingTakenMultiplier:         1,
+		ExternalHealingTakenMultiplier: 1,
+		MovementSpeedMultiplier:        1,
+		PushbackChance:                 1,
+	}
+}
+
+type UnitStat int
+
+func (s UnitStat) IsStat() bool               { return int(s) < int(ProtoStatsLen) }
+func (s UnitStat) IsPseudoStat() bool         { return !s.IsStat() }
+func (s UnitStat) EqualsStat(other Stat) bool { return s.IsStat() && (s.StatIdx() == int(other)) }
+func (s UnitStat) EqualsPseudoStat(other proto.PseudoStat) bool {
+	return s.IsPseudoStat() && (s.PseudoStatIdx() == int(other))
+}
+func (s UnitStat) StatIdx() int {
+	if !s.IsStat() {
+		panic("Is a pseudo stat")
+	}
+	return int(s)
+}
+func (s UnitStat) PseudoStatIdx() int {
+	if s.IsStat() {
+		panic("Is a regular stat")
+	}
+	return int(s) - int(ProtoStatsLen)
+}
+func (s UnitStat) AddToStatsProto(p *proto.UnitStats, value float64) {
+	if s.IsStat() {
+		p.Stats[s.StatIdx()] += value
+	} else {
+		p.PseudoStats[s.PseudoStatIdx()] += value
+	}
+}
+
+func UnitStatFromIdx(s int) UnitStat   { return UnitStat(s) }
+func UnitStatFromStat(s Stat) UnitStat { return UnitStat(s) }
+func UnitStatFromPseudoStat(s proto.PseudoStat) UnitStat {
+	return UnitStat(int(s) + int(ProtoStatsLen))
+}

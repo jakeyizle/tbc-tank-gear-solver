@@ -20,7 +20,8 @@ export async function fetchWasmModule(
 	if (!isGzipped) return WebAssembly.instantiate(bytes, importObject);
 
 	const body = new Response(bytes).body;
-	if (!body) throw new Error("fetchWasmModule: response has no body to decompress");
+	if (!body)
+		throw new Error("fetchWasmModule: response has no body to decompress");
 	const decompressed = await new Response(
 		body.pipeThrough(new DecompressionStream("gzip")),
 	).arrayBuffer();

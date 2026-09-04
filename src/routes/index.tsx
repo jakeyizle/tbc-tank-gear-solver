@@ -2,7 +2,7 @@ import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import CharacterSection from "#/components/CharacterSection";
 import ConfigurationPanel from "#/components/ConfigurationPanel";
 import ItemInputSection from "#/components/ItemInputSection";
@@ -104,19 +104,24 @@ function App() {
 		});
 	};
 
-	const handleCharacterDetected = (character: DetectedCharacter) => {
-		if (character.classId) setClassValue(character.classId);
-		if (character.raceId) setRaceValue(character.raceId);
-		if (Object.keys(character.talentRanks).length > 0) {
-			setTalents((prev) =>
-				prev.map((talent) =>
-					talent.id in character.talentRanks
-						? { ...talent, rank: character.talentRanks[talent.id] }
-						: talent,
-				),
-			);
-		}
-	};
+	// useCallback so this stays a stable reference across unrelated re-renders (in particular
+	// solveProgress ticks during a solve) - see ItemInputSection's React.memo wrapping below.
+	const handleCharacterDetected = useCallback(
+		(character: DetectedCharacter) => {
+			if (character.classId) setClassValue(character.classId);
+			if (character.raceId) setRaceValue(character.raceId);
+			if (Object.keys(character.talentRanks).length > 0) {
+				setTalents((prev) =>
+					prev.map((talent) =>
+						talent.id in character.talentRanks
+							? { ...talent, rank: character.talentRanks[talent.id] }
+							: talent,
+					),
+				);
+			}
+		},
+		[],
+	);
 
 	const handleSolveAll = async () => {
 		setSolveError(null);

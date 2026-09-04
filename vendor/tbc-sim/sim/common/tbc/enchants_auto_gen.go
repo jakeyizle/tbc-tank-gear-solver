@@ -1,0 +1,4 @@
+package tbc
+
+func RegisterAllEnchants() {
+}

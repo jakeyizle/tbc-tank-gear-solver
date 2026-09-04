@@ -1,0 +1,1510 @@
+import { ref } from 'tsx-vanilla';
+
+import { CacheHandler } from '../../cache_handler';
+import i18n from '../../../i18n/config';
+import { AuraStats, Player, SpellStats, UnitMetadata } from '../../player.js';
+import {
+	APLActionGuardianHotwDpsRotation_Strategy as HotwStrategy,
+	APLActionItemSwap_SwapSet as ItemSwapSet,
+	APLValue,
+	APLValueEclipsePhase,
+	APLValueAutoAttackType,
+	APLValueAutoSwingTime_SwingType,
+	APLValueVariable,
+} from '../../proto/apl.js';
+import { ActionID, OtherAction, Stat, UnitReference, UnitReference_Type as UnitType } from '../../proto/common.js';
+import { ActionId, defaultTargetIcon, getPetIconFromName } from '../../proto_utils/action_id.js';
+import { renameAPLReference } from '../../proto_utils/apl_utils.js';
+import { getStatName } from '../../proto_utils/names.js';
+import { translateStat } from '../../../i18n/localization.js';
+import { EventID, TypedEvent } from '../../typed_event.js';
+import { bucket, getEnumValues, randomUUID } from '../../utils.js';
+import { Input, InputConfig } from '../input.jsx';
+import { BooleanPicker } from '../pickers/boolean_picker.js';
+import { DropdownPicker, DropdownPickerConfig, DropdownValueConfig, TextDropdownPicker } from '../pickers/dropdown_picker.jsx';
+import { ListItemPickerConfig, ListPicker, ListPickerExtraAction } from '../pickers/list_picker.jsx';
+import { NumberPicker, NumberPickerConfig } from '../pickers/number_picker.js';
+import { AdaptiveStringPicker } from '../pickers/string_picker.js';
+import { UnitPicker, UnitPickerConfig, UnitValue } from '../pickers/unit_picker.jsx';
+import { APLNameModal } from './apl/apl_name_modal';
+import { t } from 'i18next';
+
+export type ACTION_ID_SET =
+	| 'auras'
+	| 'stackable_auras'
+	| 'icd_auras'
+	| 'exclusive_effect_auras'
+	| 'spells'
+	| 'castable_spells'
+	| 'channel_spells'
+	| 'dot_spells'
+	| 'castable_dot_spells'
+	| 'shield_spells'
+	| 'non_instant_spells'
+	| 'friendly_spells'
+	| 'expected_dot_spells'
+	| 'spells_with_travelTime'
+	| 'potions'
+	| 'conjured_items';
+
+const actionIdSets: Record<
+	ACTION_ID_SET,
+	{
+		defaultLabel: string;
+		getActionIDs: (metadata: UnitMetadata) => Promise<Array<DropdownValueConfig<ActionId>>>;
+	}
+> = {
+	auras: {
+		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.auras'),
+		getActionIDs: async metadata => {
+			const auras = metadata.getAuras();
+			return auras.map(actionId => {
+				return {
+					value: actionId.id,
+					submenu: createSpellSubmenu(actionId.id, auras),
+				};
+			});
+		},
+	},
+	stackable_auras: {
+		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.stackable_auras'),
+		getActionIDs: async metadata => {
+			const auras = metadata.getAuras();
+			return auras
+				.filter(aura => aura.data.maxStacks > 0)
+				.map(actionId => {
+					return {
+						value: actionId.id,
+						submenu: createSpellSubmenu(actionId.id, auras),
+					};
+				});
+		},
+	},
+	icd_auras: {
+		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.icd_auras'),
+		getActionIDs: async metadata => {
+			const auras = metadata.getAuras();
+			return auras
+				.filter(aura => aura.data.hasIcd)
+				.map(actionId => {
+					return {
+						value: actionId.id,
+						submenu: createSpellSubmenu(actionId.id, auras),
+					};
+				});
+		},
+	},
+	exclusive_effect_auras: {
+		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.exclusive_effect_auras'),
+		getActionIDs: async metadata => {
+			const auras = metadata.getAuras();
+			return auras
+				.filter(aura => aura.data.hasExclusiveEffect)
+				.map(actionId => {
+					return {
+						value: actionId.id,
+						submenu: createSpellSubmenu(actionId.id, auras),
+					};
+				});
+		},
+	},
+	// Used for non categorized lists
+	spells: {
+		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.spells'),
+		getActionIDs: async metadata => {
+			const spells = metadata.getSpells().filter(spell => spell.data.isCastable);
+			return spells.map(actionId => {
+				return {
+					value: actionId.id,
+					submenu: createSpellSubmenu(actionId.id, spells, []),
+				};
+			});
+		},
+	},
+	castable_spells: {
+		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.castable_spells'),
+		getActionIDs: async metadata => {
+			const castableSpells = metadata.getSpells().filter(spell => spell.data.isCastable);
+
+			// Split up non-cooldowns and cooldowns into separate sections for easier browsing.
+			const { spells, cooldowns, potions, conjuredItems } = bucket(castableSpells, spell =>
+				spell.data.isPotion ? 'potions' : spell.data.isConjured ? 'conjuredItems' : spell.data.isMajorCooldown ? 'cooldowns' : 'spells',
+			);
+
+			const placeholders: Array<ActionId> = [ActionId.fromOtherId(OtherAction.OtherActionPotion)];
+
+			return [
+				[
+					{
+						value: ActionId.fromEmpty(),
+						headerText: i18n.t('rotation_tab.apl.submenus.spell'),
+						submenu: ['spell'],
+					},
+				],
+				(spells || []).map(actionId => {
+					return {
+						value: actionId.id,
+						submenu: createSpellSubmenu(actionId.id, spells, ['spell']),
+						extraCssClasses: actionId.data.prepullOnly
+							? ['apl-prepull-actions-only']
+							: actionId.data.encounterOnly
+								? ['apl-priority-list-only']
+								: [],
+					};
+				}),
+				[
+					{
+						value: ActionId.fromEmpty(),
+						headerText: i18n.t('rotation_tab.apl.submenus.cooldowns'),
+						submenu: ['cooldowns'],
+					},
+				],
+				(cooldowns || []).map(actionId => {
+					return {
+						value: actionId.id,
+						submenu: createSpellSubmenu(actionId.id, spells, ['cooldowns']),
+						extraCssClasses: actionId.data.prepullOnly
+							? ['apl-prepull-actions-only']
+							: actionId.data.encounterOnly
+								? ['apl-priority-list-only']
+								: [],
+					};
+				}),
+				[
+					{
+						value: ActionId.fromEmpty(),
+						headerText: i18n.t('rotation_tab.apl.submenus.potions'),
+						submenu: ['potions'],
+					},
+				],
+				(potions || []).map(actionId => {
+					return {
+						value: actionId.id,
+						submenu: createSpellSubmenu(actionId.id, spells, ['potions']),
+						extraCssClasses: actionId.data.prepullOnly
+							? ['apl-prepull-actions-only']
+							: actionId.data.encounterOnly
+								? ['apl-priority-list-only']
+								: [],
+					};
+				}),
+				[
+					{
+						value: ActionId.fromEmpty(),
+						headerText: i18n.t('rotation_tab.apl.submenus.conjured_items'),
+						submenu: ['conjured_items'],
+					},
+				],
+				(conjuredItems || []).map(actionId => {
+					return {
+						value: actionId.id,
+						submenu: createSpellSubmenu(actionId.id, spells, ['conjured_items']),
+						extraCssClasses: actionId.data.prepullOnly
+							? ['apl-prepull-actions-only']
+							: actionId.data.encounterOnly
+								? ['apl-priority-list-only']
+								: [],
+					};
+				}),
+				[
+					{
+						value: ActionId.fromEmpty(),
+						headerText: i18n.t('rotation_tab.apl.submenus.placeholders'),
+						submenu: ['placeholders'],
+					},
+				],
+				placeholders.map(actionId => {
+					return {
+						value: actionId,
+						submenu: ['placeholders'],
+						tooltip: i18n.t('rotation_tab.apl.helpers.placeholder_tooltip'),
+					};
+				}),
+			].flat();
+		},
+	},
+	non_instant_spells: {
+		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.non_instant_spells'),
+		getActionIDs: async metadata => {
+			const spells = metadata.getSpells().filter(spell => spell.data.isCastable && spell.data.hasCastTime);
+			return spells.map(actionId => {
+				return {
+					value: actionId.id,
+					submenu: createSpellSubmenu(actionId.id, spells),
+				};
+			});
+		},
+	},
+	friendly_spells: {
+		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.friendly_spells'),
+		getActionIDs: async metadata => {
+			const spells = metadata.getSpells().filter(spell => spell.data.isCastable && spell.data.isFriendly);
+			return spells.map(actionId => {
+				return {
+					value: actionId.id,
+					submenu: createSpellSubmenu(actionId.id, spells),
+				};
+			});
+		},
+	},
+	channel_spells: {
+		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.channel_spells'),
+		getActionIDs: async metadata => {
+			const spells = metadata.getSpells().filter(spell => spell.data.isCastable && spell.data.isChanneled);
+			return spells.map(actionId => {
+				return {
+					value: actionId.id,
+					submenu: createSpellSubmenu(actionId.id, spells),
+				};
+			});
+		},
+	},
+	potions: {
+		defaultLabel: i18n.t('rotation_tab.apl.submenus.potions'),
+		getActionIDs: async metadata => {
+			const spells = metadata.getSpells().filter(spell => spell.data.isPotion);
+			return spells.map(actionId => {
+				return {
+					value: actionId.id,
+					submenu: createSpellSubmenu(actionId.id, spells),
+				};
+			});
+		},
+	},
+	conjured_items: {
+		defaultLabel: i18n.t('rotation_tab.apl.submenus.conjured_items'),
+		getActionIDs: async metadata => {
+			const spells = metadata.getSpells().filter(spell => spell.data.isConjured);
+			return spells.map(actionId => {
+				return {
+					value: actionId.id,
+					submenu: createSpellSubmenu(actionId.id, spells),
+				};
+			});
+		},
+	},
+	dot_spells: {
+		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.dot_spells'),
+		getActionIDs: async metadata => {
+			const spells = metadata
+				.getSpells()
+				.filter(spell => spell.data.hasDot)
+				// filter duplicate dot entries from RelatedDotSpell
+				.filter((value, index, self) => self.findIndex(v => v.id.anyId() === value.id.anyId()) === index);
+
+			return spells.map(actionId => {
+				return {
+					value: actionId.id,
+					submenu: createSpellSubmenu(actionId.id, spells),
+				};
+			});
+		},
+	},
+	castable_dot_spells: {
+		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.castable_dot_spells'),
+		getActionIDs: async metadata => {
+			const spells = metadata.getSpells().filter(spell => spell.data.isCastable && spell.data.hasDot);
+			return spells.map(actionId => {
+				return {
+					value: actionId.id,
+					submenu: createSpellSubmenu(actionId.id, spells),
+				};
+			});
+		},
+	},
+	expected_dot_spells: {
+		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.expected_dot_spells'),
+		getActionIDs: async metadata => {
+			const spells = metadata
+				.getSpells()
+				.filter(spell => spell.data.hasExpectedTick)
+				// filter duplicate dot entries from RelatedDotSpell
+				.filter((value, index, self) => self.findIndex(v => v.id.anyId() === value.id.anyId()) === index);
+			return spells.map(actionId => {
+				return {
+					value: actionId.id,
+					submenu: createSpellSubmenu(actionId.id, spells),
+				};
+			});
+		},
+	},
+	shield_spells: {
+		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.shield_spells'),
+		getActionIDs: async metadata => {
+			const spells = metadata.getSpells().filter(spell => spell.data.hasShield);
+			return spells.map(actionId => {
+				return {
+					value: actionId.id,
+					submenu: createSpellSubmenu(actionId.id, spells),
+				};
+			});
+		},
+	},
+	spells_with_travelTime: {
+		defaultLabel: i18n.t('rotation_tab.apl.helpers.action_id_sets.spells_with_travelTime'),
+		getActionIDs: async metadata => {
+			const spells = metadata.getSpells().filter(spell => spell.data.hasMissileSpeed);
+			return spells.map(actionId => {
+				return {
+					value: actionId.id,
+					submenu: createSpellSubmenu(actionId.id, spells),
+				};
+			});
+		},
+	},
+};
+
+const spellHasRanks = (actionId: ActionId, spells: AuraStats[] | SpellStats[]) => {
+	return spells.filter(spell => actionId.baseName === spell.id.baseName && actionId.tag === spell.id.tag && spell.id.hasRank).length > 1;
+};
+
+const createSpellSubmenu = (actionId: ActionId, spells: AuraStats[] | SpellStats[], baseMenuEntry: string[] = []) => {
+	const hasRanks = spellHasRanks(actionId, spells);
+	return hasRanks ? [...baseMenuEntry, actionId.nameWithoutRank] : baseMenuEntry;
+};
+
+export type DEFAULT_UNIT_REF = 'self' | 'currentTarget';
+
+export interface APLActionIDPickerConfig<ModObject>
+	extends Omit<DropdownPickerConfig<ModObject, ActionID, ActionId>, 'defaultLabel' | 'equals' | 'setOptionContent' | 'values' | 'getValue' | 'setValue'> {
+	actionIdSet: ACTION_ID_SET;
+	getUnitRef: (player: Player<any>) => UnitReference;
+	defaultUnitRef: DEFAULT_UNIT_REF;
+	getValue: (obj: ModObject) => ActionID;
+	setValue: (eventID: EventID, obj: ModObject, newValue: ActionID) => void;
+}
+
+const cachedAPLActionIDPickerContent = new CacheHandler<Element>();
+
+export class APLActionIDPicker extends DropdownPicker<Player<any>, ActionID, ActionId> {
+	constructor(parent: HTMLElement, player: Player<any>, config: APLActionIDPickerConfig<Player<any>>) {
+		const actionIdSet = actionIdSets[config.actionIdSet];
+		super(parent, player, {
+			...config,
+			sourceToValue: (src: ActionID) => (src ? ActionId.fromProto(src) : ActionId.fromEmpty()),
+			valueToSource: (val: ActionId) => val.toProto(),
+			defaultLabel: actionIdSet.defaultLabel,
+			equals: (a, b) => (a == null) == (b == null) && (!a || a.equals(b!)),
+			setOptionContent: (button, valueConfig) => {
+				const actionId = valueConfig.value;
+				const isAuraType = ['auras', 'stackable_auras', 'icd_auras', 'exclusive_effect_auras'].includes(config.actionIdSet);
+
+				const cacheKey = `${actionId.toString()}${isAuraType}`;
+				const cachedContent = cachedAPLActionIDPickerContent.get(cacheKey)?.cloneNode(true) as Element | undefined;
+				if (cachedContent) {
+					button.appendChild(cachedContent);
+				}
+
+				const iconRef = ref<HTMLAnchorElement>();
+				const content = (
+					<>
+						<a
+							ref={iconRef}
+							className="apl-actionid-item-icon"
+							dataset={{
+								whtticon: false,
+							}}
+						/>
+						{actionId.name}
+					</>
+				);
+				button.appendChild(content);
+
+				actionId.setBackgroundAndHref(iconRef.value!);
+				actionId.setWowheadDataset(iconRef.value!, { useBuffAura: isAuraType });
+
+				cachedAPLActionIDPickerContent.set(cacheKey, content);
+			},
+			createMissingValue: value => {
+				if (value.anyId() == 0) {
+					return new Promise<DropdownValueConfig<ActionId>>(() => {
+						value: actionIdSet.defaultLabel;
+					});
+				}
+
+				return value.fill().then(filledId => ({
+					value: filledId,
+				}));
+			},
+			values: [],
+		});
+
+		const getUnitRef = config.getUnitRef;
+		const defaultRef =
+			config.defaultUnitRef == 'self' ? UnitReference.create({ type: UnitType.Self }) : UnitReference.create({ type: UnitType.CurrentTarget });
+		const getActionIDs = actionIdSet.getActionIDs;
+		const updateValues = async () => {
+			const unitRef = getUnitRef(player);
+			const metadata = player.sim.getUnitMetadata(unitRef, player, defaultRef);
+			if (metadata) {
+				const values = await getActionIDs(metadata);
+				this.setOptions(values);
+			}
+		};
+		updateValues();
+		const unitMetaEvent = player.sim.unitMetadataEmitter.on(updateValues);
+		const rotationChangeEvent = player.rotationChangeEmitter.on(updateValues);
+		this.addOnDisposeCallback(() => {
+			unitMetaEvent.dispose();
+			rotationChangeEvent.dispose();
+		});
+	}
+}
+
+export type UNIT_SET = 'aura_sources' | 'aura_sources_targets_first' | 'targets' | 'players';
+
+const unitSets: Record<
+	UNIT_SET,
+	{
+		// Uses target icon by default instead of person icon. This should be set to true for inputs that default to CurrentTarget.
+		targetUI?: boolean;
+		getUnits: (player: Player<any>) => Array<UnitReference | undefined>;
+	}
+> = {
+	aura_sources: {
+		getUnits: player => {
+			return [
+				undefined,
+				player
+					.getPetMetadatas()
+					.asList()
+					.map((petMetadata, i) => UnitReference.create({ type: UnitType.Pet, index: i, owner: UnitReference.create({ type: UnitType.Self }) })),
+				UnitReference.create({ type: UnitType.CurrentTarget }),
+				UnitReference.create({ type: UnitType.PreviousTarget }),
+				UnitReference.create({ type: UnitType.NextTarget }),
+				player.sim.raid
+					.getActivePlayers()
+					.filter(filter => filter != player)
+					.map(mapPlayer => UnitReference.create({ type: UnitType.Player, index: mapPlayer.getRaidIndex() })),
+				player.sim.encounter.targetsMetadata.asList().map((targetMetadata, i) => UnitReference.create({ type: UnitType.Target, index: i })),
+			].flat();
+		},
+	},
+	aura_sources_targets_first: {
+		targetUI: true,
+		getUnits: player => {
+			return [
+				undefined,
+				player.sim.encounter.targetsMetadata.asList().map((targetMetadata, i) => UnitReference.create({ type: UnitType.Target, index: i })),
+				UnitReference.create({ type: UnitType.Self }),
+				player
+					.getPetMetadatas()
+					.asList()
+					.map((petMetadata, i) => UnitReference.create({ type: UnitType.Pet, index: i, owner: UnitReference.create({ type: UnitType.Self }) })),
+			].flat();
+		},
+	},
+	targets: {
+		targetUI: true,
+		getUnits: player => {
+			return [
+				undefined,
+				player.sim.encounter.targetsMetadata.asList().map((_targetMetadata, i) => UnitReference.create({ type: UnitType.Target, index: i })),
+				UnitReference.create({ type: UnitType.PreviousTarget }),
+				UnitReference.create({ type: UnitType.NextTarget }),
+			].flat();
+		},
+	},
+	players: {
+		targetUI: true,
+		getUnits: player => {
+			return [
+				undefined,
+				player.sim.raid.getActivePlayers().map(player => UnitReference.create({ type: UnitType.Player, index: player.getRaidIndex() })),
+			].flat();
+		},
+	},
+};
+
+export interface APLUnitPickerConfig extends Omit<UnitPickerConfig<Player<any>>, 'values'> {
+	unitSet: UNIT_SET;
+}
+
+export class APLUnitPicker extends UnitPicker<Player<any>> {
+	private readonly unitSet: UNIT_SET;
+
+	constructor(parent: HTMLElement, player: Player<any>, config: APLUnitPickerConfig) {
+		const targetUI = !!unitSets[config.unitSet].targetUI;
+		super(parent, player, {
+			...config,
+			sourceToValue: (src: UnitReference | undefined) => APLUnitPicker.refToValue(src, player, targetUI),
+			valueToSource: (val: UnitValue) => val.value,
+			values: [],
+			hideLabelWhenDefaultSelected: true,
+		});
+		this.unitSet = config.unitSet;
+		this.rootElem.classList.add('apl-unit-picker');
+
+		this.updateValues();
+		const event = player.sim.unitMetadataEmitter.on(() => this.updateValues());
+		this.addOnDisposeCallback(() => {
+			event.dispose();
+		});
+	}
+
+	private static refToValue(ref: UnitReference | undefined, thisPlayer: Player<any>, targetUI: boolean | undefined): UnitValue {
+		if (!ref || ref.type == UnitType.Unknown) {
+			return {
+				value: ref,
+				iconUrl: targetUI ? 'fa-bullseye' : 'fa-user',
+				text: targetUI ? i18n.t('rotation_tab.apl.helpers.unit_labels.current_target') : i18n.t('rotation_tab.apl.helpers.unit_labels.self'),
+			};
+		} else if (ref.type == UnitType.Self) {
+			return {
+				value: ref,
+				iconUrl: 'fa-user',
+				text: i18n.t('rotation_tab.apl.helpers.unit_labels.self'),
+			};
+		} else if (ref.type == UnitType.CurrentTarget) {
+			return {
+				value: ref,
+				iconUrl: 'fa-bullseye',
+				text: i18n.t('rotation_tab.apl.helpers.unit_labels.current_target'),
+			};
+		} else if (ref.type == UnitType.PreviousTarget) {
+			return {
+				value: ref,
+				iconUrl: 'fa-arrow-left',
+				text: i18n.t('rotation_tab.apl.helpers.unit_labels.previous_target'),
+			};
+		} else if (ref.type == UnitType.NextTarget) {
+			return {
+				value: ref,
+				iconUrl: 'fa-arrow-right',
+				text: i18n.t('rotation_tab.apl.helpers.unit_labels.next_target'),
+			};
+		} else if (ref.type == UnitType.Player) {
+			const player = thisPlayer.sim.raid.getPlayer(ref.index);
+			if (player) {
+				return {
+					value: ref,
+					iconUrl: player.getSpecIcon(),
+					text: `${i18n.t('rotation_tab.apl.helpers.unit_labels.player')} ${ref.index + 1}`,
+				};
+			}
+		} else if (ref.type == UnitType.Target) {
+			const targetMetadata = thisPlayer.sim.encounter.targetsMetadata.asList()[ref.index];
+			if (targetMetadata) {
+				return {
+					value: ref,
+					iconUrl: defaultTargetIcon,
+					text: `${i18n.t('rotation_tab.apl.helpers.unit_labels.target')} ${ref.index + 1}`,
+				};
+			}
+		} else if (ref.type == UnitType.Pet) {
+			const petMetadata = thisPlayer.sim.getUnitMetadata(ref, thisPlayer, UnitReference.create({ type: UnitType.Self }));
+			let name = `${i18n.t('rotation_tab.apl.helpers.unit_labels.pet')} ${ref.index + 1}`;
+			let icon: string | ActionId = 'fa-paw';
+			if (petMetadata) {
+				const petName = petMetadata.getName();
+				if (petName) {
+					const rmIdx = petName.indexOf(' - ');
+					name = petName.substring(rmIdx + ' - '.length);
+					icon = getPetIconFromName(name) || icon;
+				}
+			}
+			return {
+				value: ref,
+				iconUrl: icon,
+				text: name,
+			};
+		}
+
+		return {
+			value: ref,
+		};
+	}
+
+	private updateValues() {
+		const unitSet = unitSets[this.unitSet];
+		const values = unitSet.getUnits(this.modObject);
+
+		this.setOptions(
+			values.map(v => {
+				const valueConfig: DropdownValueConfig<UnitValue> = {
+					value: APLUnitPicker.refToValue(v, this.modObject, unitSet.targetUI),
+				};
+				if (v && v.type == UnitType.Pet) {
+					if (unitSet.targetUI) {
+						valueConfig.submenu = [APLUnitPicker.refToValue(v.owner!, this.modObject, unitSet.targetUI)];
+					} else {
+						valueConfig.submenu = [APLUnitPicker.refToValue(undefined, this.modObject, unitSet.targetUI)];
+					}
+				}
+				return valueConfig;
+			}),
+		);
+	}
+}
+
+type APLPickerBuilderFieldFactory<F> = (
+	parent: HTMLElement,
+	player: Player<any>,
+	config: InputConfig<Player<any>, F>,
+	getParentValue: () => any,
+) => Input<Player<any>, F>;
+
+export interface APLPickerBuilderFieldConfig<T, F extends keyof T> {
+	field: F;
+	newValue: () => T[F];
+	factory: APLPickerBuilderFieldFactory<T[F]>;
+
+	label?: string;
+	labelTooltip?: string;
+}
+
+export interface APLPickerBuilderConfig<T> extends InputConfig<Player<any>, T> {
+	newValue: () => T;
+	fields: Array<APLPickerBuilderFieldConfig<T, any>>;
+}
+
+export interface APLPickerBuilderField<T, F extends keyof T> extends APLPickerBuilderFieldConfig<T, F> {
+	picker: Input<Player<any>, T[F]>;
+}
+
+export class APLPickerBuilder<T> extends Input<Player<any>, T> {
+	private readonly config: APLPickerBuilderConfig<T>;
+	private readonly fieldPickers: Array<APLPickerBuilderField<T, any>>;
+
+	constructor(parent: HTMLElement, modObject: Player<any>, config: APLPickerBuilderConfig<T>) {
+		super(parent, 'apl-picker-builder-root', modObject, config);
+		this.config = config;
+
+		this.fieldPickers = config.fields.map(fieldConfig => APLPickerBuilder.makeFieldPicker(this, fieldConfig));
+
+		this.init();
+	}
+
+	private static makeFieldPicker<T, F extends keyof T>(
+		builder: APLPickerBuilder<T>,
+		fieldConfig: APLPickerBuilderFieldConfig<T, F>,
+	): APLPickerBuilderField<T, F> {
+		const field: F = fieldConfig.field;
+		const picker = fieldConfig.factory(
+			builder.rootElem,
+			builder.modObject,
+			{
+				label: fieldConfig.label,
+				labelTooltip: fieldConfig.labelTooltip,
+				id: randomUUID(),
+				changedEvent: (player: Player<any>) => player.rotationChangeEmitter,
+				getValue: () => {
+					const source = builder.getSourceValue();
+					if (!source[field]) {
+						source[field] = fieldConfig.newValue();
+					}
+					return source[field];
+				},
+				setValue: (eventID: EventID, player: Player<any>, newValue: any) => {
+					builder.getSourceValue()[field] = newValue;
+					player.rotationChangeEmitter.emit(eventID);
+				},
+			},
+			() => builder.getSourceValue(),
+		);
+
+		if (field === 'vals' || field === 'actions') {
+			picker.rootElem.classList.add('apl-picker-builder-multi');
+		}
+
+		return {
+			...fieldConfig,
+			picker: picker,
+		};
+	}
+
+	getInputElem(): HTMLElement {
+		return this.rootElem;
+	}
+
+	getInputValue(): T {
+		const val = this.config.newValue();
+		this.fieldPickers.forEach(pickerData => {
+			val[pickerData.field as keyof T] = pickerData.picker.getInputValue();
+		});
+		return val;
+	}
+
+	setInputValue(newValue: T) {
+		this.fieldPickers.forEach(pickerData => {
+			pickerData.picker.setInputValue(newValue[pickerData.field as keyof T]);
+		});
+	}
+}
+
+export function actionIdFieldConfig(
+	field: string,
+	actionIdSet: ACTION_ID_SET,
+	unitRefField?: string,
+	defaultUnitRef?: DEFAULT_UNIT_REF,
+	options?: Partial<APLPickerBuilderFieldConfig<any, any>>,
+): APLPickerBuilderFieldConfig<any, any> {
+	return {
+		field: field,
+		newValue: () => ActionID.create(),
+		factory: (parent, player, config, getParentValue) =>
+			new APLActionIDPicker(parent, player, {
+				id: randomUUID(),
+				...config,
+				actionIdSet: actionIdSet,
+				getUnitRef: () => (unitRefField ? getParentValue()[unitRefField] : UnitReference.create()),
+				defaultUnitRef: defaultUnitRef || 'self',
+			}),
+		...(options || {}),
+	};
+}
+
+export function unitFieldConfig(
+	field: string,
+	unitSet: UNIT_SET,
+	options?: Partial<APLPickerBuilderFieldConfig<any, any>>,
+): APLPickerBuilderFieldConfig<any, any> {
+	return {
+		field: field,
+		newValue: () => undefined,
+		factory: (parent, player, config) =>
+			new APLUnitPicker(parent, player, {
+				id: randomUUID(),
+				...config,
+				unitSet: unitSet,
+			}),
+		...(options || {}),
+	};
+}
+
+export function booleanFieldConfig(
+	field: string,
+	label?: string,
+	options?: Partial<APLPickerBuilderFieldConfig<any, any>>,
+): APLPickerBuilderFieldConfig<any, any> {
+	return {
+		field: field,
+		newValue: () => false,
+		factory: (parent, player, config) => {
+			config.extraCssClasses = ['input-inline'].concat(config.extraCssClasses || []);
+			return new BooleanPicker(parent, player, { id: randomUUID(), ...config });
+		},
+		...(options || {}),
+		label: label,
+	};
+}
+
+export function numberFieldConfig(
+	field: string,
+	float: boolean,
+	options?: Partial<APLPickerBuilderFieldConfig<any, any>>,
+): APLPickerBuilderFieldConfig<any, any> {
+	return {
+		field: field,
+		newValue: () => 0,
+		factory: (parent, player, config) => {
+			const numberPickerConfig = config as NumberPickerConfig<Player<any>>;
+			numberPickerConfig.float = float;
+			numberPickerConfig.extraCssClasses = ['input-inline'].concat(config.extraCssClasses || []);
+			return new NumberPicker(parent, player, numberPickerConfig);
+		},
+		...(options || {}),
+	};
+}
+
+export function stringFieldConfig(field: string, options?: Partial<APLPickerBuilderFieldConfig<any, any>>): APLPickerBuilderFieldConfig<any, any> {
+	return {
+		field: field,
+		newValue: () => '',
+		factory: (parent, player, config) => {
+			config.extraCssClasses = ['input-inline'].concat(config.extraCssClasses || []);
+			return new AdaptiveStringPicker(parent, player, { id: randomUUID(), ...config });
+		},
+		...(options || {}),
+	};
+}
+
+export function variableNameFieldConfig(field: string, options?: Partial<APLPickerBuilderFieldConfig<any, any>>): APLPickerBuilderFieldConfig<any, any> {
+	return {
+		field: field,
+		newValue: () => '',
+		factory: (parent, player, config) => {
+			const picker = new TextDropdownPicker(parent, player, {
+				id: randomUUID(),
+				...config,
+				defaultLabel: i18n.t('rotation_tab.apl.helpers.select_variable'),
+				equals: (a, b) => a === b,
+				values: [],
+				changedEvent: (player: Player<any>) => player.rotationChangeEmitter,
+			});
+
+			const updateValues = () => {
+				const variables = player.aplRotation?.valueVariables || [];
+				const values = variables.map((variable: any) => ({
+					value: variable.name,
+					label: variable.name,
+				}));
+
+				// If no variables are defined, show a placeholder
+				if (values.length === 0) {
+					values.push({
+						value: '',
+						label: i18n.t('rotation_tab.apl.helpers.no_variables_defined'),
+					});
+				}
+
+				picker.setOptions(values);
+			};
+
+			// Update values initially and when rotation changes
+			updateValues();
+			player.rotationChangeEmitter.on(updateValues);
+
+			return picker;
+		},
+		...(options || {}),
+	};
+}
+
+export function placeholderNameFieldConfig(field: string, options?: Partial<APLPickerBuilderFieldConfig<any, any>>): APLPickerBuilderFieldConfig<any, any> {
+	return {
+		field: field,
+		newValue: () => '',
+		factory: (parent, player, config, getParentValue) => {
+			return new APLPlaceholderNamePicker(parent, player, config, getParentValue);
+		},
+		...(options || {}),
+	};
+}
+
+class APLPlaceholderNamePicker extends Input<Player<any>, string> {
+	private readonly nameLabel: HTMLElement;
+
+	constructor(parent: HTMLElement, player: Player<any>, config: InputConfig<Player<any>, string>, getParentValue: () => any) {
+		super(parent, 'apl-placeholder-name-picker-root', player, config);
+
+		const container = this.rootElem.appendChild(
+			<div className="apl-name-display">
+				<span className="apl-name-value" />
+				<button className="btn btn-link apl-name-rename" type="button">
+					<i className="fas fa-pencil-alt" />
+				</button>
+			</div>,
+		) as HTMLElement;
+
+		this.nameLabel = container.querySelector('.apl-name-value')!;
+
+		container.querySelector('.apl-name-rename')!.addEventListener('click', () => {
+			this.openNameModal(player, getParentValue);
+		});
+
+		this.init();
+
+		// Auto-open modal when name is empty (freshly created)
+		if (!config.getValue(player)) {
+			this.openNameModal(player, getParentValue, true);
+		}
+	}
+
+	private findContainingGroup(player: Player<any>, parentValue: any): any | undefined {
+		return player.aplRotation?.groups?.find((group: any) =>
+			group.actions?.some((action: any) => {
+				const found = { value: false };
+				const search = (obj: any) => {
+					if (found.value || !obj || typeof obj !== 'object') return;
+					if (obj === parentValue) {
+						found.value = true;
+						return;
+					}
+					if (Array.isArray(obj)) {
+						obj.forEach(search);
+					} else {
+						Object.values(obj).forEach(search);
+					}
+				};
+				search(action);
+				return found.value;
+			}),
+		);
+	}
+
+	private getExistingPlaceholderNames(group: any, excludeCurrent: boolean): string[] {
+		const names = new Set<string>();
+		const scan = (obj: any) => {
+			if (!obj || typeof obj !== 'object') return;
+			if (obj?.value?.oneofKind === 'variablePlaceholder') {
+				const name = obj.value.variablePlaceholder?.name;
+				if (name) names.add(name);
+			}
+			if (Array.isArray(obj)) {
+				obj.forEach(scan);
+			} else {
+				Object.values(obj).forEach(scan);
+			}
+		};
+		group?.actions?.forEach(scan);
+
+		if (excludeCurrent) {
+			const currentName = this.getSourceValue();
+			if (currentName) names.delete(currentName);
+		}
+
+		return Array.from(names);
+	}
+
+	private openNameModal(player: Player<any>, getParentValue: () => any, isNew = false) {
+		const currentName = this.getSourceValue();
+		const group = this.findContainingGroup(player, getParentValue());
+		new APLNameModal(this.rootElem.closest('.individual-sim-ui') as HTMLElement ?? document.body, {
+			title: currentName
+				? i18n.t('rotation_tab.apl.nameModal.rename', { itemName: i18n.t('rotation_tab.apl.variablePlaceholder.name') })
+				: i18n.t('rotation_tab.apl.floatingActionBar.new', { itemName: i18n.t('rotation_tab.apl.variablePlaceholder.name') }),
+			inputLabel: i18n.t('rotation_tab.apl.variablePlaceholder.nameLabel'),
+			confirmButtonLabel: currentName ? i18n.t('rotation_tab.apl.nameModal.renameConfirm') : undefined,
+			defaultValue: currentName || '',
+			existingNames: () => this.getExistingPlaceholderNames(group, !!currentName),
+			onSubmit: (name: string) => {
+				if (currentName && group) {
+					// Rename placeholders within this group only
+					renameAPLReference(group, { type: 'placeholder', oldName: currentName, newName: name });
+					// Rename matching variable entries in group references that point to this group
+					const groupName = group.name;
+					const updateGroupRefs = (obj: any) => {
+						if (!obj || typeof obj !== 'object') return;
+						if (obj?.oneofKind === 'groupReference' && obj.groupReference?.groupName === groupName) {
+							for (const v of obj.groupReference.variables ?? []) {
+								if (v.name === currentName) v.name = name;
+							}
+						}
+						if (Array.isArray(obj)) obj.forEach(updateGroupRefs);
+						else Object.values(obj).forEach(updateGroupRefs);
+					};
+					updateGroupRefs(player.aplRotation);
+				}
+				this.setSourceValue(TypedEvent.nextEventID(), name);
+				player.rotationChangeEmitter.emit(TypedEvent.nextEventID());
+			},
+			onCancel: isNew
+				? () => {
+						// Remove the placeholder by resetting the parent APLValue
+						const parentValue = getParentValue();
+						const clearValue = (obj: any): boolean => {
+							if (!obj || typeof obj !== 'object') return false;
+							if (obj?.value?.oneofKind === 'variablePlaceholder' && obj.value.variablePlaceholder === parentValue) {
+								obj.value = { oneofKind: undefined };
+								return true;
+							}
+							if (Array.isArray(obj)) return obj.some(clearValue);
+							return Object.values(obj).some(clearValue);
+						};
+						clearValue(player.aplRotation);
+						player.rotationChangeEmitter.emit(TypedEvent.nextEventID());
+					}
+				: undefined,
+		});
+	}
+
+	getInputElem(): HTMLElement | null {
+		return this.rootElem;
+	}
+
+	getInputValue(): string {
+		return this.nameLabel.textContent || '';
+	}
+
+	setInputValue(newValue: string) {
+		this.nameLabel.textContent = newValue || '';
+	}
+}
+
+export function groupNameFieldConfig(field: string, options?: Partial<APLPickerBuilderFieldConfig<any, any>>): APLPickerBuilderFieldConfig<any, any> {
+	return {
+		field: field,
+		newValue: () => '',
+		factory: (parent, player, config) => {
+			const picker = new TextDropdownPicker(parent, player, {
+				id: randomUUID(),
+				...config,
+				defaultLabel: i18n.t('rotation_tab.apl.helpers.select_group'),
+				equals: (a, b) => a === b,
+				values: [],
+				changedEvent: (player: Player<any>) => player.rotationChangeEmitter,
+			});
+
+			const updateValues = () => {
+				const groups = player.aplRotation?.groups || [];
+				const values = groups.map((group: any) => ({
+					value: group.name,
+					label: group.name,
+				}));
+
+				// If no groups are defined, show a placeholder
+				if (values.length === 0) {
+					values.push({
+						value: '',
+						label: i18n.t('rotation_tab.apl.helpers.no_groups_defined'),
+					});
+				}
+
+				picker.setOptions(values);
+			};
+
+			// Update values initially and when rotation changes
+			updateValues();
+			player.rotationChangeEmitter.on(updateValues);
+
+			return picker;
+		},
+		...(options || {}),
+	};
+}
+
+export function groupReferenceVariablesFieldConfig(
+	field: string,
+	groupNameField: string,
+	options?: Partial<APLPickerBuilderFieldConfig<any, any>>,
+): APLPickerBuilderFieldConfig<any, any> {
+	return {
+		field: field,
+		newValue: () => [],
+		factory: (parent, player, config, getParentValue) => {
+			// Create a simple container
+			const container = document.createElement('div');
+			container.classList.add('group-reference-variables-container');
+			parent.appendChild(container);
+
+			// Create a ListPicker for the variables
+			const listPicker = new ListPicker(container, player, {
+				title: 'Group Variables',
+				titleTooltip: "Variables to pass to the group. These will override the group's internal variables.",
+				itemLabel: 'Variable',
+				changedEvent: (player: Player<any>) => player.rotationChangeEmitter,
+				getValue: () => {
+					const parentValue = getParentValue();
+					return parentValue?.variables || [];
+				},
+				setValue: (eventID: EventID, player: Player<any>, newValue: any[]) => {
+					const parentValue = getParentValue();
+					parentValue.variables = newValue;
+					config.setValue(eventID, player, newValue);
+				},
+				newItem: () => {
+					throw new Error('newItem should not be called for auto-populated group variables');
+				},
+				copyItem: (oldItem: any) => ({
+					name: oldItem.name,
+					value: oldItem.value,
+				}),
+				newItemPicker: (
+					parent: HTMLElement,
+					listPicker: ListPicker<Player<any>, any>,
+					index: number,
+					itemConfig: ListItemPickerConfig<Player<any>, any>,
+				) => {
+					const currentVariables = getParentValue()?.variables || [];
+					const variableName = currentVariables[index]?.__uiVarName || currentVariables[index]?.name || '';
+					return new APLGroupVariablePicker(parent, player, itemConfig, getParentValue, groupNameField, variableName);
+				},
+				inlineMenuBar: false, // Hide the add/remove buttons since we auto-populate
+				allowedActions: ['delete', 'copy'], // Only allow delete and copy, not create
+			});
+
+			// Function to update the list based on the selected group
+			const updateVariableList = () => {
+				const parentValue = getParentValue();
+				const selectedGroupName = parentValue[groupNameField];
+
+				if (!selectedGroupName) {
+					listPicker.setInputValue([]);
+					container.classList.add('d-none');
+					return;
+				}
+
+				// Find the selected group
+				const groups = player.aplRotation?.groups || [];
+				const selectedGroup = groups.find((group: any) => group.name === selectedGroupName);
+
+				if (!selectedGroup) {
+					listPicker.setInputValue([]);
+					container.classList.add('d-none');
+					return;
+				}
+
+				// Prepare a set and recursive scanner for VariablePlaceholder values.
+				const placeholderVariables = new Set<string>();
+				const scanForPlaceholders = (obj: any) => {
+					if (!obj || typeof obj !== 'object') return;
+					// Detect a variable placeholder APLValue.
+					if (obj?.value?.oneofKind === 'variablePlaceholder') {
+						const name = obj.value.variablePlaceholder?.name;
+						if (name) placeholderVariables.add(name);
+					}
+					// Recurse through arrays and object properties.
+					if (Array.isArray(obj)) {
+						obj.forEach(child => scanForPlaceholders(child));
+					} else {
+						Object.values(obj).forEach(child => scanForPlaceholders(child));
+					}
+				};
+
+				// Perform a full recursive scan on every action in the group.
+				selectedGroup.actions?.forEach((actionItem: any) => {
+					scanForPlaceholders(actionItem);
+				});
+
+				// Hide the container if no placeholder variables found
+				if (placeholderVariables.size === 0) {
+					container.classList.add('d-none');
+					listPicker.setInputValue([]);
+					return;
+				}
+
+				// Show the container and populate variables
+				container.classList.remove('d-none');
+
+				parentValue.variables = Array.from(placeholderVariables).map(varName => {
+					// Find existing variable or create new one
+					let variableItem = parentValue?.variables.find((v: any) => v.name === varName);
+					if (!variableItem) {
+						variableItem = {
+							name: varName,
+							value: {
+								uuid: { value: randomUUID() },
+								value: {
+									oneofKind: 'variableRef',
+									variableRef: { name: '' },
+								},
+							},
+						};
+					}
+					// Attach UI variable name for label
+					variableItem.__uiVarName = varName;
+					return variableItem;
+				});
+
+				// Clear first to force picker recreation — labels are set in
+				// the constructor and won't update on reuse.
+				listPicker.setInputValue([]);
+				listPicker.setInputValue(parentValue.variables);
+			};
+
+			// Listen for group name changes and rotation changes
+			player.rotationChangeEmitter.on(updateVariableList);
+			updateVariableList();
+
+			return {
+				rootElem: container,
+				getInputValue: () => {
+					const parentValue = getParentValue();
+					return parentValue?.variables || [];
+				},
+				setInputValue: (newValue: any[]) => {
+					const parentValue = getParentValue();
+					parentValue.variables = newValue;
+				},
+			} as any;
+		},
+		...(options || {}),
+	};
+}
+
+// Simple picker for individual group variables
+class APLGroupVariablePicker extends Input<Player<any>, any> {
+	private readonly valuePicker: TextDropdownPicker<Player<any>, string>;
+	private readonly getParentValue: () => any;
+	private readonly groupNameField: string;
+	private readonly variableName: string;
+
+	constructor(
+		parent: HTMLElement,
+		player: Player<any>,
+		config: ListItemPickerConfig<Player<any>, any>,
+		getParentValue: () => any,
+		groupNameField: string,
+		variableName: string,
+	) {
+		super(parent, 'apl-group-variable-picker-root', player, config);
+		this.getParentValue = getParentValue;
+		this.groupNameField = groupNameField;
+		this.variableName = variableName;
+
+		// Create label for the variable name
+		const label = document.createElement('label');
+		label.textContent = `${this.variableName}:`;
+		label.classList.add('group-variable-label', 'fw-bold', 'd-block');
+		this.rootElem.appendChild(label);
+
+		// Variable value picker
+		this.valuePicker = new TextDropdownPicker(this.rootElem, this.modObject, {
+			id: randomUUID(),
+			label: '',
+			labelTooltip: i18n.t('rotation_tab.apl.helpers.field_configs.variable_assignment_tooltip', { variableName: this.variableName }),
+			defaultLabel: i18n.t('rotation_tab.apl.helpers.select_variable'),
+			equals: (a, b) => a === b,
+			values: [],
+			changedEvent: (player: Player<any>) => player.rotationChangeEmitter,
+			getValue: () => {
+				const item = this.getSourceValue();
+				if (item?.value?.value?.variableRef?.name) {
+					return item.value.value.variableRef.name;
+				}
+				return '';
+			},
+			setValue: (eventID: EventID, player: Player<any>, newValue: string) => {
+				const item = this.getSourceValue();
+				if (item && newValue) {
+					item.value = {
+						uuid: { value: randomUUID() },
+						value: {
+							oneofKind: 'variableRef',
+							variableRef: { name: newValue },
+						},
+					};
+					player.rotationChangeEmitter.emit(eventID);
+				}
+			},
+		});
+
+		// Update available variables when group changes
+		const updateAvailableVariables = () => {
+			const parentValue = this.getParentValue();
+			const selectedGroupName = parentValue[this.groupNameField];
+
+			if (!selectedGroupName) {
+				this.valuePicker.setOptions([]);
+				return;
+			}
+
+			// Get available variables from the rotation
+			const availableVariables = this.modObject.aplRotation?.valueVariables || [];
+			const values = availableVariables.map((variable: any) => ({
+				value: variable.name,
+				label: variable.name,
+			}));
+
+			this.valuePicker.setOptions(values);
+		};
+
+		// Listen for group name changes
+		this.modObject.rotationChangeEmitter.on(updateAvailableVariables);
+		updateAvailableVariables();
+
+		this.init();
+	}
+
+	getInputElem(): HTMLElement | null {
+		return this.rootElem;
+	}
+
+	getInputValue(): any {
+		return {
+			name: this.variableName,
+			value: this.getSourceValue()?.value,
+		};
+	}
+
+	setInputValue(newValue: any) {
+		if (!newValue) return;
+		// The value picker will be updated via the change event
+	}
+}
+
+export function eclipseTypeFieldConfig(field: string): APLPickerBuilderFieldConfig<any, any> {
+	const values = [
+		{ value: APLValueEclipsePhase.LunarPhase, label: i18n.t('rotation_tab.apl.helpers.eclipse_types.lunar') },
+		{ value: APLValueEclipsePhase.SolarPhase, label: i18n.t('rotation_tab.apl.helpers.eclipse_types.solar') },
+		{ value: APLValueEclipsePhase.NeutralPhase, label: i18n.t('rotation_tab.apl.helpers.eclipse_types.neutral') },
+	];
+
+	return {
+		field: field,
+		newValue: () => APLValueEclipsePhase.LunarPhase,
+		factory: (parent, player, config) =>
+			new TextDropdownPicker(parent, player, {
+				id: randomUUID(),
+				...config,
+				defaultLabel: i18n.t('rotation_tab.apl.helpers.eclipse_types.lunar'),
+				equals: (a, b) => a == b,
+				values: values,
+			}),
+	};
+}
+
+
+export function hotwStrategyFieldConfig(field: string): APLPickerBuilderFieldConfig<any, any> {
+	const values = [
+		{ value: HotwStrategy.Caster, label: i18n.t('rotation_tab.apl.helpers.hotw_strategies.caster') },
+		{ value: HotwStrategy.Cat, label: i18n.t('rotation_tab.apl.helpers.hotw_strategies.cat') },
+		{ value: HotwStrategy.Hybrid, label: i18n.t('rotation_tab.apl.helpers.hotw_strategies.hybrid') },
+	];
+
+	return {
+		field: field,
+		label: i18n.t('rotation_tab.apl.helpers.field_configs.strategy'),
+		newValue: () => HotwStrategy.Caster,
+		factory: (parent, player, config) =>
+			new TextDropdownPicker(parent, player, {
+				id: randomUUID(),
+				...config,
+				defaultLabel: i18n.t('rotation_tab.apl.helpers.hotw_strategies.caster'),
+				equals: (a, b) => a == b,
+				values: values,
+			}),
+	};
+}
+
+export function statTypeFieldConfig(field: string): APLPickerBuilderFieldConfig<any, any> {
+	const allStats = getEnumValues(Stat) as Array<Stat>;
+	const values = [{ value: -1, label: i18n.t('common.none') }].concat(
+		allStats.map(stat => {
+			return { value: stat, label: translateStat(stat) };
+		}),
+	);
+
+	return {
+		field: field,
+		label: i18n.t('rotation_tab.apl.helpers.field_configs.buff_type'),
+		newValue: () => 0,
+		factory: (parent, player, config) =>
+			new TextDropdownPicker(parent, player, {
+				id: randomUUID(),
+				...config,
+				defaultLabel: i18n.t('common.none'),
+				equals: (a, b) => a == b,
+				values: values,
+			}),
+	};
+}
+
+export const minIcdInput = numberFieldConfig('minIcdSeconds', false, {
+	label: i18n.t('rotation_tab.apl.helpers.field_configs.min_icd'),
+	labelTooltip: i18n.t('rotation_tab.apl.helpers.field_configs.min_icd_tooltip'),
+});
+
+export function aplInputBuilder<T>(
+	newValue: () => T,
+	fields: Array<APLPickerBuilderFieldConfig<T, keyof T>>,
+): (parent: HTMLElement, player: Player<any>, config: InputConfig<Player<any>, T>) => Input<Player<any>, T> {
+	return (parent, player, config) => {
+		return new APLPickerBuilder(parent, player, {
+			...config,
+			newValue: newValue,
+			fields: fields,
+		});
+	};
+}
+
+export function reactionTimeCheckbox(): APLPickerBuilderFieldConfig<any, any> {
+	return booleanFieldConfig('includeReactionTime', i18n.t('rotation_tab.apl.helpers.field_configs.include_reaction_time'), {
+		labelTooltip: i18n.t('rotation_tab.apl.helpers.field_configs.include_reaction_time_tooltip'),
+	});
+}
+
+export function useDotBaseValueCheckbox(): APLPickerBuilderFieldConfig<any, any> {
+	return booleanFieldConfig('useBaseValue', i18n.t('rotation_tab.apl.helpers.field_configs.use_base_value'), {
+		labelTooltip: i18n.t('rotation_tab.apl.helpers.field_configs.use_base_value_tooltip'),
+	});
+}
+
+export function itemSwapSetFieldConfig(field: string): APLPickerBuilderFieldConfig<any, any> {
+	return {
+		field: field,
+		newValue: () => ItemSwapSet.Swap1,
+		factory: (parent, player, config) =>
+			new TextDropdownPicker(parent, player, {
+				id: randomUUID(),
+				...config,
+				defaultLabel: i18n.t('common.none'),
+				equals: (a, b) => a == b,
+				values: [
+					{ value: ItemSwapSet.Main, label: i18n.t('rotation_tab.apl.item_swap_sets.main') },
+					{ value: ItemSwapSet.Swap1, label: i18n.t('rotation_tab.apl.item_swap_sets.swapped') },
+				],
+			}),
+	};
+}
+
+export function autoTypeFieldConfig(field: string): APLPickerBuilderFieldConfig<any, any> {
+	return {
+		field: field,
+		newValue: () => APLValueAutoAttackType.AnyAuto,
+		factory: (parent, player, config) =>
+			new TextDropdownPicker(parent, player, {
+				id: randomUUID(),
+				...config,
+				defaultLabel: t('common.none'),
+				equals: (a, b) => a === b,
+				values: [
+					{ value: APLValueAutoAttackType.AnyAuto, label: t('common.any') },
+					{ value: APLValueAutoAttackType.MeleeAuto, label: t('common.melee') },
+					{ value: APLValueAutoAttackType.MainHandAuto, label: t('slots.main_hand', { ns: 'character' }) },
+					{ value: APLValueAutoAttackType.OffHandAuto, label: t('slots.off_hand', { ns: 'character' }) },
+					{ value: APLValueAutoAttackType.RangedAuto, label: t('slots.ranged', { ns: 'character' }) },
+				],
+			}),
+	};
+}
+
+export function autoSwingTypeFieldConfig(field: string): APLPickerBuilderFieldConfig<any, any> {
+	return {
+		field: field,
+		newValue: () => APLValueAutoSwingTime_SwingType.MainHand,
+		factory: (parent, player, config) =>
+			new TextDropdownPicker(parent, player, {
+				id: randomUUID(),
+				...config,
+				defaultLabel: t('common.none'),
+				equals: (a, b) => a === b,
+				values: [
+					{ value: APLValueAutoSwingTime_SwingType.MainHand, label: t('slots.main_hand', { ns: 'character' }) },
+					{ value: APLValueAutoSwingTime_SwingType.OffHand, label: t('slots.off_hand', { ns: 'character' }) },
+					{ value: APLValueAutoSwingTime_SwingType.Ranged, label: t('slots.ranged', { ns: 'character' }) },
+				],
+			}),
+	};
+}
+
+/**
+ * Creates a ListPickerExtraAction that extracts an APL value/condition to a named variable,
+ * replacing it with a Variable Reference.
+ */
+export function extractToVariableAction(
+	player: Player<any>,
+	getValue: (index: number) => APLValue | undefined,
+	setValue: (index: number, variableRef: APLValue) => void,
+	modalParent: HTMLElement = document.body,
+): ListPickerExtraAction {
+	const isExtractable = (index: number): boolean => {
+		const value = getValue(index);
+		return !!value && !!value.value.oneofKind && value.value.oneofKind !== 'variableRef';
+	};
+
+	return {
+		cssClass: 'list-picker-item-extract-variable',
+		icon: 'fa-arrow-right-from-bracket',
+		tooltip: i18n.t('rotation_tab.apl.variables.extractToVariable'),
+		shouldShow: isExtractable,
+		onClick: (index: number) => {
+			if (!isExtractable(index)) return;
+			const value = getValue(index)!;
+
+			new APLNameModal(modalParent, {
+				title: i18n.t('rotation_tab.apl.variables.extractToVariable'),
+				inputLabel: i18n.t('rotation_tab.apl.variables.attributes.name'),
+				confirmButtonLabel: i18n.t('rotation_tab.apl.nameModal.extract'),
+				existingNames: (player.aplRotation.valueVariables || []).map(v => v.name),
+				onSubmit: (name: string) => {
+					if (!player.aplRotation.valueVariables) {
+						player.aplRotation.valueVariables = [];
+					}
+					player.aplRotation.valueVariables.push(APLValueVariable.create({ name, value: APLValue.clone(value) }));
+
+					setValue(
+						index,
+						APLValue.create({
+							value: { oneofKind: 'variableRef', variableRef: { name } },
+							uuid: { value: randomUUID() },
+						}),
+					);
+
+					player.rotationChangeEmitter.emit(TypedEvent.nextEventID());
+				},
+			});
+		},
+	};
+}

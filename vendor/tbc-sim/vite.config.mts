@@ -1,0 +1,176 @@
+/** @type {import('vite').UserConfig} */
+
+import fs from 'fs';
+import { glob } from 'glob';
+import { IncomingMessage, ServerResponse } from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { ConfigEnv, defineConfig, PluginOption, UserConfigExport } from 'vite';
+import { checker } from 'vite-plugin-checker';
+import i18nextLoader from 'vite-plugin-i18next-loader';
+import stylelint from 'vite-plugin-stylelint';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export const BASE_PATH = path.resolve(__dirname, 'ui');
+export const OUT_DIR = path.join(__dirname, 'dist', 'tbc');
+
+function serveExternalAssets() {
+	const workerMappings = {
+		'/tbc/sim_worker.js': '/tbc/local_worker.js',
+		'/tbc/net_worker.js': '/tbc/net_worker.js',
+		'/tbc/lib.wasm': '/tbc/lib.wasm',
+		'/tbc/reforge_worker.js': '/tbc/reforge_worker.js',
+		'/tbc/highs.wasm': '/tbc/highs.wasm',
+	};
+
+	return {
+		name: 'serve-external-assets',
+		configureServer(server) {
+			server.middlewares.use((req, res, next) => {
+				const url = req.url!;
+
+				if (Object.keys(workerMappings).includes(url)) {
+					const targetPath = workerMappings[url as keyof typeof workerMappings];
+					const assetsPath = path.resolve(__dirname, './dist/tbc');
+					const requestedPath = path.join(assetsPath, targetPath.replace('/tbc/', ''));
+
+					serveFile(res, requestedPath);
+					return;
+				}
+
+				// Serve HiGHS chunk files
+				if (url.startsWith('/tbc/highs-') && url.endsWith('.js')) {
+					const assetsPath = path.resolve(__dirname, './dist/tbc');
+					const requestedPath = path.join(assetsPath, url.replace('/tbc/', ''));
+
+					serveFile(res, requestedPath);
+					return;
+				}
+
+				if (url.includes('/tbc/assets')) {
+					const assetsPath = path.resolve(__dirname, './assets');
+					const assetRelativePath = url.split('/tbc/assets')[1];
+					const requestedPath = path.join(assetsPath, assetRelativePath);
+
+					serveFile(res, requestedPath);
+					return;
+				} else {
+					next();
+				}
+			});
+		},
+	} satisfies PluginOption;
+}
+
+function serveFile(res: ServerResponse<IncomingMessage>, filePath: string) {
+	if (fs.existsSync(filePath)) {
+		const contentType = determineContentType(filePath);
+		res.writeHead(200, { 'Content-Type': contentType });
+		fs.createReadStream(filePath).pipe(res);
+	} else {
+		console.log('Not found on filesystem: ', filePath);
+		res.writeHead(404, { 'Content-Type': 'text/plain' });
+		res.end('Not Found');
+	}
+}
+
+function determineContentType(filePath: string) {
+	const extension = path.extname(filePath).toLowerCase();
+	switch (extension) {
+		case '.jpg':
+		case '.jpeg':
+			return 'image/jpeg';
+		case '.png':
+			return 'image/png';
+		case '.gif':
+			return 'image/gif';
+		case '.css':
+			return 'text/css';
+		case '.js':
+			return 'text/javascript';
+		case '.woff':
+		case '.woff2':
+			return 'font/woff2';
+		case '.json':
+			return 'application/json';
+		case '.wasm':
+			return 'application/wasm'; // Adding MIME type for WebAssembly files
+		// Add more cases as needed
+		default:
+			return 'application/octet-stream';
+	}
+}
+
+export const getBaseConfig = ({ command, mode }: ConfigEnv) =>
+	({
+		base: '/tbc/',
+		root: BASE_PATH,
+		build: {
+			outDir: OUT_DIR,
+			minify: mode === 'development' ? false : 'oxc',
+			sourcemap: command === 'serve' ? 'inline' : false,
+			target: ['es2020'],
+		},
+	}) satisfies Partial<UserConfigExport>;
+
+export default defineConfig(({ command, mode }) => {
+	const baseConfig = getBaseConfig({ command, mode });
+	return {
+		...baseConfig,
+		css: {
+			preprocessorOptions: {
+				scss: {
+					silenceDeprecations: ['import', 'global-builtin', 'color-functions', 'if-function'],
+				},
+			},
+		},
+		plugins: [
+			i18nextLoader({ namespaceResolution: 'basename', paths: ['assets/locales'] }),
+			serveExternalAssets(),
+			checker({
+				root: BASE_PATH,
+				typescript: { root: __dirname, tsconfigPath: 'tsconfig.json' },
+				// Type-checking during build is redundant: the makefile runs `tsc --noEmit` right before `vite build`.
+				enableBuild: false,
+			}),
+			stylelint({
+				build: true,
+				lintInWorker: process.env.NODE_ENV === 'production',
+				include: ['ui/**/*.scss'],
+				configFile: path.resolve(__dirname, 'stylelint.config.mjs'),
+			}),
+		],
+		oxc: {
+			jsx: {
+				runtime: 'classic',
+				pragma: 'element',
+				pragmaFrag: 'fragment',
+			},
+			jsxInject: "import { element, fragment } from 'tsx-vanilla';",
+		},
+		build: {
+			...baseConfig.build,
+			rollupOptions: {
+				input: {
+					...glob.sync(path.resolve(BASE_PATH, '**/index.html').replace(/\\/g, '/')).reduce<Record<string, string>>((acc, cur) => {
+						const name = path.relative(__dirname, cur).split(path.sep).join('/');
+						acc[name] = cur;
+						return acc;
+					}, {}),
+					// Add shared.scss as a separate entry if needed or handle it separately
+				},
+				output: {
+					assetFileNames: () => 'bundle/[name]-[hash].style.css',
+					entryFileNames: () => 'bundle/[name]-[hash].entry.js',
+					chunkFileNames: () => 'bundle/[name]-[hash].chunk.js',
+				},
+			},
+			server: {
+				origin: 'http://localhost:3000',
+				// Adding custom middleware to serve 'dist' directory in development
+			},
+		},
+	};
+});

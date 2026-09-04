@@ -5,11 +5,30 @@ import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useState } from "react";
-import { STAT_LABELS, STAT_NAMES, type Stat, type StatName } from "#/solver/types";
+import {
+	STAT_LABELS,
+	STAT_NAMES,
+	type Stat,
+	type StatName,
+} from "#/solver/types";
 import { monoFontFamily } from "#/theme";
 
 const FILTERED_STAT_NAMES: StatName[] = STAT_NAMES.filter((stat) => {
-	return ['SpellPower', 'SpellCrit', 'Armor', 'Resilience', 'Defense', 'MeleeHit', 'Dodge', 'BlockValue', 'SpellHit', 'Parry', 'Block', 'Expertise', 'Health'].includes(stat);
+	return [
+		"SpellPower",
+		"SpellCrit",
+		"Armor",
+		"Resilience",
+		"Defense",
+		"MeleeHit",
+		"Dodge",
+		"BlockValue",
+		"SpellHit",
+		"Parry",
+		"Block",
+		"Expertise",
+		"Health",
+	].includes(stat);
 }).sort((a, b) => STAT_LABELS[a].localeCompare(STAT_LABELS[b]));
 
 interface StatsEntryProps {
@@ -25,7 +44,9 @@ export default function StatsEntry({ stats, onChange }: StatsEntryProps) {
 	const [drafts, setDrafts] = useState<Partial<Record<StatName, string>>>({});
 
 	const usedStats = new Set(stats.map((s) => s.name));
-	const availableStats = FILTERED_STAT_NAMES.filter((stat) => !usedStats.has(stat));
+	const availableStats = FILTERED_STAT_NAMES.filter(
+		(stat) => !usedStats.has(stat),
+	);
 
 	const editValue = (name: StatName, newValue: string) => {
 		setDrafts((prev) => ({ ...prev, [name]: newValue }));

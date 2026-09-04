@@ -39,26 +39,36 @@ export default function ConsumablesSection({
 				Consumables
 			</Box>
 
-			<Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ flex: 1 }}>
+			<Stack
+				direction="row"
+				spacing={0.75}
+				flexWrap="wrap"
+				useFlexGap
+				sx={{ flex: 1 }}
+			>
 				{consumables.map((consumable) => (
 					<Chip
 						key={consumable.id}
-						label={consumable.checked ? `✓ ${consumable.name}` : consumable.name}
+						label={
+							consumable.checked ? `✓ ${consumable.name}` : consumable.name
+						}
 						size="small"
 						onClick={() => onConsumableChange(consumable.id)}
-						sx={consumable.checked
-							? {
-									bgcolor: "rgba(126,163,189,0.2)",
-									border: "1px solid rgba(126,163,189,0.6)",
-									color: "primary.light",
-									fontWeight: 500,
-								}
-							: {
-									bgcolor: "transparent",
-									border: "1px solid rgba(255,255,255,0.14)",
-									color: "rgba(255,255,255,0.4)",
-									textDecoration: "line-through",
-								}}
+						sx={
+							consumable.checked
+								? {
+										bgcolor: "rgba(126,163,189,0.2)",
+										border: "1px solid rgba(126,163,189,0.6)",
+										color: "primary.light",
+										fontWeight: 500,
+									}
+								: {
+										bgcolor: "transparent",
+										border: "1px solid rgba(255,255,255,0.14)",
+										color: "rgba(255,255,255,0.4)",
+										textDecoration: "line-through",
+									}
+						}
 					/>
 				))}
 			</Stack>

@@ -8,7 +8,9 @@ describe("gemsSatisfySocketBonus", () => {
 	});
 
 	it("lets Purple satisfy either a Red or a Blue socket", () => {
-		expect(gemsSatisfySocketBonus(["Red", "Blue"], ["Purple", "Purple"])).toBe(true);
+		expect(gemsSatisfySocketBonus(["Red", "Blue"], ["Purple", "Purple"])).toBe(
+			true,
+		);
 	});
 
 	it("does not let Purple satisfy a Yellow socket", () => {
@@ -21,11 +23,15 @@ describe("gemsSatisfySocketBonus", () => {
 	});
 
 	it("fails when there are fewer gems than sockets", () => {
-		expect(gemsSatisfySocketBonus(["Red", "Blue", "Yellow"], ["Red", "Blue"])).toBe(false);
+		expect(
+			gemsSatisfySocketBonus(["Red", "Blue", "Yellow"], ["Red", "Blue"]),
+		).toBe(false);
 	});
 
 	it("ignores extra gems beyond what the sockets need", () => {
-		expect(gemsSatisfySocketBonus(["Red"], ["Red", "Blue", "Yellow"])).toBe(true);
+		expect(gemsSatisfySocketBonus(["Red"], ["Red", "Blue", "Yellow"])).toBe(
+			true,
+		);
 	});
 
 	it("returns true for zero sockets regardless of gems supplied", () => {
@@ -53,6 +59,7 @@ describe("itemMeetsSocketBonus", () => {
 			objectiveScore: 0,
 			uncritabilityScore: 0,
 			resistanceScores: {},
+			constraintScore: 0,
 			...overrides,
 		}) as LPItem;
 

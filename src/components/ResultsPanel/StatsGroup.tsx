@@ -13,6 +13,8 @@ export interface StatDisplay {
 	value: number;
 	unit?: "%";
 	rating?: number;
+	// Optional extra text shown after the value (e.g. "± 812.40" for a stat weight's stdev).
+	detail?: string;
 }
 
 interface StatsGroupProps {
@@ -145,9 +147,22 @@ export default function StatsGroup({
 								<Typography variant="body2" color="text.secondary">
 									{stat.name}
 								</Typography>
-								<Typography variant="body2" fontWeight="medium">
-									{formatValue(stat)}
-								</Typography>
+								<Box
+									sx={{ display: "flex", alignItems: "baseline", gap: 0.75 }}
+								>
+									<Typography variant="body2" fontWeight="medium">
+										{formatValue(stat)}
+									</Typography>
+									{stat.detail && (
+										<Typography
+											variant="caption"
+											color="text.disabled"
+											sx={{ fontFamily: monoFontFamily }}
+										>
+											{stat.detail}
+										</Typography>
+									)}
+								</Box>
 							</Box>
 						))}
 					</Stack>

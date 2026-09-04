@@ -153,7 +153,7 @@ export default function ResultsPanel({
 								}
 								onClick={handleCopy}
 							>
-								{copied ? "Copied!" : "Export Gear (for Sixty Upgrades)"}
+								{copied ? "Copied!" : "Export for Sixty Upgrades"}
 							</Button>
 						</Box>
 					</Box>
@@ -185,6 +185,9 @@ export default function ResultsPanel({
 								solverConfig={activeResult.solverConfig}
 								includeBuffsConsumables={includeBuffsConsumables}
 								simMetrics={activeResult.simMetrics}
+								statWeights={activeResult.statWeights}
+								statWeightStdevs={activeResult.statWeightStdevs}
+								simBalanceEndpoints={activeResult.simBalanceEndpoints}
 							/>
 						</Box>
 					</Box>

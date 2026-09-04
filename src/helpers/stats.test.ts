@@ -20,6 +20,7 @@ const makeItem = (stats: Stat[]): LPItem =>
 		objectiveScore: 0,
 		uncritabilityScore: 0,
 		resistanceScores: {},
+		constraintScore: 0,
 	}) as LPItem;
 
 const makeModifierSource = (

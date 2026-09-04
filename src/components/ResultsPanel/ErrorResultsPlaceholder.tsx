@@ -6,7 +6,9 @@ interface ErrorResultsPlaceholderProps {
 	message: string;
 }
 
-export default function ErrorResultsPlaceholder({ message }: ErrorResultsPlaceholderProps) {
+export default function ErrorResultsPlaceholder({
+	message,
+}: ErrorResultsPlaceholderProps) {
 	return (
 		<Box
 			sx={{

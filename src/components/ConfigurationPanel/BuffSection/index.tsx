@@ -8,7 +8,10 @@ interface BuffsSectionProps {
 	onBuffChange: (buffId: string) => void;
 }
 
-export default function BuffSection({ buffs, onBuffChange }: BuffsSectionProps) {
+export default function BuffSection({
+	buffs,
+	onBuffChange,
+}: BuffsSectionProps) {
 	return (
 		<Box
 			sx={{
@@ -31,26 +34,34 @@ export default function BuffSection({ buffs, onBuffChange }: BuffsSectionProps) 
 				Buffs
 			</Box>
 
-			<Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ flex: 1 }}>
+			<Stack
+				direction="row"
+				spacing={0.75}
+				flexWrap="wrap"
+				useFlexGap
+				sx={{ flex: 1 }}
+			>
 				{buffs.map((buff) => (
 					<Chip
 						key={buff.id}
 						label={buff.checked ? `✓ ${buff.name}` : buff.name}
 						size="small"
 						onClick={() => onBuffChange(buff.id)}
-						sx={buff.checked
-							? {
-									bgcolor: "rgba(201,154,84,0.2)",
-									border: "1px solid rgba(201,154,84,0.6)",
-									color: "secondary.light",
-									fontWeight: 500,
-								}
-							: {
-									bgcolor: "transparent",
-									border: "1px solid rgba(255,255,255,0.14)",
-									color: "rgba(255,255,255,0.4)",
-									textDecoration: "line-through",
-								}}
+						sx={
+							buff.checked
+								? {
+										bgcolor: "rgba(201,154,84,0.2)",
+										border: "1px solid rgba(201,154,84,0.6)",
+										color: "secondary.light",
+										fontWeight: 500,
+									}
+								: {
+										bgcolor: "transparent",
+										border: "1px solid rgba(255,255,255,0.14)",
+										color: "rgba(255,255,255,0.4)",
+										textDecoration: "line-through",
+									}
+						}
 					/>
 				))}
 			</Stack>

@@ -6,7 +6,7 @@ import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { CONSUMABLES } from "#/data/consumables";
+import { parseTalentsString } from "#/data/talents";
 import type {
 	DrumsType,
 	PaladinAura,
@@ -40,7 +40,6 @@ const JUDGEMENT_OPTIONS: { value: PaladinJudgement; label: string }[] = [
 	{ value: "JudgementOfLight", label: "Judgement of Light" },
 ];
 
-// "Sanctity Aura" excluded - see protPaladinSimpleRotation.ts's header comment.
 const AURA_OPTIONS: { value: PaladinAura; label: string }[] = [
 	{ value: "AuraNone", label: "None" },
 	{ value: "DevotionAura", label: "Devotion Aura" },
@@ -49,19 +48,23 @@ const AURA_OPTIONS: { value: PaladinAura; label: string }[] = [
 	{ value: "FireResistanceAura", label: "Fire Resistance Aura" },
 	{ value: "FrostResistanceAura", label: "Frost Resistance Aura" },
 	{ value: "ShadowResistanceAura", label: "Shadow Resistance Aura" },
+	{ value: "SanctityAura", label: "Sanctity Aura" },
 ];
 
 function BoolField({
 	label,
 	checked,
 	onChange,
+	disabled,
 }: {
 	label: string;
 	checked: boolean;
 	onChange: (checked: boolean) => void;
+	disabled?: boolean;
 }) {
 	return (
 		<FormControlLabel
+			disabled={disabled}
 			control={
 				<Checkbox
 					size="small"
@@ -71,40 +74,6 @@ function BoolField({
 			}
 			label={<Typography variant="body2">{label}</Typography>}
 		/>
-	);
-}
-
-function ConsumablePicker({
-	label,
-	type,
-	itemId,
-	onChange,
-}: {
-	label: string;
-	type: "Flask";
-	itemId: number;
-	onChange: (itemId: number) => void;
-}) {
-	const options = CONSUMABLES.filter((c) => c.type === type);
-	return (
-		<Stack direction="row" spacing={1} alignItems="center">
-			<Typography variant="body2" sx={{ minWidth: 110 }} noWrap>
-				{label}
-			</Typography>
-			<Select
-				size="small"
-				value={itemId}
-				onChange={(e) => onChange(Number(e.target.value))}
-				sx={{ minWidth: 220 }}
-			>
-				<MenuItem value={0}>None</MenuItem>
-				{options.map((option) => (
-					<MenuItem key={option.id} value={option.wowheadId}>
-						{option.name}
-					</MenuItem>
-				))}
-			</Select>
-		</Stack>
 	);
 }
 
@@ -126,6 +95,11 @@ export default function RaidProfileFields({
 		value: RaidProfileSettings[K],
 	) => onChange({ ...raidProfile, [key]: value });
 
+	const talentRanks = parseTalentsString("2", raidProfile.talentsString);
+	const hasHolyShield = (talentRanks["holy-shield"] ?? 0) > 0;
+	const hasAvengersShield = (talentRanks["avengers-shield"] ?? 0) > 0;
+	const hasSanctityAura = (talentRanks["sanctity-aura"] ?? 0) > 0;
+
 	return (
 		<Stack spacing={2}>
 			<Stack spacing={0.5}>
@@ -141,9 +115,8 @@ export default function RaidProfileFields({
 				/>
 				<Typography variant="caption" color="text.disabled">
 					Paste an exported talent string (e.g. from a talent calculator).
-					Rotation options that depend on specific talents (Avenger's Shield,
-					Sanctity Aura) assume the reference build's talents regardless of
-					what's entered here - see the note on that below.
+					Rotation options below that need a specific talent are disabled
+					unless it's present here.
 				</Typography>
 			</Stack>
 
@@ -439,28 +412,11 @@ export default function RaidProfileFields({
 				<Typography variant="overline" color="text.secondary">
 					Consumables
 				</Typography>
-				<Stack
-					direction="row"
-					flexWrap="wrap"
-					useFlexGap
-					columnGap={3}
-					rowGap={1}
-				>
-					<ConsumablePicker
-						label="Flask"
-						type="Flask"
-						itemId={consumables.flaskId}
-						onChange={(v) =>
-							patch("consumables", { ...consumables, flaskId: v })
-						}
-					/>
-				</Stack>
 				<Typography variant="caption" color="text.disabled">
-					A flask replaces battle/guardian elixirs entirely for this calibration
-					profile (matching tbc-new's own consumables shape - there's no
-					separate elixir slot). Food, potion, weapon oil, and explosive don't
-					have a name lookup in this app's data yet - enter their tbc-new item
-					IDs directly (see wowhead).
+					Flask/battle/guardian elixir are solved for on each gear set's own
+					Consumables section, not set here. Food, potion, weapon oil, and
+					explosive don't have a name lookup yet - enter their item IDs
+					directly (see wowhead).
 				</Typography>
 				<Stack
 					direction="row"
@@ -583,6 +539,7 @@ export default function RaidProfileFields({
 					<BoolField
 						label="Prioritize Holy Shield"
 						checked={simpleRotation.prioritizeHolyShield}
+						disabled={!hasHolyShield}
 						onChange={(v) =>
 							patch("simpleRotation", {
 								...simpleRotation,
@@ -604,6 +561,28 @@ export default function RaidProfileFields({
 							patch("simpleRotation", {
 								...simpleRotation,
 								useHammerOfWrath: v,
+							})
+						}
+					/>
+					<BoolField
+						label="Use Avenger's Shield"
+						checked={simpleRotation.useAvengersShield}
+						disabled={!hasAvengersShield}
+						onChange={(v) =>
+							patch("simpleRotation", {
+								...simpleRotation,
+								useAvengersShield: v,
+							})
+						}
+					/>
+					<BoolField
+						label="Precast Avenger's Shield"
+						checked={simpleRotation.precastAvengersShield}
+						disabled={!hasAvengersShield}
+						onChange={(v) =>
+							patch("simpleRotation", {
+								...simpleRotation,
+								precastAvengersShield: v,
 							})
 						}
 					/>
@@ -660,18 +639,19 @@ export default function RaidProfileFields({
 							sx={{ minWidth: 180 }}
 						>
 							{AURA_OPTIONS.map((option) => (
-								<MenuItem key={option.value} value={option.value}>
+								<MenuItem
+									key={option.value}
+									value={option.value}
+									disabled={
+										option.value === "SanctityAura" && !hasSanctityAura
+									}
+								>
 									{option.label}
 								</MenuItem>
 							))}
 						</Select>
 					</Stack>
 				</Stack>
-				<Typography variant="caption" color="text.disabled">
-					Avenger's Shield rotation options aren't available yet - they require
-					the Avenger's Shield talent, which this app doesn't currently detect
-					from the talent string above.
-				</Typography>
 			</Stack>
 
 			<Stack spacing={0.5}>
@@ -684,7 +664,7 @@ export default function RaidProfileFields({
 					>
 						Magtheridon's Lair
 					</Link>{" "}
-					profile, as shipped by tbc-new's own Protection Paladin defaults.
+					profile, as shipped by tbc-new's own defaults.
 				</Typography>
 			</Stack>
 		</Stack>

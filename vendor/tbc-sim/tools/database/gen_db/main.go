@@ -1,0 +1,800 @@
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"log"
+	"maps"
+	"os"
+	"slices"
+	"strings"
+
+	"golang.org/x/sync/errgroup"
+
+	"github.com/wowsims/tbc/sim"
+	"github.com/wowsims/tbc/sim/core"
+	"github.com/wowsims/tbc/sim/core/proto"
+	_ "github.com/wowsims/tbc/sim/encounters" // Needed for preset encounters.
+	"github.com/wowsims/tbc/tools"
+	"github.com/wowsims/tbc/tools/database"
+	"github.com/wowsims/tbc/tools/database/dbc"
+)
+
+// To do a full re-scrape, delete the previous output file first.
+// go run ./tools/database/gen_db -outDir=assets -gen=atlasloot
+// go run ./tools/database/gen_db -outDir=assets -gen=db
+
+var outDir = flag.String("outDir", "assets", "Path to output directory for writing generated .go files.")
+var genAsset = flag.String("gen", "", "Asset to generate. Valid values are 'db', 'atlasloot', 'wowhead-items', 'wowhead-spells', 'wowhead-itemdb', 'mop-items', and 'wago-db2-items'")
+var dbPath = flag.String("dbPath", "./tools/database/wowsims.db", "Location of the wowsims.db file produced by tools/db2tool")
+
+func main() {
+	flag.Parse()
+
+	database.DatabasePath = *dbPath
+
+	if *outDir == "" {
+		panic("outDir flag is required!")
+	}
+
+	dbDir := fmt.Sprintf("%s/database", *outDir)
+	inputsDir := fmt.Sprintf("%s/db_inputs", *outDir)
+
+	if *genAsset == "atlasloot" {
+		helper, err := database.NewDBHelper()
+		if err != nil {
+			log.Fatalf("failed to initialize database: %v", err)
+		}
+		defer helper.Close()
+
+		db := database.ReadAtlasLootData(helper)
+		db.WriteJson(fmt.Sprintf("%s/atlasloot_db.json", inputsDir))
+		return
+	} else if *genAsset == "reforge-stats" {
+		//Todo: fill this when we have information from wowhead @ Neteyes - Gehennas
+		// For now, the version we have was taken from https://web.archive.org/web/20120201045249js_/http://www.wowhead.com/data=item-scaling
+		return
+	} else if *genAsset != "db" {
+		panic("Invalid gen value")
+	}
+	helper, err := database.NewDBHelper()
+	if err != nil {
+		log.Fatalf("failed to initialize database: %v", err)
+	}
+	defer helper.Close()
+
+	if err := database.RunOverrides(helper, "tools/database/overrides"); err != nil {
+		log.Fatalf("failed to run overrides: %v", err)
+	}
+
+	// The extractions below only read the (post-override) database and write
+	// disjoint files, so they run concurrently; everything after the Wait
+	// consumes their results.
+	var (
+		consumables     []dbc.Consumable
+		dropSources     map[int][]*proto.DropSource
+		names           map[int]string
+		craftingSources map[int][]*proto.CraftedSource
+		repSources      map[int][]*proto.RepSource
+		atlaslootDB     *database.WowDatabase
+		iconsMap        map[int]string
+		icons           map[int]database.SpellIcon
+	)
+	var g errgroup.Group
+	g.Go(func() error { _, err := database.LoadAndWriteRawRandomSuffixes(helper, inputsDir); return err })
+	g.Go(func() error {
+		_, err := database.LoadAndWriteRawItems(helper, "s.OverallQualityId != 7 AND s.Field_1_15_7_59706_054 = 0 AND s.OverallQualityId != 0 AND (i.ClassID = 2 OR i.ClassID = 4 OR (i.ClassID = 7 AND i.InventoryType = 12)) AND s.Display_lang != '' AND (s.ID != 34219 AND s.Display_lang NOT LIKE '%Test%' AND s.Display_lang NOT LIKE 'QA%' AND s.Display_lang != 'unused')", inputsDir)
+		return err
+	})
+	g.Go(func() error { _, err := database.LoadAndWriteRandomPropAllocations(helper, inputsDir); return err })
+	g.Go(func() error { _, err := database.LoadAndWriteRawGems(helper, inputsDir); return err })
+	g.Go(func() error { _, err := database.LoadAndWriteRawEnchants(helper, inputsDir); return err })
+	g.Go(func() error { _, err := database.LoadAndWriteRawSpellEffects(helper, inputsDir); return err })
+	g.Go(func() error { _, err := database.LoadAndWriteItemStatEffects(helper, inputsDir); return err })
+	g.Go(func() error { _, err := database.LoadAndWriteItemDamageTables(helper, inputsDir); return err })
+	g.Go(func() error { _, err := database.LoadAndWriteItemArmorTotal(helper, inputsDir); return err })
+	g.Go(func() error { _, err := database.LoadAndWriteItemArmorQuality(helper, inputsDir); return err })
+	g.Go(func() error { _, err := database.LoadAndWriteItemArmorShield(helper, inputsDir); return err })
+	g.Go(func() error { _, err := database.LoadAndWriteArmorLocation(helper, inputsDir); return err })
+	g.Go(func() error { _, err := database.LoadAndWriteItemEffects(helper, inputsDir); return err })
+	g.Go(func() error { _, err := database.LoadAndWriteSpells(helper, inputsDir); return err })
+	g.Go(func() (err error) { consumables, err = database.LoadAndWriteConsumables(helper, inputsDir); return })
+	g.Go(func() (err error) {
+		dropSources, names, err = database.LoadAndWriteDropSources(helper, inputsDir)
+		return
+	})
+	g.Go(func() (err error) { icons, err = database.LoadSpellIcons(helper); return })
+	g.Go(func() error { craftingSources = database.LoadCraftedItems(helper); return nil })
+	g.Go(func() error { repSources = database.LoadRepItems(helper); return nil })
+	g.Go(func() error {
+		//Todo: See if we cant get rid of these as well
+		atlaslootDB = database.ReadDatabaseFromJson(tools.ReadFile(fmt.Sprintf("%s/atlasloot_db.json", inputsDir)))
+		return nil
+	})
+	g.Go(func() (err error) { iconsMap, err = database.LoadArtTexturePaths(database.ListfilePath); return })
+	if err := g.Wait(); err != nil {
+		panic(fmt.Sprintf("Error loading DBC data %v", err))
+	}
+
+	db := database.NewWowDatabase()
+	db.Encounters = core.PresetEncounters
+
+	var instance = dbc.GetDBC()
+	instance.LoadSpellScaling()
+	instance.LoadShieldBlockValues()
+	database.GenerateProtos(instance, db)
+
+	processItems(instance, iconsMap, names, dropSources, craftingSources, repSources, db)
+
+	for _, gem := range instance.Gems {
+		parsed := gem.ToProto()
+		// All BOA gems are unique-equipped, but this isn't indicated in the gamefiles.
+		if gem.Bonding == dbc.BIND_ON_ACQUIRE {
+			parsed.Unique = true
+		}
+		if parsed.Icon == "" {
+			parsed.Icon = strings.ToLower(database.GetIconName(iconsMap, gem.FDID))
+		}
+		db.MergeGem(parsed)
+	}
+
+	for _, enchant := range instance.Enchants {
+		parsed := enchant.ToProto()
+
+		if parsed.Icon == "" {
+			parsed.Icon = strings.ToLower(database.GetIconName(iconsMap, enchant.FDID))
+		}
+		db.MergeEnchant(parsed)
+	}
+
+	for _, atlaslootItem := range atlaslootDB.Items {
+		if dbItem, ok := db.Items[atlaslootItem.Id]; ok {
+			firstDBRepFaction := proto.RepFaction(-1)
+
+			for _, dbItemSource := range dbItem.Sources {
+				if dbRepSource := dbItemSource.GetRep(); dbRepSource != nil {
+					firstDBRepFaction = dbRepSource.RepFactionId
+					break
+				}
+			}
+
+			atlaslootItem.Sources = core.FilterSlice(atlaslootItem.Sources, func(atlaslootItemSource *proto.UIItemSource) bool {
+				atlaslootRepSource := atlaslootItemSource.GetRep()
+				return (atlaslootRepSource == nil) || (atlaslootRepSource.RepFactionId != firstDBRepFaction)
+			})
+
+			db.MergeItem(atlaslootItem)
+		}
+	}
+
+	for _, consumable := range consumables {
+		db.MergeConsumable(consumable.ToProto())
+	}
+
+	for _, consumable := range database.ConsumableOverrides {
+		db.MergeConsumable(consumable)
+	}
+
+	db.MergeItems(database.ItemOverrides)
+	db.MergeGems(database.GemOverrides)
+	db.MergeEnchants(database.EnchantOverrides)
+	ApplyGlobalFilters(db)
+	leftovers := db.Clone()
+	ApplyNonSimmableFilters(leftovers)
+	leftovers.WriteBinaryAndJson(fmt.Sprintf("%s/leftover_db.bin", dbDir), fmt.Sprintf("%s/leftover_db.json", dbDir))
+	ApplySimmableFilters(db)
+
+	database.GenerateItemEffects(instance, db, dropSources)
+	database.GenerateEnchantEffects(instance, db)
+	database.GenerateMissingEffectsFile()
+	database.GenerateItemEffectRandomPropPoints(instance, db)
+
+	// Disbabled due to duplicate SpellIDs
+	// Our enchants already have the icon saved so this is redundant
+	// for _, enchant := range db.Enchants {
+	// 	if enchant.ItemId != 0 {
+	// 		db.AddItemIcon(enchant.ItemId, enchant.Icon, enchant.Name)
+	// 	}
+	// 	if enchant.SpellId != 0 {
+	// 		db.AddSpellIcon(enchant.SpellId, enchant.Icon, enchant.Name)
+	// 	}
+	// }
+
+	for _, consume := range db.Consumables {
+		if len(consume.EffectIds) > 0 {
+			for _, se := range consume.EffectIds {
+				effect := instance.SpellEffectsById[int(se)]
+				db.MergeEffect(effect.ToProto())
+			}
+		}
+	}
+
+	for _, randomSuffix := range instance.RandomSuffix {
+		if _, exists := db.RandomSuffixes[int32(randomSuffix.ID)]; !exists {
+			db.RandomSuffixes[int32(randomSuffix.ID)] = randomSuffix.ToProto()
+		}
+	}
+
+	addSpellIcons(db, database.SharedSpellsIcons, icons, iconsMap)
+
+	for _, group := range GetAllTalentSpellIds(&inputsDir) {
+		addSpellIcons(db, group, icons, iconsMap)
+	}
+
+	for _, group := range GetAllRotationSpellIds() {
+		addSpellIcons(db, group, icons, iconsMap)
+	}
+
+	craftedSpellIds := []int32{}
+	for _, item := range db.Items {
+		for _, source := range item.Sources {
+			if crafted := source.GetCrafted(); crafted != nil {
+				craftedSpellIds = append(craftedSpellIds, crafted.SpellId)
+
+				// Manual override for epic crafted items with crafting requirement
+				if instance.Items[int(item.Id)].Bonding == dbc.BIND_ON_ACQUIRE && item.Quality == proto.ItemQuality_ItemQualityEpic && item.RequiredProfession == proto.Profession_ProfessionUnknown {
+					item.RequiredProfession = crafted.Profession
+				}
+			}
+
+			if rep := source.GetRep(); rep != nil {
+				item.FactionRestriction = proto.UIItem_FactionRestriction(rep.FactionId)
+			}
+		}
+
+		if item.Phase < 2 {
+			item.Phase = database.InferPhase(item)
+		}
+
+	}
+	addSpellIcons(db, craftedSpellIds, icons, iconsMap)
+
+	database.LoadAndWriteEnchantDescriptions("assets/enchants/descriptions.json", db, instance)
+
+	atlasDBProto := atlaslootDB.ToUIProto()
+	db.MergeZones(atlasDBProto.Zones)
+	db.MergeNpcs(atlasDBProto.Npcs)
+	db.WriteBinaryAndJson(fmt.Sprintf("%s/db.bin", dbDir), fmt.Sprintf("%s/db.json", dbDir))
+}
+
+func processItems(instance *dbc.DBC,
+	iconsMap map[int]string,
+	names map[int]string,
+	dropSources map[int][]*proto.DropSource,
+	craftingSources map[int][]*proto.CraftedSource,
+	repSources map[int][]*proto.RepSource,
+	db *database.WowDatabase) {
+	sourceMap := make(map[string][]*proto.UIItemSource, len(instance.Items))
+	parsedItems := make([]*proto.UIItem, 0, len(instance.Items))
+
+	sortedItemKeys := slices.Sorted(maps.Keys(instance.Items))
+	sortedItems := make([]dbc.Item, len(instance.Items))
+	for i, k := range sortedItemKeys {
+		sortedItems[i] = instance.Items[k]
+	}
+
+	for _, item := range sortedItems {
+		if item.Flags2&0x10 != 0 && (item.StatAlloc[0] > 0 && item.StatAlloc[0] < 600) {
+			continue
+		}
+		parsed := item.ToUIItem()
+		if parsed.Icon == "" {
+			parsed.Icon = strings.ToLower(database.GetIconName(iconsMap, item.FDID))
+		}
+
+		drops := dropSources[int(item.Id)]
+		if drops != nil {
+			sources := make([]*proto.UIItemSource, 0, len(drops))
+			for _, drop := range drops {
+				sources = append(sources, &proto.UIItemSource{
+					Source: &proto.UIItemSource_Drop{Drop: drop},
+				})
+				db.MergeZone(&proto.UIZone{Id: drop.ZoneId, Name: names[int(drop.ZoneId)]})
+				db.MergeNpc(&proto.UINPC{Id: drop.NpcId, Name: drop.OtherName, ZoneId: drop.ZoneId})
+			}
+			parsed.Sources = sources
+			sourceMap[parsed.Name] = sources
+		}
+
+		crafted := craftingSources[int(item.Id)]
+		if crafted != nil {
+			sources := make([]*proto.UIItemSource, 0, len(crafted))
+			for _, craft := range crafted {
+				sources = append(sources, &proto.UIItemSource{
+					Source: &proto.UIItemSource_Crafted{Crafted: craft},
+				})
+			}
+			parsed.Sources = sources
+			sourceMap[parsed.Name] = sources
+		}
+
+		rep := repSources[int(item.Id)]
+		if rep != nil {
+			sources := make([]*proto.UIItemSource, 0, len(rep))
+			for _, repItem := range rep {
+				sources = append(sources, &proto.UIItemSource{
+					Source: &proto.UIItemSource_Rep{Rep: repItem},
+				})
+			}
+			parsed.Sources = sources
+			sourceMap[parsed.Name] = sources
+		}
+
+		parsedItems = append(parsedItems, parsed)
+	}
+
+	for _, parsed := range parsedItems {
+		if len(parsed.Sources) == 0 {
+			if fallbacks, ok := sourceMap[parsed.Name]; ok {
+				parsed.Sources = fallbacks
+			}
+		}
+	}
+	db.MergeItems(parsedItems)
+}
+
+// Filters out entities which shouldn't be included anywhere.
+func ApplyGlobalFilters(db *database.WowDatabase) {
+	db.Items = core.FilterMap(db.Items, func(_ int32, item *proto.UIItem) bool {
+		if _, ok := database.ItemAllowList[item.Id]; ok {
+			return true
+		}
+		if _, ok := database.ItemDenyList[item.Id]; ok {
+			return false
+		}
+		if len(item.ScalingOptions) <= 0 {
+			return false
+		}
+		if item.ScalingOptions[0].Ilvl > core.MaxIlvl || item.ScalingOptions[0].Ilvl < core.MinIlvl {
+			return false
+		}
+		for _, pattern := range database.DenyListNameRegexes {
+			if pattern.MatchString(item.Name) {
+				return false
+			}
+		}
+		return true
+	})
+
+	// There is an 'unavailable' version of every naxx set, e.g. https://www.wowhead.com/mop-classic/item=43728/bonescythe-gauntlets
+	heroesItems := core.FilterMap(db.Items, func(_ int32, item *proto.UIItem) bool {
+		return strings.HasPrefix(item.Name, "Heroes' ")
+	})
+	db.Items = core.FilterMap(db.Items, func(_ int32, item *proto.UIItem) bool {
+		nameToMatch := "Heroes' " + item.Name
+		for _, heroItem := range heroesItems {
+			if heroItem.Name == nameToMatch {
+				return false
+			}
+		}
+		return true
+	})
+
+	// There is an 'unavailable' version of many t8 set pieces, e.g. https://www.wowhead.com/mop-classic/item=46235/darkruned-gauntlets
+	valorousItems := core.FilterMap(db.Items, func(_ int32, item *proto.UIItem) bool {
+		return strings.HasPrefix(item.Name, "Valorous ")
+	})
+	db.Items = core.FilterMap(db.Items, func(_ int32, item *proto.UIItem) bool {
+		nameToMatch := "Valorous " + item.Name
+		for _, item := range valorousItems {
+			if item.Name == nameToMatch {
+				return false
+			}
+		}
+		return true
+	})
+
+	// There is an 'unavailable' version of many t9 set pieces, e.g. https://www.wowhead.com/mop-classic/item=48842/thralls-hauberk
+	triumphItems := core.FilterMap(db.Items, func(_ int32, item *proto.UIItem) bool {
+		return strings.HasSuffix(item.Name, "of Triumph")
+	})
+	db.Items = core.FilterMap(db.Items, func(_ int32, item *proto.UIItem) bool {
+		nameToMatch := item.Name + " of Triumph"
+		for _, item := range triumphItems {
+			if item.Name == nameToMatch {
+				return false
+			}
+		}
+		return true
+	})
+
+	db.Gems = core.FilterMap(db.Gems, func(_ int32, gem *proto.UIGem) bool {
+		if _, ok := database.GemDenyList[gem.Id]; ok {
+			return false
+		}
+
+		prefix, uncut, _ := strings.Cut(gem.Name, " ")
+		if slices.Contains([]string{
+			"Forceful",
+			"Quick",
+			"Reckless",
+			"Purified Shadowsong",
+		}, prefix) {
+			gem.Phase = 5
+		} else if slices.Contains([]string{
+			"Crimson Spinel",
+			"Empyrean Sapphire",
+			"Lionseye",
+			"Shadowsong Amethyst",
+			"Pyrestone",
+			"Seaspray Emerald",
+		}, uncut) {
+			gem.Phase = 3
+		} else if gem.Name == "Charmed Amani Jewel" {
+			gem.Phase = 3
+		} else if strings.Contains(prefix, "Unstable") {
+			gem.Phase = 2
+		} else {
+			gem.Phase = 1
+		}
+
+		for _, pattern := range database.DenyListNameRegexes {
+			if pattern.MatchString(gem.Name) {
+				return false
+			}
+		}
+		return true
+	})
+
+	db.Gems = core.FilterMap(db.Gems, func(_ int32, gem *proto.UIGem) bool {
+		if strings.HasSuffix(gem.Name, "Stormjewel") {
+			gem.Unique = false
+		}
+		return true
+	})
+
+	db.ItemIcons = core.FilterMap(db.ItemIcons, func(_ int32, icon *proto.IconData) bool {
+		return icon.Name != "" && icon.Icon != ""
+	})
+	db.SpellIcons = core.FilterMap(db.SpellIcons, func(_ int32, icon *proto.IconData) bool {
+		return icon.Name != "" && icon.Icon != "" && icon.Id != 0
+	})
+
+	db.Enchants = core.FilterMap(db.Enchants, func(_ database.EnchantDBKey, enchant *proto.UIEnchant) bool {
+		for _, pattern := range database.DenyListNameRegexes {
+			if pattern.MatchString(enchant.Name) {
+				return false
+			}
+		}
+		if strings.Contains(enchant.Name, "Template") {
+			return false
+		}
+		return !strings.HasPrefix(enchant.Name, "QA") && !strings.HasPrefix(enchant.Name, "Test") && !strings.HasPrefix(enchant.Name, "TEST")
+	})
+
+	db.Consumables = core.FilterMap(db.Consumables, func(_ int32, consumable *proto.Consumable) bool {
+		if slices.Contains(database.ConsumableAllowList, consumable.Id) {
+			return true
+		}
+		if slices.Contains(database.ConsumableDenyList, consumable.Id) {
+			return false
+		}
+		if allZero(consumable.Stats) && consumable.Type != proto.ConsumableType_ConsumableTypePotion {
+			return false
+		}
+
+		for _, pattern := range database.DenyListNameRegexes {
+			if pattern.MatchString(consumable.Name) {
+				return false
+			}
+		}
+
+		if consumable.Type == proto.ConsumableType_ConsumableTypeUnknown || consumable.Type == proto.ConsumableType_ConsumableTypeScroll {
+			return false
+		}
+
+		return !strings.HasPrefix(consumable.Name, "QA") && !strings.HasPrefix(consumable.Name, "Test") && !strings.HasPrefix(consumable.Name, "TEST") && !strings.Contains(consumable.Name, "Flaskataur")
+	})
+}
+
+func allZero(stats []float64) bool {
+	for _, val := range stats {
+		if val != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// Filters out entities which shouldn't be included in the sim.
+func ApplySimmableFilters(db *database.WowDatabase) {
+	db.Items = core.FilterMap(db.Items, simmableItemFilter)
+	db.Gems = core.FilterMap(db.Gems, simmableGemFilter)
+	db.Enchants = core.FilterMap(db.Enchants, simmableEnchantFilter)
+}
+
+func ApplyNonSimmableFilters(db *database.WowDatabase) {
+	db.Items = core.FilterMap(db.Items, func(id int32, item *proto.UIItem) bool {
+		return !simmableItemFilter(id, item)
+	})
+	db.Gems = core.FilterMap(db.Gems, func(id int32, gem *proto.UIGem) bool {
+		return !simmableGemFilter(id, gem)
+	})
+	db.Enchants = core.FilterMap(db.Enchants, func(id database.EnchantDBKey, enchant *proto.UIEnchant) bool {
+		return !simmableEnchantFilter(id, enchant)
+	})
+}
+func simmableItemFilter(_ int32, item *proto.UIItem) bool {
+	if _, ok := database.ItemAllowList[item.Id]; ok {
+		return true
+	}
+
+	if item.Quality < proto.ItemQuality_ItemQualityUncommon {
+		return false
+	} else if item.Quality == proto.ItemQuality_ItemQualityArtifact {
+		return false
+	} else if item.Quality >= proto.ItemQuality_ItemQualityHeirloom {
+		return false
+	} else if item.Quality <= proto.ItemQuality_ItemQualityEpic {
+		if item.ScalingOptions[0].Ilvl < 60 {
+			return false
+		}
+	}
+	if item.ScalingOptions[0].Ilvl == 0 {
+		fmt.Printf("Missing ilvl: %s\n", item.Name)
+	}
+
+	return true
+}
+func simmableGemFilter(_ int32, gem *proto.UIGem) bool {
+	if _, ok := database.GemAllowList[gem.Id]; ok {
+		return true
+	}
+
+	return gem.Quality >= proto.ItemQuality_ItemQualityUncommon
+}
+func simmableEnchantFilter(key database.EnchantDBKey, enchant *proto.UIEnchant) bool {
+	if slices.Contains(database.EnchantAllowList, enchant.EffectId) {
+		return true
+	}
+	if _, ok := database.EnchantDenyList[enchant.EffectId]; ok {
+		return false
+	}
+	return enchant.EffectId > 1000 && (enchant.ItemId == 0 || enchant.ItemId > 20000 || enchant.ItemId == 18283) // Filters EXTREMELY low level enchants
+}
+
+type TalentConfig struct {
+	FieldName string `json:"fieldName"`
+	// Spell ID for each rank of this talent.
+	// Omitted ranks will be inferred by incrementing from the last provided rank.
+	SpellIds  []int32 `json:"spellIds"`
+	MaxPoints int32   `json:"maxPoints"`
+}
+
+type TalentTreeConfig struct {
+	Name          string         `json:"name"`
+	BackgroundUrl string         `json:"backgroundUrl"`
+	Talents       []TalentConfig `json:"talents"`
+}
+
+func getSpellIdsFromTalentJson(infile *string) []int32 {
+	data, err := os.ReadFile(*infile)
+
+	if err != nil {
+		log.Fatalf("failed to load talent json file: %s", err)
+	}
+
+	var buf bytes.Buffer
+
+	err = json.Compact(&buf, []byte(data))
+	if err != nil {
+		log.Fatalf("failed to compact json: %s", err)
+	}
+
+	var talents []TalentTreeConfig
+
+	err = json.Unmarshal(buf.Bytes(), &talents)
+	if err != nil {
+		log.Fatalf("failed to parse talent to json %s", err)
+	}
+	spellIds := make([]int32, 0)
+
+	for _, tree := range talents {
+		for _, talent := range tree.Talents {
+			spellIds = append(spellIds, talent.SpellIds...)
+
+			// Infer omitted spell IDs.
+			if len(talent.SpellIds) < int(talent.MaxPoints) {
+				curSpellId := talent.SpellIds[len(talent.SpellIds)-1]
+				for i := len(talent.SpellIds); i < int(talent.MaxPoints); i++ {
+					curSpellId++
+					spellIds = append(spellIds, curSpellId)
+				}
+			}
+		}
+	}
+	return spellIds
+}
+
+func GetAllTalentSpellIds(inputsDir *string) map[string][]int32 {
+	talentsDir := fmt.Sprintf("%s/../../ui/core/talents/trees", *inputsDir)
+	specFiles := []string{
+		"druid.json",
+		"hunter.json",
+		"mage.json",
+		"paladin.json",
+		"priest.json",
+		"rogue.json",
+		"shaman.json",
+		"warlock.json",
+		"warrior.json",
+	}
+
+	ret_db := make(map[string][]int32, 0)
+
+	for _, specFile := range specFiles {
+		specPath := fmt.Sprintf("%s/%s", talentsDir, specFile)
+		ret_db[specFile[:len(specFile)-5]] = getSpellIdsFromTalentJson(&specPath)
+	}
+
+	return ret_db
+
+}
+
+func CreateTempAgent(r *proto.Raid) core.Agent {
+	encounter := core.MakeSingleTargetEncounter(0.0)
+	env, _, _ := core.NewEnvironment(r, encounter, false)
+	return env.Raid.Parties[0].Players[0]
+}
+
+type RotContainer struct {
+	Name string
+	Raid *proto.Raid
+}
+
+func GetAllRotationSpellIds() map[string][]int32 {
+	sim.RegisterAll()
+
+	rotMapping := []RotContainer{
+		// Druid
+		{Name: "balanceDruid", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassDruid,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "514322312533135231351-553232132322125331251-55553351531522531351",
+		}, &proto.Player_BalanceDruid{BalanceDruid: &proto.BalanceDruid{Options: &proto.BalanceDruid_Options{ClassOptions: &proto.DruidOptions{}}}}), nil, nil, nil)},
+		{Name: "feralCatDruid", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassDruid,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "514322312533135231351-553232132322125331251-55553351531522531351",
+		}, &proto.Player_FeralCatDruid{FeralCatDruid: &proto.FeralCatDruid{Options: &proto.FeralCatDruid_Options{ClassOptions: &proto.DruidOptions{}}, Rotation: &proto.FeralCatDruid_Rotation{}}}), nil, nil, nil)},
+		{Name: "feralBearDruid", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassDruid,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "514322312533135231351-553232132322125331251-55553351531522531351",
+		}, &proto.Player_FeralBearDruid{FeralBearDruid: &proto.FeralBearDruid{Options: &proto.FeralBearDruid_Options{ClassOptions: &proto.DruidOptions{}}}}), nil, nil, nil)},
+		{Name: "restorationDruid", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassDruid,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "514322312533135231351-553232132322125331251-55553351531522531351",
+		}, &proto.Player_RestorationDruid{RestorationDruid: &proto.RestorationDruid{Options: &proto.RestorationDruid_Options{ClassOptions: &proto.DruidOptions{}}}}), nil, nil, nil)},
+
+		// Hunter
+		{Name: "hunter", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassHunter,
+			Race:          proto.Race_RaceTroll,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "552332215252122531351-55552512553132531351-33323532512322313531351",
+		}, &proto.Player_Hunter{Hunter: &proto.Hunter{Options: &proto.Hunter_Options{ClassOptions: &proto.HunterOptions{}}}}), nil, nil, nil)},
+
+		// Mage
+		{Name: "mage", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassMage,
+			Race:          proto.Race_RaceTroll,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "25525523122321523331251-5552323123233312531251-2535323313235313251551",
+		}, &proto.Player_Mage{Mage: &proto.Mage{Options: &proto.Mage_Options{ClassOptions: &proto.MageOptions{}}}}), nil, nil, nil)},
+
+		// Paladin
+		{Name: "holyPaladin", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassPaladin,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "55553122523132531351-5532513352332152521551-5523535132233125331351",
+		}, &proto.Player_HolyPaladin{HolyPaladin: &proto.HolyPaladin{Options: &proto.HolyPaladin_Options{ClassOptions: &proto.PaladinOptions{}}}}), nil, nil, nil)},
+		{Name: "protPaladin", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassPaladin,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "55553122523132531351-5532513352332152521551-5523535132233125331351",
+		}, &proto.Player_ProtectionPaladin{ProtectionPaladin: &proto.ProtectionPaladin{Options: &proto.ProtectionPaladin_Options{ClassOptions: &proto.PaladinOptions{}}}}), nil, nil, nil)},
+		{Name: "retPaladin", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassPaladin,
+			Race:          proto.Race_RaceBloodElf,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "55553122523132531351-5532513352332152521551-5523535132233125331351",
+		}, &proto.Player_RetributionPaladin{RetributionPaladin: &proto.RetributionPaladin{Options: &proto.RetributionPaladin_Options{ClassOptions: &proto.PaladinOptions{}}}}), nil, nil, nil)},
+
+		// Priest
+		{Name: "priest", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassPriest,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "5552323133525122531551-235551332322152531351-553252512251123251551",
+		}, &proto.Player_Priest{Priest: &proto.Priest{Options: &proto.Priest_Options{ClassOptions: &proto.PriestOptions{}}}}), nil, nil, nil)},
+
+		// Rogue
+		{Name: "rogue", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassRogue,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "325323125552132521551-325355212255515522321251-5522531332321213531351",
+		}, &proto.Player_Rogue{Rogue: &proto.Rogue{Options: &proto.Rogue_Options{ClassOptions: &proto.RogueOptions{}}}}), nil, nil, nil)},
+
+		// Shaman
+		{Name: "elementalShaman", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassShaman,
+			Race:          proto.Race_RaceTroll,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "55233155233215351351-552523215552133531151-55235351355313515321",
+		}, &proto.Player_ElementalShaman{ElementalShaman: &proto.ElementalShaman{Options: &proto.ElementalShaman_Options{ClassOptions: &proto.ShamanOptions{}}}}), nil, nil, nil)},
+		{Name: "enhancementShaman", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassShaman,
+			Race:          proto.Race_RaceTroll,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "55233155233215351351-552523215552133531151-55235351355313515321",
+		}, &proto.Player_EnhancementShaman{EnhancementShaman: &proto.EnhancementShaman{Options: &proto.EnhancementShaman_Options{ClassOptions: &proto.ShamanOptions{}}}}), nil, nil, nil)},
+		{Name: "restorationShaman", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassShaman,
+			Race:          proto.Race_RaceTroll,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "55233155233215351351-552523215552133531151-55235351355313515321",
+		}, &proto.Player_RestorationShaman{RestorationShaman: &proto.RestorationShaman{Options: &proto.RestorationShaman_Options{ClassOptions: &proto.ShamanOptions{}}}}), nil, nil, nil)},
+
+		// Warlock
+		{Name: "warlock", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassWarlock,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "552222251223511551231-2352333133252123531351-555522512232513531351",
+			Profession1:   proto.Profession_Herbalism,
+		}, &proto.Player_Warlock{Warlock: &proto.Warlock{Options: &proto.Warlock_Options{ClassOptions: &proto.WarlockOptions{}}}}), nil, nil, nil)},
+
+		// Warrior
+		{Name: "DpsWarrior", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassWarrior,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "35325321352515523321251-555531355252122531251-2355511333322123531351",
+		}, &proto.Player_DpsWarrior{DpsWarrior: &proto.DpsWarrior{Options: &proto.DpsWarrior_Options{ClassOptions: &proto.WarriorOptions{}}}}), nil, nil, nil)},
+		{Name: "protectionWarrior", Raid: core.SinglePlayerRaidProto(core.WithSpec(&proto.Player{
+			Class:         proto.Class_ClassWarrior,
+			Equipment:     &proto.EquipmentSpec{},
+			TalentsString: "35325321352515523321251-555531355252122531251-2355511333322123531351",
+		}, &proto.Player_ProtectionWarrior{ProtectionWarrior: &proto.ProtectionWarrior{Options: &proto.ProtectionWarrior_Options{ClassOptions: &proto.WarriorOptions{}}}}), nil, nil, nil)},
+	}
+
+	ret_db := make(map[string][]int32, 0)
+
+	for _, r := range rotMapping {
+		f := CreateTempAgent(r.Raid).GetCharacter()
+
+		spells := make([]int32, 0, len(f.Spellbook))
+
+		for _, s := range f.Spellbook {
+			if s.SpellID != 0 {
+				spells = append(spells, s.SpellID)
+			}
+		}
+
+		for _, s := range f.GetAuras() {
+			if s.ActionID.SpellID != 0 {
+				spells = append(spells, s.ActionID.SpellID)
+			}
+		}
+
+		ret_db[r.Name] = spells
+	}
+	return ret_db
+}
+
+func addSpellIcons(db *database.WowDatabase, spellIds []int32, icons map[int]database.SpellIcon, iconsMap map[int]string) {
+	for _, spellId := range spellIds {
+		iconEntry := icons[int(spellId)]
+		if iconEntry.Name == "" {
+			continue
+		}
+		db.SpellIcons[spellId] = &proto.IconData{
+			Id:      int32(iconEntry.SpellID),
+			Name:    iconEntry.Name,
+			Icon:    strings.ToLower(database.GetIconName(iconsMap, iconEntry.FDID)),
+			HasBuff: iconEntry.HasBuff,
+			Rank:    int32(iconEntry.Rank),
+		}
+	}
+}

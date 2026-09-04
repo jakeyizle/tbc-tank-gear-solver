@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { calculateAvoidanceTarget, calculateUncritabilityTarget } from "./avoidance";
+import {
+	calculateAvoidanceTarget,
+	calculateUncritabilityTarget,
+} from "./avoidance";
 
 describe("calculateAvoidanceTarget", () => {
 	it("returns 0 when uncrushability is disabled, regardless of base avoidance", () => {

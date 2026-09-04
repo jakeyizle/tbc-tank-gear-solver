@@ -7,7 +7,7 @@ import IconButton from "@mui/material/IconButton";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { SimCalibrationProfile } from "#/types/SimCalibrationProfile";
 import CalibrationSettingsFields from "./CalibrationSettingsFields";
 import EncounterSettingsFields from "./EncounterSettingsFields";
@@ -24,10 +24,10 @@ interface SimCalibrationPanelProps {
  * gear itself - see src/types/SimCalibrationProfile.ts. Collapsed by default since most solves
  * never touch this; unedited settings reproduce today's fixed v1 calibration profile exactly.
  */
-export default function SimCalibrationPanel({
-	profile,
-	onChange,
-}: SimCalibrationPanelProps) {
+// Memoized so a parent re-render that doesn't change these props (e.g. routes/index.tsx's
+// solveProgress ticks during a solve) skips reconciling this panel - see useSolverConfigs.ts's
+// note on why fresh handler identities would otherwise defeat this.
+function SimCalibrationPanel({ profile, onChange }: SimCalibrationPanelProps) {
 	const [expanded, setExpanded] = useState(false);
 
 	return (
@@ -109,3 +109,5 @@ export default function SimCalibrationPanel({
 		</Paper>
 	);
 }
+
+export default memo(SimCalibrationPanel);

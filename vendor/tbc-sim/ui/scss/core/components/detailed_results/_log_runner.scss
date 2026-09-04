@@ -1,0 +1,86 @@
+.log-runner-root {
+	.log-runner-actions {
+		display: flex;
+		margin-bottom: var(--spacer-3);
+
+		.log-search-input {
+			width: 25vw;
+		}
+
+		.show-debug-picker {
+			width: unset;
+			margin-bottom: 0;
+			margin-right: var(--block-spacer);
+			margin-left: auto;
+
+			label {
+				margin-left: var(--spacer-1);
+			}
+		}
+	}
+
+	.log-runner-scroll {
+		overflow-y: auto;
+		overflow-x: auto;
+
+		margin: 0 auto;
+		position: relative;
+		width: 100%;
+		box-sizing: border-box;
+		will-change: scroll-position;
+		height: 70vh;
+	}
+
+	.log-runner-table {
+		table-layout: fixed;
+
+		th {
+			padding: var(--spacer-2);
+			vertical-align: bottom;
+
+			&:first-child {
+				width: 10ch;
+			}
+
+			&:not(:first-child) {
+				width: auto;
+			}
+		}
+
+		.log-runner-logs {
+			tr {
+				&:not(:last-child) {
+					td {
+						border-bottom: 1px solid var(--bs-border-color);
+					}
+				}
+
+				td {
+					padding-top: var(--spacer-2);
+					padding-bottom: var(--spacer-2);
+					padding-left: var(--spacer-2);
+				}
+
+				.log-timestamp {
+					padding-right: var(--spacer-2);
+					text-align: right;
+					vertical-align: top;
+					font-variant-numeric: tabular-nums;
+				}
+
+				.log-event {
+					// Fill any extra width
+					width: 100%;
+
+					.icon {
+						vertical-align: middle;
+					}
+
+					.log-action {
+						color: var(--bs-brand);
+					}
+				}
+			}
+		}
+	}
+}

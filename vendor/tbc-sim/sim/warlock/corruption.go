@@ -1,0 +1,72 @@
+package warlock
+
+import (
+	"time"
+
+	"github.com/wowsims/tbc/sim/core"
+)
+
+const corruptionCoeff = 0.156
+
+func (warlock *Warlock) registerCorruption() *core.Spell {
+	tickCount := int32(6)
+	warlock.CorruptionTickBaseDamage = float64(900 / tickCount)
+
+	warlock.Corruption = warlock.RegisterSpell(core.SpellConfig{
+		ActionID:       core.ActionID{SpellID: 27216},
+		SpellSchool:    core.SpellSchoolShadow,
+		ProcMask:       core.ProcMaskSpellDamage,
+		Flags:          core.SpellFlagAPL,
+		ClassSpellMask: WarlockSpellCorruption,
+
+		DamageMultiplier: 1,
+		CritMultiplier:   1,
+		ManaCost:         core.ManaCostOptions{FlatCost: 370},
+		Cast: core.CastConfig{
+			DefaultCast: core.Cast{
+				GCD:      core.GCDDefault,
+				CastTime: time.Millisecond * 2000,
+			},
+		},
+
+		ApplyEffects: func(sim *core.Simulation, target *core.Unit, spell *core.Spell) {
+			result := spell.CalcOutcome(sim, target, spell.OutcomeMagicHit)
+
+			if result.Landed() {
+				spell.Dot(target).Apply(sim)
+			}
+			spell.DealOutcome(sim, result)
+		},
+		BonusCoefficient: corruptionCoeff,
+
+		Dot: core.DotConfig{
+			Aura: core.Aura{
+				Label: "Corruption",
+				Tag:   "Affliction",
+			},
+			NumberOfTicks:    tickCount,
+			TickLength:       3 * time.Second,
+			BonusCoefficient: corruptionCoeff,
+			OnSnapshot: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
+				dot.Snapshot(target, warlock.CorruptionTickBaseDamage)
+			},
+			OnTick: func(sim *core.Simulation, target *core.Unit, dot *core.Dot) {
+				dot.CalcAndDealPeriodicSnapshotDamage(sim, target, dot.OutcomeTick)
+			},
+		},
+		ExpectedTickDamage: func(sim *core.Simulation, target *core.Unit, spell *core.Spell, useSnapshot bool) *core.SpellResult {
+			dot := spell.Dot(target)
+			if useSnapshot {
+				result := dot.CalcSnapshotDamage(sim, target, dot.OutcomeTick)
+				result.Damage /= dot.TickPeriod().Seconds()
+				return result
+			} else {
+				result := spell.CalcPeriodicDamage(sim, target, 900, spell.OutcomeExpectedMagicCrit)
+				result.Damage /= dot.CalcTickPeriod().Round(time.Millisecond).Seconds()
+				return result
+			}
+		},
+	})
+
+	return warlock.Corruption
+}

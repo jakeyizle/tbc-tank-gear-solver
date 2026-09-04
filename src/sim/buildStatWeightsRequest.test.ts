@@ -43,6 +43,7 @@ describe("buildStatWeightsRequest", () => {
 		expect(request.player.rotation).toEqual(
 			buildProtPaladinRotation(
 				DEFAULT_SIM_CALIBRATION_PROFILE.raidProfile.simpleRotation,
+				DEFAULT_SIM_CALIBRATION_PROFILE.raidProfile.talentsString,
 			),
 		);
 	});

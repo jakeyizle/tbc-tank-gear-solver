@@ -1,15 +1,39 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	TEST_CLASS_ID,
 	TEST_RACE_ID,
 } from "#/solver/__fixtures__/testItemPool";
-import type { InputItem } from "#/solver/types";
+import { solveConfig } from "#/solver/solveConfig";
+import type { InputItem, LPItem } from "#/solver/types";
+import { DEFAULT_SIM_CALIBRATION_PROFILE } from "#/types/SimCalibrationProfile";
 import type { TbcUiDatabase } from "./buildStatWeightsRequest";
 import {
+	calibrateWeights,
+	measureFinalSimMetrics,
+	runCalibrationBatch,
+} from "./calibrateWeights";
+import {
+	absoluteValueForMetric,
+	deriveSecondaryConstraintBound,
 	exceedsHysteresisThreshold,
 	filterItemsForClass,
 	isSignificantImprovement,
+	solveConfigForSimMetric,
 } from "./solveSimMetric";
+
+vi.mock("#/solver/solveConfig", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("#/solver/solveConfig")>();
+	return { ...actual, solveConfig: vi.fn() };
+});
+vi.mock("./calibrateWeights", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("./calibrateWeights")>();
+	return {
+		...actual,
+		calibrateWeights: vi.fn(),
+		measureFinalSimMetrics: vi.fn(),
+		runCalibrationBatch: vi.fn(),
+	};
+});
 
 // classAllowlist values are tbc-new's proto.Class ordinals (common.proto): Warrior=1, Paladin=2.
 const fakeDb: TbcUiDatabase = {
@@ -132,5 +156,290 @@ describe("isSignificantImprovement", () => {
 				baseOptions,
 			),
 		).toBe(false);
+	});
+});
+
+describe("solveConfigForSimMetric", () => {
+	const gearItem = (overrides: Partial<LPItem>): LPItem =>
+		({
+			name: "Test Item",
+			stats: [],
+			sockets: [],
+			socketBonus: [],
+			enchant: { name: "", id: "", effectID: "", type: "Chest", stats: [] },
+			gems: [],
+			gemSlots: [],
+			locked: false,
+			avoidanceScore: 0,
+			objectiveScore: 0,
+			uncritabilityScore: 0,
+			resistanceScores: {},
+			...overrides,
+		}) as LPItem;
+
+	// Round 1's accepted proposal (id 30007 - "The Darkener's Grasp", real 40 Stamina - see
+	// isSignificantImprovement's own tests above) and round 2's rejected one (id 34400 -
+	// "Crown of Dath'Remar", real 91 Stamina) - reusing the same real fixture ids so the (real,
+	// unmocked) isSignificantImprovement/scoreGearSet call inside solveConfigForSimMetric has
+	// genuine item data to score against.
+	const roundOneProposal = [
+		gearItem({ id: "30007", type: "Neck", uniqueId: "neck" }),
+	];
+	const roundTwoProposal = [
+		gearItem({
+			id: "34400",
+			type: "Head",
+			uniqueId: "head",
+			objectiveScore: 91,
+		}),
+	];
+
+	const baseOptions = {
+		uncrushabilitySetting: 0,
+		uncritabilitySetting: 0,
+		resistanceFloors: [],
+		areEnchantsGemsLocked: false,
+		excludeUniqueGems: false,
+		phase: 3,
+		raceId: TEST_RACE_ID,
+		classId: TEST_CLASS_ID,
+		talentSources: [],
+		buffs: [],
+		abilitySources: [],
+		enabledConsumableIds: [],
+	};
+
+	const profile = {
+		...DEFAULT_SIM_CALIBRATION_PROFILE,
+		calibration: {
+			...DEFAULT_SIM_CALIBRATION_PROFILE.calibration,
+			maxRounds: 2,
+		},
+	};
+
+	beforeEach(() => {
+		vi.mocked(solveConfig).mockReset();
+		vi.mocked(calibrateWeights).mockReset();
+		vi.mocked(measureFinalSimMetrics)
+			.mockReset()
+			.mockResolvedValue({ tps: 0, dtps: 0, tmi5: 0 });
+	});
+
+	it("returns the accepted round's stat weights, not a later rejected round's", async () => {
+		const roundOneStats = [
+			{ name: "Stamina" as const, value: 1, type: "flat" as const },
+		];
+		const roundOneStdev = [
+			{ name: "Stamina" as const, value: 0.01, type: "flat" as const },
+		];
+		const roundTwoStats = [
+			{ name: "Stamina" as const, value: 1, type: "flat" as const },
+		];
+		const roundTwoStdev = [
+			{ name: "Stamina" as const, value: 1000, type: "flat" as const },
+		];
+
+		vi.mocked(calibrateWeights)
+			.mockResolvedValueOnce({
+				optimizeStats: roundOneStats,
+				stdevStats: roundOneStdev,
+			})
+			.mockResolvedValueOnce({
+				optimizeStats: roundTwoStats,
+				stdevStats: roundTwoStdev,
+			});
+		vi.mocked(solveConfig)
+			.mockResolvedValueOnce(roundOneProposal)
+			.mockResolvedValueOnce(roundTwoProposal);
+
+		const result = await solveConfigForSimMetric(
+			[],
+			baseOptions,
+			[],
+			{ items: [], enchants: [], gems: [] },
+			{ tmi: 1 },
+			profile,
+		);
+
+		// Round 2's swap isn't distinguishable from calibration noise (huge stdev) - the loop
+		// should reject it, stop, and report round 1's stats/gear as final, not round 2's.
+		expect(result.converged).toBe(true);
+		expect(result.items).toEqual(roundOneProposal);
+		expect(result.finalStatWeights).toEqual(roundOneStats);
+	});
+
+	const singleRoundProfile = {
+		...DEFAULT_SIM_CALIBRATION_PROFILE,
+		calibration: {
+			...DEFAULT_SIM_CALIBRATION_PROFILE.calibration,
+			maxRounds: 1,
+		},
+	};
+
+	it("calibrates round 1 for real and reports it as round1StatWeights when nothing is precomputed", async () => {
+		const roundOneStats = [
+			{ name: "Stamina" as const, value: 2, type: "flat" as const },
+		];
+		const roundOneStdev = [
+			{ name: "Stamina" as const, value: 0.02, type: "flat" as const },
+		];
+		vi.mocked(calibrateWeights).mockResolvedValueOnce({
+			optimizeStats: roundOneStats,
+			stdevStats: roundOneStdev,
+		});
+		vi.mocked(solveConfig).mockResolvedValueOnce(roundOneProposal);
+
+		const result = await solveConfigForSimMetric(
+			[],
+			baseOptions,
+			[],
+			{ items: [], enchants: [], gems: [] },
+			{ tmi: 1 },
+			singleRoundProfile,
+		);
+
+		expect(calibrateWeights).toHaveBeenCalledTimes(1);
+		expect(result.round1StatWeights).toEqual({
+			optimizeStats: roundOneStats,
+			stdevStats: roundOneStdev,
+		});
+	});
+
+	it("skips calibrating round 1 and uses precomputedRound1 instead when provided", async () => {
+		const precomputed = {
+			optimizeStats: [
+				{ name: "Stamina" as const, value: 3, type: "flat" as const },
+			],
+			stdevStats: [
+				{ name: "Stamina" as const, value: 0.03, type: "flat" as const },
+			],
+		};
+		vi.mocked(solveConfig).mockResolvedValueOnce(roundOneProposal);
+
+		const result = await solveConfigForSimMetric(
+			[],
+			baseOptions,
+			[],
+			{ items: [], enchants: [], gems: [] },
+			{ tmi: 1 },
+			singleRoundProfile,
+			undefined,
+			precomputed,
+		);
+
+		expect(calibrateWeights).not.toHaveBeenCalled();
+		expect(result.round1StatWeights).toEqual(precomputed);
+		expect(result.finalStatWeights).toEqual(precomputed.optimizeStats);
+	});
+
+	it("derives a per-round secondary constraint from one shared calibration batch (no extra sim call) and passes it to solveConfig", async () => {
+		// STAMINA = proto.Stat.StatStamina ordinal (common.proto) - matches calibrateWeights.test.ts's
+		// own constant. tps' epValue is unsigned/higher-is-better (stays +5); tmi's is unsigned but
+		// lower-is-better, so blendMetricEpValues flips it to -2 for the constraint vector.
+		const STAMINA = 2;
+		const tpsStats: number[] = [];
+		tpsStats[STAMINA] = 5;
+		const tmiStats: number[] = [];
+		tmiStats[STAMINA] = 2;
+		const fakeResult = {
+			tps: { epValues: { apiVersion: 0, stats: tpsStats, pseudoStats: [] } },
+			tmi: { epValues: { apiVersion: 0, stats: tmiStats, pseudoStats: [] } },
+			// biome-ignore lint/suspicious/noExplicitAny: partial fake, only the fields blendMetricEpValues reads matter
+		} as any;
+
+		vi.mocked(runCalibrationBatch).mockResolvedValueOnce({
+			result: fakeResult,
+			// current TMI-5 (8) is above the desired ceiling (5) - constraint should tighten.
+			baselineMetrics: { tps: 0, dtps: 0, tmi5: 8 },
+		});
+		vi.mocked(solveConfig).mockResolvedValueOnce(roundOneProposal);
+
+		await solveConfigForSimMetric(
+			[],
+			baseOptions,
+			[], // empty baseline gear - scoreGearSet's constraintScoreAtBaseline is trivially 0
+			{ items: [], enchants: [], gems: [] },
+			{ tps: 1 },
+			singleRoundProfile,
+			undefined,
+			undefined,
+			{ metric: "tmi", targetAbsolute: 5, kind: "ceiling" },
+		);
+
+		expect(runCalibrationBatch).toHaveBeenCalledTimes(1);
+		expect(calibrateWeights).not.toHaveBeenCalled();
+
+		const passedOptions = vi.mocked(solveConfig).mock.calls[0][1];
+		// bound = constraintScoreAtBaseline(0) + sign(-1 for tmi) * (target(5) - current(8)) = 3;
+		// a real-world ceiling on a lower-is-better metric becomes a floor on the (already sign-
+		// flipped) constraintScore - see deriveSecondaryConstraintBound's own doc comment.
+		expect(passedOptions.secondaryConstraint).toEqual({
+			statWeights: expect.arrayContaining([
+				{ name: "Stamina", value: -2, type: "flat" },
+			]),
+			bound: 3,
+			kind: "floor",
+		});
+	});
+});
+
+describe("absoluteValueForMetric", () => {
+	const snapshot = { tps: 100, dtps: 50, tmi5: 12.5 };
+
+	it("reads tps/dtps directly by name", () => {
+		expect(absoluteValueForMetric(snapshot, "tps")).toBe(100);
+		expect(absoluteValueForMetric(snapshot, "dtps")).toBe(50);
+	});
+
+	it("maps SimMetric's 'tmi' to the snapshot's 'tmi5' field", () => {
+		expect(absoluteValueForMetric(snapshot, "tmi")).toBe(12.5);
+	});
+});
+
+describe("deriveSecondaryConstraintBound", () => {
+	const stats = [{ name: "Stamina" as const, value: 4, type: "flat" as const }];
+
+	it("keeps the user-facing kind unchanged for a higher-is-better metric (tps)", () => {
+		// ceiling: tps(gear) <= target => constraintScore(gear) <= target - current + baseline
+		const result = deriveSecondaryConstraintBound(
+			{ metric: "tps", targetAbsolute: 100, kind: "ceiling" },
+			stats,
+			/* currentAbsolute */ 80,
+			/* constraintScoreAtBaseline */ 10,
+		);
+		expect(result).toEqual({
+			statWeights: stats,
+			bound: 10 + (100 - 80),
+			kind: "ceiling",
+		});
+	});
+
+	it("flips the LP-facing kind for a lower-is-better metric (tmi), since its vector's sign is already inverted", () => {
+		// user wants a ceiling on real TMI - that's a floor on the sign-flipped constraintScore.
+		const result = deriveSecondaryConstraintBound(
+			{ metric: "tmi", targetAbsolute: 5, kind: "ceiling" },
+			stats,
+			/* currentAbsolute */ 8,
+			/* constraintScoreAtBaseline */ 0,
+		);
+		expect(result).toEqual({
+			statWeights: stats,
+			bound: 0 + -1 * (5 - 8),
+			kind: "floor",
+		});
+	});
+
+	it("flips the LP-facing kind the other way for a floor on a lower-is-better metric", () => {
+		const result = deriveSecondaryConstraintBound(
+			{ metric: "dtps", targetAbsolute: 200, kind: "floor" },
+			stats,
+			/* currentAbsolute */ 150,
+			/* constraintScoreAtBaseline */ 20,
+		);
+		expect(result).toEqual({
+			statWeights: stats,
+			bound: 20 + -1 * (200 - 150),
+			kind: "ceiling",
+		});
 	});
 });
