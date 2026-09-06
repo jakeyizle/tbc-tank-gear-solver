@@ -64,6 +64,16 @@ export interface CalibrationSettings {
 	 * (min(4, hardwareConcurrency / 2), the default this app has always used).
 	 */
 	workerCount: number;
+	/**
+	 * How many independent calibration batches to run and average per round (see
+	 * calibrateWeights.ts's runCalibrationBatches) - a brute-force variance reduction for noisy
+	 * metrics like TMI-5: averaging N independent Monte Carlo estimates shrinks the effective
+	 * noise by sqrt(N) at the cost of N times the sim time. 1 = today's behavior (no averaging).
+	 * Optional because this profile is persisted raw with no migration (see
+	 * useSimCalibrationProfile.ts) - an older saved profile predates this field entirely, so
+	 * every read site defaults a missing value to 1.
+	 */
+	replicates?: number;
 }
 
 export interface EncounterSettings {
@@ -197,6 +207,7 @@ export const DEFAULT_SIM_CALIBRATION_PROFILE: SimCalibrationProfile = {
 		iterations: 4000,
 		maxRounds: 5,
 		workerCount: 0,
+		replicates: 1,
 	},
 	encounter: {
 		duration: PROT_PALADIN_REFERENCE_ENCOUNTER.duration,

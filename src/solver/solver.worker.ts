@@ -34,6 +34,7 @@ self.onmessage = async (e) => {
 				PROT_PALADIN_BASELINE_GEAR,
 				db,
 				options.simBalance.balance,
+				options.survivabilityMetric ?? "tmi",
 				options.simCalibrationProfile ?? DEFAULT_SIM_CALIBRATION_PROFILE,
 				(progress) => postMessage({ type: "progress", ...progress }),
 				cachedEndpoints,

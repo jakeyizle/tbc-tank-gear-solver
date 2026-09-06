@@ -1,4 +1,6 @@
+import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { clearRound1WeightsCache } from "#/sim/round1WeightsCache";
 import { clearSimBalanceCache } from "#/sim/simBalanceCache";
@@ -49,6 +51,27 @@ export default function CalibrationSettingsFields({
 					v != null && onChange({ ...calibration, workerCount: v })
 				}
 			/>
+			<Tooltip
+				title="Runs this many independent calibration batches per round and averages
+					them, instead of just one. Reduces noise in the calibrated weights (useful
+					for noisy metrics like TMI-5) at the cost of running that many times slower."
+				arrow
+				placement="top"
+			>
+				<Box>
+					<NumberSpinner
+						id="calibration-replicates"
+						label="Calibration replicates"
+						size="small"
+						min={1}
+						max={10}
+						value={calibration.replicates ?? 1}
+						onValueChange={(v) =>
+							v != null && onChange({ ...calibration, replicates: v })
+						}
+					/>
+				</Box>
+			</Tooltip>
 			<Typography
 				variant="caption"
 				color="primary"

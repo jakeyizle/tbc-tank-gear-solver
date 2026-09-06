@@ -62,6 +62,8 @@ export function useSolverConfigs() {
 						(legacyRatios
 							? { balance: legacyRatioToBalance(legacyRatios) }
 							: { balance: legacyModeBalance ?? 0.5 }),
+					// Old saves before this feature existed only ever meant TMI-5 by "Survivability."
+					survivabilityMetric: c.survivabilityMetric ?? "tmi",
 				};
 			},
 		),

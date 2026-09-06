@@ -13,6 +13,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import type { DragEvent, ReactNode } from "react";
 import { useState } from "react";
+import type { SurvivabilityMetric } from "#/sim/solveBalancedSimMetric";
 import {
 	type Buff,
 	type ConsumableItem,
@@ -62,6 +63,7 @@ interface ConfigCardProps {
 	onUpdateOptimizeStats: (stats: Stat[]) => void;
 	onUpdateObjectiveMode: (mode: "stats" | "ehp" | "simWeighted") => void;
 	onUpdateSimBalance: (balance: number) => void;
+	onUpdateSurvivabilityMetric: (metric: SurvivabilityMetric) => void;
 	onUpdateResistanceFloors: (floors: ResistanceFloor[]) => void;
 	onBuffChange: (buffId: string) => void;
 	onConsumableChange: (consumableId: string) => void;
@@ -121,13 +123,24 @@ function ConfigBand({
 	);
 }
 
-function simBalanceSummary(balance: number): string {
-	return `${Math.round(balance * 100)}% Threat / ${Math.round((1 - balance) * 100)}% Survivability`;
+const SURVIVABILITY_METRIC_LABELS: Record<SurvivabilityMetric, string> = {
+	tmi: "TMI-5",
+	dtps: "DTPS",
+};
+
+function simBalanceSummary(
+	balance: number,
+	survivabilityMetric: SurvivabilityMetric,
+): string {
+	return `${Math.round(balance * 100)}% Threat / ${Math.round((1 - balance) * 100)}% Survivability (${SURVIVABILITY_METRIC_LABELS[survivabilityMetric]})`;
 }
 
 function statsSummary(config: SolverConfiguration): string {
 	if (config.objectiveMode === "simWeighted") {
-		return simBalanceSummary(config.simBalance.balance);
+		return simBalanceSummary(
+			config.simBalance.balance,
+			config.survivabilityMetric,
+		);
 	}
 	if (config.objectiveMode !== "stats") {
 		return NON_STATS_OBJECTIVE_LABELS[config.objectiveMode];
@@ -158,6 +171,7 @@ export default function ConfigCard({
 	onUpdateOptimizeStats,
 	onUpdateObjectiveMode,
 	onUpdateSimBalance,
+	onUpdateSurvivabilityMetric,
 	onUpdateResistanceFloors,
 	onBuffChange,
 	onConsumableChange,
@@ -451,15 +465,18 @@ export default function ConfigCard({
 						>
 							Runs a real combat simulation each round instead of an instant
 							formula, so this is much slower than the other modes. The slider
-							below balances Threat (TPS) against Survivability (TMI-5).
-							Encounter, buffs, and consumables settings live in the Advanced Sim
-							Calibration panel below.
+							below balances Threat (TPS) against Survivability (
+							{SURVIVABILITY_METRIC_LABELS[config.survivabilityMetric]}).
+							Encounter, buffs, and consumables settings live in the Advanced
+							Sim Calibration panel below.
 						</Typography>
 					)}
 					{config.objectiveMode === "simWeighted" && (
 						<SimBalanceSlider
 							balance={config.simBalance.balance}
 							onChange={onUpdateSimBalance}
+							survivabilityMetric={config.survivabilityMetric}
+							onChangeSurvivabilityMetric={onUpdateSurvivabilityMetric}
 						/>
 					)}
 					{config.objectiveMode === "stats" && (

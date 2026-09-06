@@ -43,6 +43,10 @@ export interface TbcUiDatabase {
  * talents/consumables/rotation) - see src/types/SimCalibrationProfile.ts. `iterations` is
  * passed separately since callers already source it from `profile.calibration.iterations`
  * themselves (see calibrateWeights.ts).
+ * @param seedOverride Explicit randomSeed string, instead of the default `Date.now()`-derived
+ * one - lets a caller running several batches back-to-back (see calibrateWeights.ts's
+ * runCalibrationBatches) guarantee each gets an independent seed rather than relying on enough
+ * wall-clock time elapsing between calls.
  */
 export function buildStatWeightsRequest(
 	gear: GearPiece[],
@@ -50,6 +54,7 @@ export function buildStatWeightsRequest(
 	statsToWeigh: StatName[],
 	iterations: number,
 	profile: SimCalibrationProfile,
+	seedOverride?: string,
 ) {
 	const gearRefs: GearItemRef[] = gear.map((item) => ({
 		id: Number(item.id),
@@ -110,7 +115,7 @@ export function buildStatWeightsRequest(
 		encounter,
 		tanks: PROT_PALADIN_REFERENCE_TANKS,
 		// int64 proto fields must be JSON strings, not numbers/bigints (see plan doc).
-		simOptions: { iterations, randomSeed: String(Date.now()) },
+		simOptions: { iterations, randomSeed: seedOverride ?? String(Date.now()) },
 		statsToWeigh: tbcStatsToWeigh,
 		epReferenceStat: TBC_EP_REFERENCE_STAT,
 	};

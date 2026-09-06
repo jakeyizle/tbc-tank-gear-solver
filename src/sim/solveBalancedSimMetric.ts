@@ -1,17 +1,19 @@
 // The "balance slider" objective: a single 0..1 dial between pure Threat (TPS) and pure
-// Survivability (TMI-5), implemented as an epsilon-constraint (see docs/plans/sim-backed-
-// objectives.md's rejection of a raw weighted-ratio blend for exactly the reason this replaces -
-// different metrics' calibrated weights live on incomparable scales, so a ratio like {tps:1,
-// tmi:1} never means what it looks like it means) anchored to two real, sim-verified endpoints
-// instead of a raw threshold the user would have no intuition for.
+// Survivability (TMI-5 or DTPS - see SurvivabilityMetric below), implemented as an
+// epsilon-constraint (see docs/plans/sim-backed-objectives.md's rejection of a raw
+// weighted-ratio blend for exactly the reason this replaces - different metrics' calibrated
+// weights live on incomparable scales, so a ratio like {tps:1, tmi:1} never means what it looks
+// like it means) anchored to two real, sim-verified endpoints instead of a raw threshold the
+// user would have no intuition for.
 //
-// Mechanism: solve the pure-TPS optimum and the pure-TMI optimum once (the "endpoints"), then
-// interpolate a TMI-5 ceiling between the two endpoints' own achieved TMI-5 values according to
-// the slider position, and solve once more maximizing TPS subject to that ceiling. At balance=1
-// the ceiling is exactly the threat-endpoint's own TMI-5 (trivially satisfied by that same gear);
-// at balance=0 it's the tightest achievable TMI-5 (the survival-endpoint's own value) - see
-// solveSimMetric.ts's deriveSecondaryConstraintBound for the per-round linearization this relies
-// on every SLP round of the final constrained solve.
+// Mechanism: solve the pure-TPS optimum and the pure-survivability optimum once (the
+// "endpoints"), then interpolate a ceiling on the chosen survivability metric between the two
+// endpoints' own achieved values according to the slider position, and solve once more
+// maximizing TPS subject to that ceiling. At balance=1 the ceiling is exactly the
+// threat-endpoint's own value (trivially satisfied by that same gear); at balance=0 it's the
+// tightest achievable value (the survival-endpoint's own value) - see solveSimMetric.ts's
+// deriveSecondaryConstraintBound for the per-round linearization this relies on every SLP round
+// of the final constrained solve.
 
 import type { SolveOptions } from "#/solver/solveConfig";
 import type { InputItem, LPItem, Stat } from "#/solver/types";
@@ -21,17 +23,25 @@ import type {
 } from "#/types/SimCalibrationProfile";
 import type { TbcUiDatabase } from "./buildStatWeightsRequest";
 import {
+	absoluteValueForMetric,
 	type SimMetricSolveProgress,
 	solveConfigForSimMetric,
 } from "./solveSimMetric";
 import { resetWasmClient } from "./statWeightsClient";
 import type { GearPiece } from "./toTbcItemSpec";
 
+// Which metric backs the slider's "Survivability" endpoint - a narrowed SimMetric (calibrateWeights.ts),
+// since "tps" is never a valid survivability choice.
+export type SurvivabilityMetric = "tmi" | "dtps";
+
 // A single-metric endpoint solve's result, stripped down to what the balance slider needs: its
-// own achieved absolute metrics (to anchor the interpolation and show the UI real numbers) and
-// the weight vector that produced it (displayable the same way a plain single-metric solve's
-// stat weights already are - see StatsSummary.tsx).
+// own achieved absolute metrics (to anchor the interpolation and show the UI real numbers), the
+// weight vector that produced it (displayable the same way a plain single-metric solve's stat
+// weights already are - see StatsSummary.tsx), and the actual gear that earned those numbers -
+// without `items`, the "100% Threat"/"100% Survivability" anchors would be numbers with no way
+// for a user to see or use the gear behind them (see StatsSummary.tsx's endpoint preview).
 export interface BalanceEndpoint {
+	items: LPItem[];
 	simMetrics: SimMetricsSnapshot;
 	finalStatWeights: Stat[];
 	finalStatWeightStdevs: Stat[];
@@ -61,11 +71,13 @@ export interface SimBalanceSolveResult {
 }
 
 function toBalanceEndpoint(result: {
+	items: LPItem[];
 	simMetrics: SimMetricsSnapshot;
 	finalStatWeights: Stat[];
 	finalStatWeightStdevs: Stat[];
 }): BalanceEndpoint {
 	return {
+		items: result.items,
 		simMetrics: result.simMetrics,
 		finalStatWeights: result.finalStatWeights,
 		finalStatWeightStdevs: result.finalStatWeightStdevs,
@@ -73,19 +85,23 @@ function toBalanceEndpoint(result: {
 }
 
 /**
- * Interpolates a TMI-5 ceiling between the survival endpoint's own achieved value (t=0, tightest
- * possible) and the threat endpoint's own achieved value (t=1, loosest useful bound - anything
- * looser wouldn't constrain the threat-maximizing solve at all). Extracted as a pure function so
- * the interpolation math - the one place a swapped endpoint would silently invert the whole
- * slider - is directly unit-testable without a real sim.
+ * Interpolates a ceiling on the chosen survivability metric between the survival endpoint's own
+ * achieved value (t=0, tightest possible) and the threat endpoint's own achieved value (t=1,
+ * loosest useful bound - anything looser wouldn't constrain the threat-maximizing solve at all).
+ * Metric-agnostic (plain endpoint-value interpolation) - works identically for TMI-5 or DTPS, or
+ * any other metric a future survivability choice might add. Extracted as a pure function so the
+ * interpolation math - the one place a swapped endpoint would silently invert the whole slider -
+ * is directly unit-testable without a real sim.
  */
-export function interpolateTmiCeiling(
+export function interpolateEndpointCeiling(
 	balance: number,
-	threatEndpointTmi: number,
-	survivalEndpointTmi: number,
+	threatEndpointValue: number,
+	survivalEndpointValue: number,
 ): number {
 	const t = Math.min(1, Math.max(0, balance));
-	return survivalEndpointTmi + t * (threatEndpointTmi - survivalEndpointTmi);
+	return (
+		survivalEndpointValue + t * (threatEndpointValue - survivalEndpointValue)
+	);
 }
 
 /**
@@ -101,6 +117,7 @@ export async function solveBalancedSimMetric(
 	baselineGear: GearPiece[],
 	db: TbcUiDatabase,
 	balance: number,
+	survivabilityMetric: SurvivabilityMetric,
 	profile: SimCalibrationProfile,
 	onProgress?: (progress: BalanceSolveProgress) => void,
 	cachedEndpoints?: { threat: BalanceEndpoint; survival: BalanceEndpoint },
@@ -133,7 +150,7 @@ export async function solveBalancedSimMetric(
 			options,
 			baselineGear,
 			db,
-			{ tmi: 1 },
+			{ [survivabilityMetric]: 1 },
 			profile,
 			(progress) => onProgress?.({ ...progress, stage: "survivalEndpoint" }),
 		);
@@ -143,10 +160,10 @@ export async function solveBalancedSimMetric(
 		resetWasmClient();
 	}
 
-	const tmiCeiling = interpolateTmiCeiling(
+	const survivabilityCeiling = interpolateEndpointCeiling(
 		balance,
-		threatEndpoint.simMetrics.tmi5,
-		survivalEndpoint.simMetrics.tmi5,
+		absoluteValueForMetric(threatEndpoint.simMetrics, survivabilityMetric),
+		absoluteValueForMetric(survivalEndpoint.simMetrics, survivabilityMetric),
 	);
 
 	// Seeded from baselineGear (same as the endpoints, not threatEndpoint's own gear) - solveSim-
@@ -161,7 +178,11 @@ export async function solveBalancedSimMetric(
 		profile,
 		(progress) => onProgress?.({ ...progress, stage: "balancing" }),
 		undefined,
-		{ metric: "tmi", targetAbsolute: tmiCeiling, kind: "ceiling" },
+		{
+			metric: survivabilityMetric,
+			targetAbsolute: survivabilityCeiling,
+			kind: "ceiling",
+		},
 	);
 
 	return {

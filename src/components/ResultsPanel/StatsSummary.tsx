@@ -1,14 +1,26 @@
 import Box from "@mui/material/Box";
+import ButtonBase from "@mui/material/ButtonBase";
 import Typography from "@mui/material/Typography";
 import { getBaseStats } from "#/data/baseStats";
 import { convertStatToPercentageOrSkill } from "#/helpers/convertStat";
 import { buildStatInputs } from "#/helpers/resultStats";
 import { calculateStatValue } from "#/helpers/stats";
-import type { BalanceEndpoint } from "#/sim/solveBalancedSimMetric";
+import type {
+	BalanceEndpoint,
+	SurvivabilityMetric,
+} from "#/sim/solveBalancedSimMetric";
+import { absoluteValueForMetric } from "#/sim/solveSimMetric";
 import { type LPItem, STAT_LABELS, type Stat } from "#/solver/types";
 import type { SimMetricsSnapshot } from "#/types/SimCalibrationProfile";
 import type { BaseConfig, SolverConfiguration } from "#/types/SolverConfig";
 import StatsGroup from "./StatsGroup";
+
+// Which gear ResultsPanel is currently displaying - "balanced" is the real solve output; the
+// other two preview one of the balance slider's endpoints instead, using that endpoint's own
+// already-computed gear (see BalanceEndpoint.items) rather than triggering a new solve. Owned
+// here since this component is what actually offers the click-through (the endpoint anchors
+// below); ResultsPanel just holds the selected value and swaps the displayed items/metrics.
+export type GearView = "balanced" | "threat" | "survival";
 
 interface StatsSummaryProps {
 	items: LPItem[];
@@ -21,11 +33,105 @@ interface StatsSummaryProps {
 	// The balance slider's two real anchors - see solveBalancedSimMetric.ts and
 	// SimBalanceSlider.tsx. Only set for a "simWeighted" solve.
 	simBalanceEndpoints?: { threat: BalanceEndpoint; survival: BalanceEndpoint };
+	// Which gear is currently on screen, and how to change it - clicking an endpoint's own label
+	// below previews its exact gear (see GearView); clicking the already-selected one switches
+	// back to the balanced result. Both optional so the anchors still render as plain
+	// (non-interactive) text if a future caller doesn't wire up previewing.
+	selectedGearView?: GearView;
+	onSelectGearView?: (view: GearView) => void;
 }
 
-function formatEndpointAnchor(endpoint: BalanceEndpoint): string {
-	const { tps, tmi5 } = endpoint.simMetrics;
-	return `${tps.toLocaleString(undefined, { maximumFractionDigits: 0 })} TPS / ${tmi5.toLocaleString(undefined, { maximumFractionDigits: 2 })} TMI-5`;
+const SURVIVABILITY_METRIC_LABELS: Record<SurvivabilityMetric, string> = {
+	tmi: "TMI-5",
+	dtps: "DTPS",
+};
+
+function formatEndpointAnchor(
+	endpoint: BalanceEndpoint,
+	survivabilityMetric: SurvivabilityMetric,
+): string {
+	const { tps } = endpoint.simMetrics;
+	const survivalValue = absoluteValueForMetric(
+		endpoint.simMetrics,
+		survivabilityMetric,
+	);
+	return `${tps.toLocaleString(undefined, { maximumFractionDigits: 0 })} TPS · ${survivalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${SURVIVABILITY_METRIC_LABELS[survivabilityMetric]}`;
+}
+
+interface EndpointAnchorProps {
+	label: string;
+	endpoint: BalanceEndpoint;
+	view: Exclude<GearView, "balanced">;
+	selected: boolean;
+	survivabilityMetric: SurvivabilityMetric;
+	// Absent when the caller doesn't wire up previewing - the anchor still shows the real
+	// numbers, just as plain (non-interactive, non-clickable) text.
+	onSelect?: (view: GearView) => void;
+	align?: "left" | "right";
+}
+
+// A single "100% Threat"/"100% Survivability" anchor - without a way to see the gear behind
+// these numbers they're just floating reference values, so clicking one (when onSelect is wired
+// up) previews that endpoint's own exact gear elsewhere in ResultsPanel; clicking the
+// already-selected one switches back to the real (balanced) solve result.
+function EndpointAnchor({
+	label,
+	endpoint,
+	view,
+	selected,
+	survivabilityMetric,
+	onSelect,
+	align = "left",
+}: EndpointAnchorProps) {
+	const content = (
+		<Box sx={{ minWidth: 0, width: "100%", textAlign: align }}>
+			<Typography
+				variant="overline"
+				color={selected ? "secondary.main" : "text.disabled"}
+				sx={{
+					lineHeight: 1.5,
+					whiteSpace: "nowrap",
+					display: "block",
+					fontWeight: selected ? 700 : 400,
+				}}
+			>
+				{label}
+			</Typography>
+			<Typography
+				variant="caption"
+				color="text.secondary"
+				sx={{ whiteSpace: "nowrap" }}
+			>
+				{formatEndpointAnchor(endpoint, survivabilityMetric)}
+			</Typography>
+		</Box>
+	);
+
+	if (!onSelect) return content;
+
+	return (
+		<ButtonBase
+			onClick={() => onSelect(selected ? "balanced" : view)}
+			sx={{
+				minWidth: 0,
+				display: "block",
+				borderRadius: 1,
+				px: 0.5,
+				py: 0.25,
+				textAlign: align,
+				bgcolor: selected ? "action.selected" : "transparent",
+				"&:hover": { bgcolor: "action.hover" },
+			}}
+			aria-pressed={selected}
+			title={
+				selected
+					? "Showing this gear - click to go back to the balanced result"
+					: `Preview the exact gear behind these numbers`
+			}
+		>
+			{content}
+		</ButtonBase>
+	);
 }
 
 export default function StatsSummary({
@@ -37,6 +143,8 @@ export default function StatsSummary({
 	statWeights,
 	statWeightStdevs,
 	simBalanceEndpoints,
+	selectedGearView,
+	onSelectGearView,
 }: StatsSummaryProps) {
 	if (!rawItems || rawItems.length === 0) {
 		return null;
@@ -277,19 +385,34 @@ export default function StatsSummary({
 			{showSimMetrics && simBalanceEndpoints && (
 				<Box
 					sx={{
-						display: "flex",
-						justifyContent: "space-between",
-						gap: 2,
-						px: 0.5,
+						display: "grid",
+						gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+						gap: 1,
 					}}
 				>
-					<Typography variant="caption" color="text.disabled">
-						100% Survivability:{" "}
-						{formatEndpointAnchor(simBalanceEndpoints.survival)}
-					</Typography>
-					<Typography variant="caption" color="text.disabled">
-						100% Threat: {formatEndpointAnchor(simBalanceEndpoints.threat)}
-					</Typography>
+					<EndpointAnchor
+						label="100% Survivability"
+						endpoint={simBalanceEndpoints.survival}
+						view="survival"
+						selected={selectedGearView === "survival"}
+						// Persisted solveResults are restored raw with no migration (unlike
+						// configs - see routes/index.tsx), so an older saved result's
+						// solverConfig can predate this field entirely.
+						survivabilityMetric={solverConfig.survivabilityMetric ?? "tmi"}
+						onSelect={onSelectGearView}
+					/>
+					<EndpointAnchor
+						label="100% Threat"
+						endpoint={simBalanceEndpoints.threat}
+						view="threat"
+						selected={selectedGearView === "threat"}
+						// Persisted solveResults are restored raw with no migration (unlike
+						// configs - see routes/index.tsx), so an older saved result's
+						// solverConfig can predate this field entirely.
+						survivabilityMetric={solverConfig.survivabilityMetric ?? "tmi"}
+						onSelect={onSelectGearView}
+						align="right"
+					/>
 				</Box>
 			)}
 

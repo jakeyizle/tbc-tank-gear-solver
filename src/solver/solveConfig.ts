@@ -35,9 +35,13 @@ export interface SolveOptions {
 	uncritabilitySetting: number;
 	optimizeStats: Stat[];
 	objectiveMode?: "stats" | "ehp" | "simWeighted";
-	// A single 0 (pure Survivability/TMI-5) .. 1 (pure Threat/TPS) dial for "simWeighted" mode -
-	// see solveBalancedSimMetric.ts for why this replaced a raw {tps,dtps,tmi5} ratio blend.
+	// A single 0 (pure Survivability) .. 1 (pure Threat/TPS) dial for "simWeighted" mode - see
+	// solveBalancedSimMetric.ts for why this replaced a raw {tps,dtps,tmi5} ratio blend.
 	simBalance?: { balance: number };
+	// Which metric backs the "Survivability" end of simBalance - see
+	// solveBalancedSimMetric.ts's SurvivabilityMetric (kept as a plain literal type here, not
+	// imported, since this file is the generic LP core and never imports from src/sim/).
+	survivabilityMetric?: "tmi" | "dtps";
 	simCalibrationProfile?: SimCalibrationProfile;
 	resistanceFloors: ResistanceFloor[];
 	// A hard floor/ceiling on a second, independently-weighted linear metric - see

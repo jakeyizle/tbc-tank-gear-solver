@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Stat } from "#/solver/types";
 import { DEFAULT_SIM_CALIBRATION_PROFILE } from "#/types/SimCalibrationProfile";
 import {
-	interpolateTmiCeiling,
+	interpolateEndpointCeiling,
 	solveBalancedSimMetric,
 } from "./solveBalancedSimMetric";
 import { solveConfigForSimMetric } from "./solveSimMetric";
@@ -12,23 +12,23 @@ vi.mock("./solveSimMetric", async (importOriginal) => {
 	return { ...actual, solveConfigForSimMetric: vi.fn() };
 });
 
-describe("interpolateTmiCeiling", () => {
-	it("returns the survival endpoint's own TMI at balance=0", () => {
-		expect(interpolateTmiCeiling(0, 10, 2)).toBe(2);
+describe("interpolateEndpointCeiling", () => {
+	it("returns the survival endpoint's own value at balance=0", () => {
+		expect(interpolateEndpointCeiling(0, 10, 2)).toBe(2);
 	});
 
-	it("returns the threat endpoint's own TMI at balance=1", () => {
-		expect(interpolateTmiCeiling(1, 10, 2)).toBe(10);
+	it("returns the threat endpoint's own value at balance=1", () => {
+		expect(interpolateEndpointCeiling(1, 10, 2)).toBe(10);
 	});
 
 	it("linearly interpolates between the two endpoints", () => {
-		expect(interpolateTmiCeiling(0.5, 10, 2)).toBe(6);
-		expect(interpolateTmiCeiling(0.25, 10, 2)).toBe(4);
+		expect(interpolateEndpointCeiling(0.5, 10, 2)).toBe(6);
+		expect(interpolateEndpointCeiling(0.25, 10, 2)).toBe(4);
 	});
 
 	it("clamps balance outside [0, 1]", () => {
-		expect(interpolateTmiCeiling(-1, 10, 2)).toBe(2);
-		expect(interpolateTmiCeiling(2, 10, 2)).toBe(10);
+		expect(interpolateEndpointCeiling(-1, 10, 2)).toBe(2);
+		expect(interpolateEndpointCeiling(2, 10, 2)).toBe(10);
 	});
 });
 
@@ -98,6 +98,7 @@ describe("solveBalancedSimMetric", () => {
 			[],
 			{ items: [], enchants: [], gems: [] },
 			0.5,
+			"tmi",
 			DEFAULT_SIM_CALIBRATION_PROFILE,
 		);
 
@@ -136,11 +137,13 @@ describe("solveBalancedSimMetric", () => {
 
 		const cachedEndpoints = {
 			threat: {
+				items: [],
 				simMetrics: threatSolveResult.simMetrics,
 				finalStatWeights: threatStats,
 				finalStatWeightStdevs: threatStats,
 			},
 			survival: {
+				items: [],
 				simMetrics: survivalSolveResult.simMetrics,
 				finalStatWeights: survivalStats,
 				finalStatWeightStdevs: survivalStats,
@@ -153,6 +156,7 @@ describe("solveBalancedSimMetric", () => {
 			[],
 			{ items: [], enchants: [], gems: [] },
 			1,
+			"tmi",
 			DEFAULT_SIM_CALIBRATION_PROFILE,
 			undefined,
 			cachedEndpoints,
@@ -168,5 +172,35 @@ describe("solveBalancedSimMetric", () => {
 		});
 		expect(result.threatEndpoint).toEqual(cachedEndpoints.threat);
 		expect(result.survivalEndpoint).toEqual(cachedEndpoints.survival);
+	});
+
+	it("uses DTPS for the survival endpoint and the balanced constraint when survivabilityMetric is 'dtps'", async () => {
+		vi.mocked(solveConfigForSimMetric)
+			.mockResolvedValueOnce(threatSolveResult as never)
+			.mockResolvedValueOnce(survivalSolveResult as never)
+			.mockResolvedValueOnce(balancedSolveResult as never);
+
+		await solveBalancedSimMetric(
+			[],
+			baseOptions,
+			[],
+			{ items: [], enchants: [], gems: [] },
+			0.5,
+			"dtps",
+			DEFAULT_SIM_CALIBRATION_PROFILE,
+		);
+
+		// call 2: survival endpoint - pure dtps, not tmi.
+		expect(vi.mocked(solveConfigForSimMetric).mock.calls[1][4]).toEqual({
+			dtps: 1,
+		});
+		// call 3: the balanced solve's constraint - interpolated halfway between the two
+		// endpoints' own DTPS (800 and 200) => 500, constrained on dtps, not tmi.
+		const finalCall = vi.mocked(solveConfigForSimMetric).mock.calls[2];
+		expect(finalCall[8]).toEqual({
+			metric: "dtps",
+			targetAbsolute: 500,
+			kind: "ceiling",
+		});
 	});
 });

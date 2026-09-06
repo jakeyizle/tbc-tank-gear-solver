@@ -10,7 +10,7 @@ import type { TbcUiDatabase } from "./buildStatWeightsRequest";
 import {
 	calibrateWeights,
 	measureFinalSimMetrics,
-	runCalibrationBatch,
+	runCalibrationBatches,
 } from "./calibrateWeights";
 import {
 	absoluteValueForMetric,
@@ -31,7 +31,7 @@ vi.mock("./calibrateWeights", async (importOriginal) => {
 		...actual,
 		calibrateWeights: vi.fn(),
 		measureFinalSimMetrics: vi.fn(),
-		runCalibrationBatch: vi.fn(),
+		runCalibrationBatches: vi.fn(),
 	};
 });
 
@@ -213,7 +213,7 @@ describe("solveConfigForSimMetric", () => {
 		...DEFAULT_SIM_CALIBRATION_PROFILE,
 		calibration: {
 			...DEFAULT_SIM_CALIBRATION_PROFILE.calibration,
-			maxRounds: 2,
+			maxRounds: 3,
 		},
 	};
 
@@ -247,9 +247,17 @@ describe("solveConfigForSimMetric", () => {
 			.mockResolvedValueOnce({
 				optimizeStats: roundTwoStats,
 				stdevStats: roundTwoStdev,
+			})
+			// A single noisy rejection is inconclusive (see CONVERGENCE_CONFIRMATION_ROUNDS) -
+			// this third round is rejected the same way, confirming convergence only after 2
+			// consecutive non-significant rounds.
+			.mockResolvedValueOnce({
+				optimizeStats: roundTwoStats,
+				stdevStats: roundTwoStdev,
 			});
 		vi.mocked(solveConfig)
 			.mockResolvedValueOnce(roundOneProposal)
+			.mockResolvedValueOnce(roundTwoProposal)
 			.mockResolvedValueOnce(roundTwoProposal);
 
 		const result = await solveConfigForSimMetric(
@@ -261,11 +269,109 @@ describe("solveConfigForSimMetric", () => {
 			profile,
 		);
 
-		// Round 2's swap isn't distinguishable from calibration noise (huge stdev) - the loop
-		// should reject it, stop, and report round 1's stats/gear as final, not round 2's.
+		// Rounds 2 and 3's swaps aren't distinguishable from calibration noise (huge stdev) -
+		// only after both reject does the loop stop, reporting round 1's stats/gear as final.
+		expect(calibrateWeights).toHaveBeenCalledTimes(3);
 		expect(result.converged).toBe(true);
 		expect(result.items).toEqual(roundOneProposal);
 		expect(result.finalStatWeights).toEqual(roundOneStats);
+	});
+
+	it("a single noisy rejected round doesn't end convergence on its own", async () => {
+		const roundOneStats = [
+			{ name: "Stamina" as const, value: 1, type: "flat" as const },
+		];
+		const roundOneStdev = [
+			{ name: "Stamina" as const, value: 0.01, type: "flat" as const },
+		];
+		const roundTwoStats = [
+			{ name: "Stamina" as const, value: 1, type: "flat" as const },
+		];
+		const roundTwoStdev = [
+			{ name: "Stamina" as const, value: 1000, type: "flat" as const },
+		];
+		const twoRoundProfile = {
+			...profile,
+			calibration: { ...profile.calibration, maxRounds: 2 },
+		};
+
+		vi.mocked(calibrateWeights)
+			.mockResolvedValueOnce({
+				optimizeStats: roundOneStats,
+				stdevStats: roundOneStdev,
+			})
+			.mockResolvedValueOnce({
+				optimizeStats: roundTwoStats,
+				stdevStats: roundTwoStdev,
+			});
+		vi.mocked(solveConfig)
+			.mockResolvedValueOnce(roundOneProposal)
+			.mockResolvedValueOnce(roundTwoProposal);
+
+		const result = await solveConfigForSimMetric(
+			[],
+			baseOptions,
+			[],
+			{ items: [], enchants: [], gems: [] },
+			{ tmi: 1 },
+			twoRoundProfile,
+		);
+
+		// Only 1 rejection happened before the round budget ran out - not enough to confirm
+		// convergence, but the last accepted gear is still what's returned.
+		expect(result.converged).toBe(false);
+		expect(result.items).toEqual(roundOneProposal);
+	});
+
+	it("a real improvement found during a confirmation retry resets the streak and is accepted", async () => {
+		const roundOneStats = [
+			{ name: "Stamina" as const, value: 1, type: "flat" as const },
+		];
+		const roundOneStdev = [
+			{ name: "Stamina" as const, value: 0.01, type: "flat" as const },
+		];
+		const roundTwoStats = [
+			{ name: "Stamina" as const, value: 1, type: "flat" as const },
+		];
+		const roundTwoStdev = [
+			{ name: "Stamina" as const, value: 1000, type: "flat" as const },
+		];
+
+		vi.mocked(calibrateWeights)
+			.mockResolvedValueOnce({
+				optimizeStats: roundOneStats,
+				stdevStats: roundOneStdev,
+			})
+			// Round 2: rejected, same as the tests above - streak becomes 1.
+			.mockResolvedValueOnce({
+				optimizeStats: roundTwoStats,
+				stdevStats: roundTwoStdev,
+			})
+			// Round 3: a real, low-noise improvement over round 1's gear (same numbers as
+			// isSignificantImprovement's own "accepts the swap" test above) - should be accepted,
+			// resetting the streak rather than requiring a 3rd rejection to have mattered.
+			.mockResolvedValueOnce({
+				optimizeStats: roundOneStats,
+				stdevStats: roundOneStdev,
+			});
+		vi.mocked(solveConfig)
+			.mockResolvedValueOnce(roundOneProposal)
+			.mockResolvedValueOnce(roundTwoProposal)
+			.mockResolvedValueOnce(roundTwoProposal);
+
+		const result = await solveConfigForSimMetric(
+			[],
+			baseOptions,
+			[],
+			{ items: [], enchants: [], gems: [] },
+			{ tmi: 1 },
+			profile,
+		);
+
+		// Round 3 was accepted (the loop simply ran out of its 3-round budget right after),
+		// never confirming non-improvement - confirms the streak reset, not just the count.
+		expect(result.converged).toBe(false);
+		expect(result.items).toEqual(roundTwoProposal);
 	});
 
 	const singleRoundProfile = {
@@ -347,12 +453,17 @@ describe("solveConfigForSimMetric", () => {
 			// biome-ignore lint/suspicious/noExplicitAny: partial fake, only the fields blendMetricEpValues reads matter
 		} as any;
 
-		vi.mocked(runCalibrationBatch).mockResolvedValueOnce({
-			result: fakeResult,
-			// current TMI-5 (8) is above the desired ceiling (5) - constraint should tighten.
-			baselineMetrics: { tps: 0, dtps: 0, tmi5: 8 },
-		});
-		vi.mocked(solveConfig).mockResolvedValueOnce(roundOneProposal);
+		vi.mocked(runCalibrationBatches).mockResolvedValueOnce([
+			{
+				result: fakeResult,
+				// current TMI-5 (8) is above the desired ceiling (5) - constraint should tighten.
+				baselineMetrics: { tps: 0, dtps: 0, tmi5: 8 },
+			},
+		]);
+		// Persistent (not Once) - the bootstrap step below now calls solveConfig a second time per
+		// round whenever a secondary constraint is active (see solveConfigForSimMetric's own
+		// comment on this), and this test only cares about the *first* call's bound.
+		vi.mocked(solveConfig).mockResolvedValue(roundOneProposal);
 
 		await solveConfigForSimMetric(
 			[],
@@ -366,13 +477,18 @@ describe("solveConfigForSimMetric", () => {
 			{ metric: "tmi", targetAbsolute: 5, kind: "ceiling" },
 		);
 
-		expect(runCalibrationBatch).toHaveBeenCalledTimes(1);
+		expect(runCalibrationBatches).toHaveBeenCalledTimes(1);
 		expect(calibrateWeights).not.toHaveBeenCalled();
 
 		const passedOptions = vi.mocked(solveConfig).mock.calls[0][1];
 		// bound = constraintScoreAtBaseline(0) + sign(-1 for tmi) * (target(5) - current(8)) = 3;
 		// a real-world ceiling on a lower-is-better metric becomes a floor on the (already sign-
-		// flipped) constraintScore - see deriveSecondaryConstraintBound's own doc comment.
+		// flipped) constraintScore - see deriveSecondaryConstraintBound's own doc comment. This is
+		// the first (unmargined) call - since the fixture's baseline gear is empty and the round's
+		// own proposal (`roundOneProposal`, mocked identically every call above) never changes
+		// Stamina relative to that baseline, the bootstrap margin computed from that (non-)delta is
+		// exactly 0 too, so the second call ends up with this same bound - see the dedicated
+		// bootstrap tests below for a case where the delta (and therefore the margin) is nonzero.
 		expect(passedOptions.secondaryConstraint).toEqual({
 			statWeights: expect.arrayContaining([
 				{ name: "Stamina", value: -2, type: "flat" },
@@ -380,6 +496,117 @@ describe("solveConfigForSimMetric", () => {
 			bound: 3,
 			kind: "floor",
 		});
+	});
+
+	it("bootstraps a margin from the round's real proposal and re-solves once with a tighter bound", async () => {
+		const STAMINA = 2;
+		const tpsStats: number[] = [];
+		tpsStats[STAMINA] = 5;
+		const tmiStats: number[] = [];
+		tmiStats[STAMINA] = 2;
+		const tmiStdevStats: number[] = [];
+		tmiStdevStats[STAMINA] = 0.5;
+		const fakeResult = {
+			tps: { epValues: { apiVersion: 0, stats: tpsStats, pseudoStats: [] } },
+			tmi: {
+				epValues: { apiVersion: 0, stats: tmiStats, pseudoStats: [] },
+				epValuesStdev: {
+					apiVersion: 0,
+					stats: tmiStdevStats,
+					pseudoStats: [],
+				},
+			},
+			// biome-ignore lint/suspicious/noExplicitAny: partial fake, only the fields blendMetricEpValues/Stdevs read matter
+		} as any;
+
+		vi.mocked(runCalibrationBatches).mockResolvedValueOnce([
+			{
+				result: fakeResult,
+				baselineMetrics: { tps: 0, dtps: 0, tmi5: 8 },
+			},
+		]);
+		// First call proposes real item "34400" (91 Stamina - see isSignificantImprovement's own
+		// fixtures above), a genuine ~51-point jump from the 40-Stamina baseline gear below - a
+		// real, nonzero delta the bootstrap step should pick up. The second call's own return
+		// value doesn't matter for this test beyond confirming it's what the function reports.
+		vi.mocked(solveConfig)
+			.mockResolvedValueOnce(roundTwoProposal)
+			.mockResolvedValueOnce(roundOneProposal);
+
+		const result = await solveConfigForSimMetric(
+			[],
+			baseOptions,
+			[{ id: "30007", enchant: { id: "" }, gemSlots: [] }], // 40 Stamina baseline
+			{ items: [], enchants: [], gems: [] },
+			{ tps: 1 },
+			singleRoundProfile,
+			undefined,
+			undefined,
+			{ metric: "tmi", targetAbsolute: 5, kind: "ceiling" },
+		);
+
+		expect(solveConfig).toHaveBeenCalledTimes(2);
+		const firstBound =
+			vi.mocked(solveConfig).mock.calls[0][1].secondaryConstraint?.bound;
+		const secondBound =
+			vi.mocked(solveConfig).mock.calls[1][1].secondaryConstraint?.bound;
+		expect(firstBound).toBeDefined();
+		// LP-facing kind here is "floor" (see the test above) - a nonzero margin makes a floor
+		// stricter by moving it up.
+		expect(secondBound).toBeGreaterThan(firstBound as number);
+		// The function's result reflects the second (margined) solveConfig call, not the first.
+		expect(result.items).toEqual(roundOneProposal);
+	});
+
+	it("falls back to the unmargined proposal if the margined re-solve is infeasible", async () => {
+		const STAMINA = 2;
+		const tpsStats: number[] = [];
+		tpsStats[STAMINA] = 5;
+		const tmiStats: number[] = [];
+		tmiStats[STAMINA] = 2;
+		const tmiStdevStats: number[] = [];
+		tmiStdevStats[STAMINA] = 0.5;
+		const fakeResult = {
+			tps: { epValues: { apiVersion: 0, stats: tpsStats, pseudoStats: [] } },
+			tmi: {
+				epValues: { apiVersion: 0, stats: tmiStats, pseudoStats: [] },
+				epValuesStdev: {
+					apiVersion: 0,
+					stats: tmiStdevStats,
+					pseudoStats: [],
+				},
+			},
+			// biome-ignore lint/suspicious/noExplicitAny: partial fake, only the fields blendMetricEpValues/Stdevs read matter
+		} as any;
+
+		vi.mocked(runCalibrationBatches).mockResolvedValueOnce([
+			{
+				result: fakeResult,
+				baselineMetrics: { tps: 0, dtps: 0, tmi5: 8 },
+			},
+		]);
+		vi.mocked(solveConfig)
+			.mockResolvedValueOnce(roundTwoProposal)
+			.mockRejectedValueOnce(
+				new Error("No gear combination satisfies: secondary floor of 999."),
+			);
+
+		const result = await solveConfigForSimMetric(
+			[],
+			baseOptions,
+			[{ id: "30007", enchant: { id: "" }, gemSlots: [] }],
+			{ items: [], enchants: [], gems: [] },
+			{ tps: 1 },
+			singleRoundProfile,
+			undefined,
+			undefined,
+			{ metric: "tmi", targetAbsolute: 5, kind: "ceiling" },
+		);
+
+		expect(solveConfig).toHaveBeenCalledTimes(2);
+		// The margined re-solve rejected - the round keeps the first (unmargined) proposal rather
+		// than the whole solve throwing.
+		expect(result.items).toEqual(roundTwoProposal);
 	});
 });
 
@@ -441,5 +668,65 @@ describe("deriveSecondaryConstraintBound", () => {
 			bound: 20 + -1 * (200 - 150),
 			kind: "ceiling",
 		});
+	});
+
+	it("defaults to no margin when constraintMarginScore is omitted (old, unmargined behavior)", () => {
+		const withDefault = deriveSecondaryConstraintBound(
+			{ metric: "tps", targetAbsolute: 100, kind: "ceiling" },
+			stats,
+			80,
+			10,
+		);
+		const withExplicitZero = deriveSecondaryConstraintBound(
+			{ metric: "tps", targetAbsolute: 100, kind: "ceiling" },
+			stats,
+			80,
+			10,
+			0,
+		);
+		expect(withDefault).toEqual(withExplicitZero);
+		expect(withDefault.bound).toBe(10 + (100 - 80));
+	});
+
+	it("tightens a ceiling's bound downward by k * constraintMarginScore", () => {
+		const result = deriveSecondaryConstraintBound(
+			{ metric: "tps", targetAbsolute: 100, kind: "ceiling" },
+			stats,
+			80,
+			10,
+			/* constraintMarginScore */ 5,
+			/* k */ 2,
+		);
+		// rawBound = 10 + (100 - 80) = 30; ceiling moves down by k * margin = 2 * 5 = 10.
+		expect(result.bound).toBe(30 - 10);
+		expect(result.kind).toBe("ceiling");
+	});
+
+	it("tightens a floor's bound upward by k * constraintMarginScore", () => {
+		const result = deriveSecondaryConstraintBound(
+			{ metric: "dtps", targetAbsolute: 200, kind: "floor" },
+			stats,
+			150,
+			20,
+			/* constraintMarginScore */ 5,
+			/* k */ 2,
+		);
+		// rawBound = 20 + -1 * (200 - 150) = -30; the metric's lower-is-better sign flips this to
+		// an LP-facing "ceiling" (see the test above), so it's the ceiling branch that fires here
+		// too - moving the bound down, i.e. tightening the user-facing floor on dtps.
+		expect(result.kind).toBe("ceiling");
+		expect(result.bound).toBe(-30 - 10);
+	});
+
+	it("a zero k reproduces the unmargined bound even with a nonzero constraintMarginScore", () => {
+		const result = deriveSecondaryConstraintBound(
+			{ metric: "tps", targetAbsolute: 100, kind: "ceiling" },
+			stats,
+			80,
+			10,
+			/* constraintMarginScore */ 1000,
+			/* k */ 0,
+		);
+		expect(result.bound).toBe(30);
 	});
 });

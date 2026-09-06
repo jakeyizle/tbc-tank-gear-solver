@@ -2,6 +2,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Paper from "@mui/material/Paper";
 import Switch from "@mui/material/Switch";
@@ -16,7 +17,7 @@ import ErrorResultsPlaceholder from "./ErrorResultsPlaceholder";
 import ItemGroupDisplay from "./ItemGroupDisplay";
 import LoadingResultsPlaceholder from "./LoadingResultsPlaceHolder";
 import ResultsTabs from "./ResultsTabs";
-import StatsSummary from "./StatsSummary";
+import StatsSummary, { type GearView } from "./StatsSummary";
 
 interface ResultsPanelProps {
 	solveResults: Map<string, SolveResult>;
@@ -40,15 +41,42 @@ export default function ResultsPanel({
 	const [compareMode, setCompareMode] = useState(false);
 	const [compareToId, setCompareToId] = useState<string | null>(null);
 	const [includeBuffsConsumables, setIncludeBuffsConsumables] = useState(true);
+	const [gearView, setGearView] = useState<GearView>("balanced");
+	// Previewing an endpoint is scoped to whichever result was active when it was selected -
+	// switching tabs should always fall back to the real solve output rather than silently
+	// carrying a stale preview over to a different config. Resetting during render (React's own
+	// documented pattern for "reset state when a prop changes") instead of an effect avoids an
+	// extra render pass after the tab switch.
+	const [gearViewResultId, setGearViewResultId] = useState(activeResultId);
+	if (activeResultId !== gearViewResultId) {
+		setGearViewResultId(activeResultId);
+		setGearView("balanced");
+	}
 
 	const resultsArray = useMemo(
 		() => Array.from(solveResults.values()),
 		[solveResults],
 	);
 
+	// The gear/metrics actually shown below - either the real solve result, or one of its two
+	// balance-slider endpoints (see GearView's own doc comment). The endpoint's own
+	// finalStatWeights/finalStatWeightStdevs are used too so the stat-weight breakdown reflects
+	// whichever gear is actually on screen, not always the balanced solve's.
+	const activeEndpoint =
+		activeResult?.simBalanceEndpoints && gearView !== "balanced"
+			? activeResult.simBalanceEndpoints[gearView]
+			: undefined;
+	const displayed = activeResult && {
+		items: activeEndpoint?.items ?? activeResult.items,
+		simMetrics: activeEndpoint?.simMetrics ?? activeResult.simMetrics,
+		statWeights: activeEndpoint?.finalStatWeights ?? activeResult.statWeights,
+		statWeightStdevs:
+			activeEndpoint?.finalStatWeightStdevs ?? activeResult.statWeightStdevs,
+	};
+
 	const handleCopy = () => {
-		if (!activeResult) return;
-		navigator.clipboard.writeText(formatItemExport(activeResult.items));
+		if (!displayed) return;
+		navigator.clipboard.writeText(formatItemExport(displayed.items));
 		setCopied(true);
 		setTimeout(() => setCopied(false), 1500);
 	};
@@ -123,10 +151,19 @@ export default function ResultsPanel({
 				onResultChange={setActiveResultId}
 			/>
 
-			{activeResult && (
+			{activeResult && displayed && (
 				<Paper elevation={1} sx={{ p: 2 }}>
 					<Box display="flex" alignItems="center" gap={1.5} sx={{ mb: 1.5 }}>
 						<Typography variant="h6">Equipment</Typography>
+						{gearView !== "balanced" && (
+							<Chip
+								size="small"
+								color="secondary"
+								variant="outlined"
+								label={`Previewing: 100% ${gearView === "threat" ? "Threat" : "Survivability"} gear`}
+								onDelete={() => setGearView("balanced")}
+							/>
+						)}
 						<Box
 							sx={{ ml: "auto", display: "flex", alignItems: "center", gap: 1 }}
 						>
@@ -167,7 +204,7 @@ export default function ResultsPanel({
 						}}
 					>
 						<Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
-							<ItemGroupDisplay items={activeResult.items} />
+							<ItemGroupDisplay items={displayed.items} />
 						</Box>
 
 						{/* Stats Summary — nested sticky rail */}
@@ -180,14 +217,16 @@ export default function ResultsPanel({
 							}}
 						>
 							<StatsSummary
-								items={activeResult.items}
+								items={displayed.items}
 								baseConfig={activeResult.baseConfig}
 								solverConfig={activeResult.solverConfig}
 								includeBuffsConsumables={includeBuffsConsumables}
-								simMetrics={activeResult.simMetrics}
-								statWeights={activeResult.statWeights}
-								statWeightStdevs={activeResult.statWeightStdevs}
+								simMetrics={displayed.simMetrics}
+								statWeights={displayed.statWeights}
+								statWeightStdevs={displayed.statWeightStdevs}
 								simBalanceEndpoints={activeResult.simBalanceEndpoints}
+								selectedGearView={gearView}
+								onSelectGearView={setGearView}
 							/>
 						</Box>
 					</Box>

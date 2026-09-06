@@ -1,6 +1,9 @@
 import { getBuffs } from "#/data/buffs";
 import { CONSUMABLES } from "#/data/consumables";
-import type { BalanceEndpoint } from "#/sim/solveBalancedSimMetric";
+import type {
+	BalanceEndpoint,
+	SurvivabilityMetric,
+} from "#/sim/solveBalancedSimMetric";
 import type {
 	Buff,
 	LPItem,
@@ -30,6 +33,9 @@ export interface SolverConfiguration {
 	// scales - see docs/plans/sim-backed-objectives.md's rejection of exactly that mechanism).
 	// Unused (but kept) in other modes.
 	simBalance: { balance: number };
+	// Which metric backs the "Survivability" end of simBalance - see
+	// solveBalancedSimMetric.ts's SurvivabilityMetric. Unused (but kept) in other modes.
+	survivabilityMetric: SurvivabilityMetric;
 	resistanceFloors: ResistanceFloor[];
 	abilities: ModifierSource[];
 	talents: ModifierSource[];
@@ -87,6 +93,7 @@ export function createEmptyConfig(
 		optimizeStats: [],
 		objectiveMode: "stats",
 		simBalance: { balance: 0.5 },
+		survivabilityMetric: "tmi",
 		resistanceFloors: [],
 		abilities: [],
 		talents: [],

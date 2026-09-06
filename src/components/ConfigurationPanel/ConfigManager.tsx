@@ -130,6 +130,9 @@ export default function ConfigManager({
 							onUpdateSimBalance={(balance) =>
 								updateConfig(config.id, { simBalance: { balance } })
 							}
+							onUpdateSurvivabilityMetric={(metric) =>
+								updateConfig(config.id, { survivabilityMetric: metric })
+							}
 							onUpdateResistanceFloors={updateResistanceFloors}
 							onBuffChange={(buffId) => handleBuffChange(config, buffId)}
 							onConsumableChange={(consumableId) =>

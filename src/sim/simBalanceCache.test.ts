@@ -9,6 +9,7 @@ import {
 
 const endpoints = {
 	threat: {
+		items: [],
 		simMetrics: { tps: 5000, dtps: 800, tmi5: 10 },
 		finalStatWeights: [
 			{ name: "AttackPower" as const, value: 1, type: "flat" as const },
@@ -18,6 +19,7 @@ const endpoints = {
 		],
 	},
 	survival: {
+		items: [],
 		simMetrics: { tps: 3000, dtps: 200, tmi5: 2 },
 		finalStatWeights: [
 			{ name: "Dodge" as const, value: 1, type: "flat" as const },

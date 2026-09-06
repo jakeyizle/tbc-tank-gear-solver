@@ -1,13 +1,22 @@
 import Box from "@mui/material/Box";
 import Slider from "@mui/material/Slider";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
-import type { BalanceEndpoint } from "#/sim/solveBalancedSimMetric";
+import type {
+	BalanceEndpoint,
+	SurvivabilityMetric,
+} from "#/sim/solveBalancedSimMetric";
+import { absoluteValueForMetric } from "#/sim/solveSimMetric";
 import { monoFontFamily } from "#/theme";
 
 interface SimBalanceSliderProps {
 	balance: number;
 	onChange: (balance: number) => void;
+	survivabilityMetric: SurvivabilityMetric;
+	onChangeSurvivabilityMetric: (metric: SurvivabilityMetric) => void;
 	// Only available once a "Weighted Sim Metrics" solve has actually run - see
 	// SolveResult.simBalanceEndpoints. Undefined before the first solve, so the slider itself is
 	// always usable; the anchor readout just doesn't appear until there's a real solve to anchor
@@ -15,9 +24,21 @@ interface SimBalanceSliderProps {
 	endpoints?: { threat: BalanceEndpoint; survival: BalanceEndpoint };
 }
 
-function formatAnchor(endpoint: BalanceEndpoint): string {
-	const { tps, tmi5 } = endpoint.simMetrics;
-	return `${tps.toLocaleString(undefined, { maximumFractionDigits: 0 })} TPS / ${tmi5.toLocaleString(undefined, { maximumFractionDigits: 2 })} TMI-5`;
+const SURVIVABILITY_METRIC_LABELS: Record<SurvivabilityMetric, string> = {
+	tmi: "TMI-5",
+	dtps: "DTPS",
+};
+
+function formatAnchor(
+	endpoint: BalanceEndpoint,
+	survivabilityMetric: SurvivabilityMetric,
+): string {
+	const { tps } = endpoint.simMetrics;
+	const survivalValue = absoluteValueForMetric(
+		endpoint.simMetrics,
+		survivabilityMetric,
+	);
+	return `${tps.toLocaleString(undefined, { maximumFractionDigits: 0 })} TPS / ${survivalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${SURVIVABILITY_METRIC_LABELS[survivabilityMetric]}`;
 }
 
 /**
@@ -33,6 +54,8 @@ function formatAnchor(endpoint: BalanceEndpoint): string {
 export default function SimBalanceSlider({
 	balance,
 	onChange,
+	survivabilityMetric,
+	onChangeSurvivabilityMetric,
 	endpoints,
 }: SimBalanceSliderProps) {
 	// Local, purely-visual drag position - committing every tick straight to `onChange` round-
@@ -58,6 +81,29 @@ export default function SimBalanceSlider({
 				>
 					Threat / Survivability balance
 				</Box>
+				<Tooltip
+					title="TMI-5 (recommended): burst-risk-weighted, penalizes rare dangerous
+						spikes far more than average damage. DTPS: plain average damage taken per
+						second."
+					arrow
+					placement="top"
+				>
+					<ToggleButtonGroup
+						size="small"
+						exclusive
+						value={survivabilityMetric}
+						onChange={(_e, value) =>
+							value && onChangeSurvivabilityMetric(value as SurvivabilityMetric)
+						}
+					>
+						<ToggleButton value="tmi" sx={{ px: 1, py: 0.25, fontSize: 11 }}>
+							TMI-5
+						</ToggleButton>
+						<ToggleButton value="dtps" sx={{ px: 1, py: 0.25, fontSize: 11 }}>
+							DTPS
+						</ToggleButton>
+					</ToggleButtonGroup>
+				</Tooltip>
 			</Box>
 
 			<Box sx={{ display: "flex", alignItems: "center", gap: 2, px: 0.5 }}>
@@ -102,14 +148,15 @@ export default function SimBalanceSlider({
 						color="text.disabled"
 						sx={{ fontFamily: monoFontFamily }}
 					>
-						100% Survivability: {formatAnchor(endpoints.survival)}
+						100% Survivability:{" "}
+						{formatAnchor(endpoints.survival, survivabilityMetric)}
 					</Typography>
 					<Typography
 						variant="caption"
 						color="text.disabled"
 						sx={{ fontFamily: monoFontFamily }}
 					>
-						100% Threat: {formatAnchor(endpoints.threat)}
+						100% Threat: {formatAnchor(endpoints.threat, survivabilityMetric)}
 					</Typography>
 				</Box>
 			)}

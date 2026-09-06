@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+	averageSimMetricsSnapshots,
+	averageStatStdevs,
+	averageStats,
 	blendMetricEpValueStdevs,
 	blendMetricEpValues,
 	extractSimMetrics,
@@ -157,6 +160,81 @@ describe("blendMetricEpValueStdevs", () => {
 			{ name: "Stamina", value: 0, type: "flat" },
 			{ name: "Armor", value: 5, type: "flat" },
 		]);
+	});
+});
+
+describe("averageStats", () => {
+	it("averages values for stats appearing in every replicate", () => {
+		const averaged = averageStats([
+			[{ name: "Stamina", value: 2, type: "flat" }],
+			[{ name: "Stamina", value: 4, type: "flat" }],
+			[{ name: "Stamina", value: 6, type: "flat" }],
+		]);
+
+		expect(averaged).toEqual([{ name: "Stamina", value: 4, type: "flat" }]);
+	});
+
+	it("averages each stat independently when replicates carry multiple stats", () => {
+		const averaged = averageStats([
+			[
+				{ name: "Stamina", value: 1, type: "flat" },
+				{ name: "Armor", value: 10, type: "flat" },
+			],
+			[
+				{ name: "Stamina", value: 3, type: "flat" },
+				{ name: "Armor", value: 20, type: "flat" },
+			],
+		]);
+
+		expect(averaged).toEqual([
+			{ name: "Stamina", value: 2, type: "flat" },
+			{ name: "Armor", value: 15, type: "flat" },
+		]);
+	});
+
+	it("returns a single replicate's values unchanged", () => {
+		const averaged = averageStats([
+			[{ name: "Stamina", value: 5, type: "flat" }],
+		]);
+
+		expect(averaged).toEqual([{ name: "Stamina", value: 5, type: "flat" }]);
+	});
+});
+
+describe("averageStatStdevs", () => {
+	it("divides the mean stdev by sqrt(N), not just averaging the stdevs", () => {
+		// mean stdev = 3; N = 4 replicates -> combined stdev = 3 / 2 = 1.5.
+		const combined = averageStatStdevs([
+			[{ name: "Stamina", value: 2, type: "flat" }],
+			[{ name: "Stamina", value: 3, type: "flat" }],
+			[{ name: "Stamina", value: 3, type: "flat" }],
+			[{ name: "Stamina", value: 4, type: "flat" }],
+		]);
+
+		expect(combined).toEqual([{ name: "Stamina", value: 1.5, type: "flat" }]);
+	});
+
+	it("leaves a single replicate's stdev unchanged (sqrt(1) = 1)", () => {
+		const combined = averageStatStdevs([
+			[{ name: "Stamina", value: 5, type: "flat" }],
+		]);
+
+		expect(combined).toEqual([{ name: "Stamina", value: 5, type: "flat" }]);
+	});
+});
+
+describe("averageSimMetricsSnapshots", () => {
+	it("averages each field independently across replicates", () => {
+		const averaged = averageSimMetricsSnapshots([
+			{ tps: 5000, dtps: 1000, tmi5: 10 },
+			{ tps: 6000, dtps: 1200, tmi5: 12 },
+		]);
+
+		expect(averaged).toEqual({ tps: 5500, dtps: 1100, tmi5: 11 });
+	});
+
+	it("returns undefined for an empty list rather than dividing by zero", () => {
+		expect(averageSimMetricsSnapshots([])).toBeUndefined();
 	});
 });
 

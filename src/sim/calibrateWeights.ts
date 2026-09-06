@@ -159,6 +159,9 @@ export async function runCalibrationBatch(
 	statsToWeigh: StatName[],
 	profile: SimCalibrationProfile,
 	onProgress?: (progress: CalibrationProgress) => void,
+	// See runCalibrationBatches - only ever passed by that loop, to guarantee each replicate gets
+	// an independent seed rather than relying on enough wall-clock time elapsing between calls.
+	seedOverride?: string,
 ): Promise<CalibrationBatch> {
 	const requestJson = buildStatWeightsRequest(
 		gear,
@@ -166,6 +169,7 @@ export async function runCalibrationBatch(
 		statsToWeigh,
 		profile.calibration.iterations,
 		profile,
+		seedOverride,
 	);
 	const request = StatWeightsRequest.fromJson(
 		requestJson as unknown as Parameters<typeof StatWeightsRequest.fromJson>[0],
@@ -197,8 +201,133 @@ export async function runCalibrationBatch(
 }
 
 /**
+ * Averages one Stat[] per stat name across replicate batches (see runCalibrationBatches) - each
+ * batch is an independent Monte Carlo estimate of the same underlying weight vector, so a plain
+ * mean is the standard way to combine N of them into one lower-variance estimate. Assumes every
+ * list carries the same set of stat names (true for callers here, which always blend the same
+ * `statsToWeigh` against every batch).
+ */
+export function averageStats(statLists: Stat[][]): Stat[] {
+	const byName = new Map<
+		string,
+		{ type: Stat["type"]; sum: number; count: number }
+	>();
+	for (const stats of statLists) {
+		for (const stat of stats) {
+			const entry = byName.get(stat.name) ?? {
+				type: stat.type,
+				sum: 0,
+				count: 0,
+			};
+			entry.sum += stat.value;
+			entry.count += 1;
+			byName.set(stat.name, entry);
+		}
+	}
+	return Array.from(byName.entries()).map(([name, { type, sum, count }]) => ({
+		name: name as Stat["name"],
+		value: sum / count,
+		type,
+	}));
+}
+
+/**
+ * Combines N replicates' independent stdev estimates for the same stat into the stdev of their
+ * *average* - not another plain mean. Each replicate's stdev already estimates the same
+ * underlying Monte Carlo noise, so averaging their point estimates shrinks that noise by
+ * sqrt(N); the combined stdev reflects that: mean(stdevs) / sqrt(N), not mean(stdevs) itself
+ * (which would understate how much averaging actually helped).
+ */
+export function averageStatStdevs(stdevLists: Stat[][]): Stat[] {
+	const averaged = averageStats(stdevLists);
+	const n = stdevLists.length || 1;
+	return averaged.map((stat) => ({
+		...stat,
+		value: stat.value / Math.sqrt(n),
+	}));
+}
+
+/** Plain per-field mean across replicate batches' baseline metrics - see averageStats. */
+export function averageSimMetricsSnapshots(
+	snapshots: SimMetricsSnapshot[],
+): SimMetricsSnapshot | undefined {
+	if (snapshots.length === 0) return undefined;
+	return {
+		tps: snapshots.reduce((sum, s) => sum + s.tps, 0) / snapshots.length,
+		dtps: snapshots.reduce((sum, s) => sum + s.dtps, 0) / snapshots.length,
+		tmi5: snapshots.reduce((sum, s) => sum + s.tmi5, 0) / snapshots.length,
+	};
+}
+
+/**
+ * Runs `profile.calibration.replicates` (default 1 - today's behavior) independent calibration
+ * batches around the same `gear` and returns all of them, for a caller to blend and average
+ * (see calibrateWeights() below) - a brute-force variance reduction for noisy metrics like
+ * TMI-5: averaging N independent Monte Carlo estimates shrinks the effective noise by sqrt(N),
+ * at the cost of N times the sim time. Runs sequentially (not in parallel) so each batch's own
+ * `Date.now()`-derived fallback seed would already differ - explicit per-replicate seeds
+ * (below) just make that guaranteed rather than incidental.
+ */
+export async function runCalibrationBatches(
+	gear: GearPiece[],
+	db: TbcUiDatabase,
+	statsToWeigh: StatName[],
+	profile: SimCalibrationProfile,
+	onProgress?: (progress: CalibrationProgress) => void,
+): Promise<CalibrationBatch[]> {
+	const replicates = Math.max(1, profile.calibration.replicates ?? 1);
+	const progressPerReplicate: CalibrationProgress[] = new Array(
+		replicates,
+	).fill({
+		completedIterations: 0,
+		totalIterations: 0,
+		completedSims: 0,
+		totalSims: 0,
+	});
+	const reportAggregateProgress = () => {
+		if (!onProgress) return;
+		onProgress(
+			progressPerReplicate.reduce(
+				(acc, p) => ({
+					completedIterations: acc.completedIterations + p.completedIterations,
+					totalIterations: acc.totalIterations + p.totalIterations,
+					completedSims: acc.completedSims + p.completedSims,
+					totalSims: acc.totalSims + p.totalSims,
+				}),
+				{
+					completedIterations: 0,
+					totalIterations: 0,
+					completedSims: 0,
+					totalSims: 0,
+				},
+			),
+		);
+	};
+
+	const batches: CalibrationBatch[] = [];
+	const baseSeed = Date.now();
+	for (let i = 0; i < replicates; i++) {
+		const batch = await runCalibrationBatch(
+			gear,
+			db,
+			statsToWeigh,
+			profile,
+			(progress) => {
+				progressPerReplicate[i] = progress;
+				reportAggregateProgress();
+			},
+			String(baseSeed + i),
+		);
+		batches.push(batch);
+	}
+	return batches;
+}
+
+/**
  * Calibrates and blends `metricRatios`' per-stat marginal weights (and their uncertainty) around
  * `gear` via the real sim, for every stat in `statsToWeigh` that has a translation entry.
+ * Averages over `profile.calibration.replicates` independent batches (see
+ * runCalibrationBatches) - a no-op average over a single batch when replicates is 1/unset.
  */
 export async function calibrateWeights(
 	gear: GearPiece[],
@@ -208,7 +337,7 @@ export async function calibrateWeights(
 	profile: SimCalibrationProfile,
 	onProgress?: (progress: CalibrationProgress) => void,
 ): Promise<CalibratedWeights> {
-	const { result, baselineMetrics } = await runCalibrationBatch(
+	const batches = await runCalibrationBatches(
 		gear,
 		db,
 		statsToWeigh,
@@ -216,10 +345,22 @@ export async function calibrateWeights(
 		onProgress,
 	);
 
+	const baselineMetricsList = batches
+		.map((b) => b.baselineMetrics)
+		.filter((m): m is SimMetricsSnapshot => m != null);
+
 	return {
-		optimizeStats: blendMetricEpValues(result, statsToWeigh, metricRatios),
-		stdevStats: blendMetricEpValueStdevs(result, statsToWeigh, metricRatios),
-		baselineMetrics,
+		optimizeStats: averageStats(
+			batches.map((b) =>
+				blendMetricEpValues(b.result, statsToWeigh, metricRatios),
+			),
+		),
+		stdevStats: averageStatStdevs(
+			batches.map((b) =>
+				blendMetricEpValueStdevs(b.result, statsToWeigh, metricRatios),
+			),
+		),
+		baselineMetrics: averageSimMetricsSnapshots(baselineMetricsList),
 	};
 }
 

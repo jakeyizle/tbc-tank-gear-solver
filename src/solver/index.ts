@@ -29,6 +29,7 @@ interface SolveOptions {
 	optimizeStats: Stat[];
 	objectiveMode?: "stats" | "ehp" | "simWeighted";
 	simBalance?: { balance: number };
+	survivabilityMetric?: "tmi" | "dtps";
 	simCalibrationProfile?: SimCalibrationProfile;
 	resistanceFloors: ResistanceFloor[];
 	areEnchantsGemsLocked: boolean;
@@ -79,7 +80,9 @@ type WorkerMessage =
 // Everything in `options` except simBalance's own balance value affects the two endpoint solves'
 // outcome (race/class/talents/buffs/consumables/resistance floors/etc - not just the item pool),
 // so the cache key hashes all of it except that one field - see simBalanceCache.ts's own header
-// comment on why `balance` itself must be excluded.
+// comment on why `balance` itself must be excluded. `survivabilityMetric` is deliberately NOT
+// excluded here (unlike `balance`) - changing it changes what the survival endpoint even *is*, so
+// it must invalidate the cache, not be ignored by it.
 function optionsForEndpointCacheKey(
 	options: SolveOptions,
 ): Record<string, unknown> {
