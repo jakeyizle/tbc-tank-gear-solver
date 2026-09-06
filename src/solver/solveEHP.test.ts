@@ -150,13 +150,14 @@ describe("solveConfigForEHP", () => {
 			uncrushabilitySetting: 0,
 			optimizeStats: [],
 			objectiveMode: "ehp" as const,
-			simBalance: { balance: 0.5 },
+			balance: 0.5,
 			survivabilityMetric: "tmi" as const,
 			resistanceFloors: [],
 			abilities: [],
 			talents: [],
 			buffs: [],
 			enabledConsumableIds: [],
+			enabledCalibrationStats: [],
 		};
 		const statsConfig = {
 			...ehpConfig,

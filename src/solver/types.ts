@@ -26,11 +26,6 @@ export interface LPItem extends Omit<ItemVariation, "type"> {
 	objectiveScore: number;
 	uncritabilityScore: number;
 	resistanceScores: Partial<Record<StatName, number>>;
-	// Dot-product against a second, independent weight vector (SolverConfiguration's
-	// constraintStats) - only meaningful when a secondary sim-metric constraint is active, 0
-	// otherwise. Mirrors objectiveScore's own computation (calculateObjectiveScore), just against
-	// a different Stat[] vector - see SolveOptions.secondaryConstraint.
-	constraintScore: number;
 }
 
 export interface ScoreSet {
@@ -38,14 +33,12 @@ export interface ScoreSet {
 	objectiveScore: number;
 	uncritabilityScore: number;
 	resistanceScores: Partial<Record<StatName, number>>;
-	constraintScore: number;
 }
 
 export type ScoreAxis =
 	| "avoidanceScore"
 	| "objectiveScore"
-	| "uncritabilityScore"
-	| "constraintScore";
+	| "uncritabilityScore";
 
 export interface EnchantCandidate {
 	enchant: Enchant;

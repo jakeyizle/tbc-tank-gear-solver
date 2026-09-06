@@ -13,17 +13,18 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import type { DragEvent, ReactNode } from "react";
 import { useState } from "react";
-import type { SurvivabilityMetric } from "#/sim/solveBalancedSimMetric";
 import {
 	type Buff,
 	type ConsumableItem,
 	type ResistanceFloor,
 	STAT_LABELS,
 	type Stat,
+	type StatName,
 } from "#/solver/types";
 import { monoFontFamily } from "#/theme";
 import type { SolverConfiguration } from "#/types/SolverConfig";
 import BuffSection from "./BuffSection";
+import CalibrationStatsSection from "./CalibrationStatsSection";
 import ConstraintsSection from "./ConstraintsSection";
 import ConsumablesSection from "./ConsumablesSection";
 import SimBalanceSlider from "./SimBalanceSlider";
@@ -40,11 +41,19 @@ const UNCRUSHABLE_TAGS: Record<number, string> = {
 };
 
 // Objective modes that ignore optimizeStats and instead recalibrate their own weight
-// vector - "ehp" via a closed-form formula, "simWeighted" via a real combat sim (see
-// docs/plans/sim-backed-objectives.md). Both are labeled/explained the same way in this UI.
+// vector - "ehp" via a closed-form formula, "tps"/"dtps"/"tmi"/"balanced" via a real combat sim
+// (see docs/plans/sim-backed-objectives.md). All are labeled/explained the same way in this UI.
 const NON_STATS_OBJECTIVE_LABELS: Record<string, string> = {
 	ehp: "Maximize Effective HP",
-	simWeighted: "Weighted Sim Metrics",
+	tps: "Maximize TPS",
+	dtps: "Minimize DTPS",
+	tmi: "Minimize TMI-5",
+	balanced: "Balance Threat/Survivability",
+};
+
+const SURVIVABILITY_METRIC_LABELS: Record<"tmi" | "dtps", string> = {
+	tmi: "TMI-5",
+	dtps: "DTPS",
 };
 
 interface ConfigCardProps {
@@ -54,6 +63,11 @@ interface ConfigCardProps {
 	canDelete: boolean;
 	displayBuffs: Buff[];
 	displayConsumables: (ConsumableItem & { checked: boolean })[];
+	displayCalibrationStats: {
+		name: StatName;
+		label: string;
+		checked: boolean;
+	}[];
 	onSelect: () => void;
 	onCollapse: () => void;
 	onDuplicate: () => void;
@@ -61,12 +75,15 @@ interface ConfigCardProps {
 	onRename: (name: string) => void;
 	onUpdateConstraints: (uncritability: number, uncrushability: number) => void;
 	onUpdateOptimizeStats: (stats: Stat[]) => void;
-	onUpdateObjectiveMode: (mode: "stats" | "ehp" | "simWeighted") => void;
-	onUpdateSimBalance: (balance: number) => void;
-	onUpdateSurvivabilityMetric: (metric: SurvivabilityMetric) => void;
+	onUpdateObjectiveMode: (
+		mode: "stats" | "ehp" | "tps" | "dtps" | "tmi" | "balanced",
+	) => void;
+	onUpdateBalance: (balance: number) => void;
+	onUpdateSurvivabilityMetric: (metric: "tmi" | "dtps") => void;
 	onUpdateResistanceFloors: (floors: ResistanceFloor[]) => void;
 	onBuffChange: (buffId: string) => void;
 	onConsumableChange: (consumableId: string) => void;
+	onCalibrationStatChange: (statName: StatName) => void;
 	onDropReorder: (draggedId: string) => void;
 }
 
@@ -123,25 +140,7 @@ function ConfigBand({
 	);
 }
 
-const SURVIVABILITY_METRIC_LABELS: Record<SurvivabilityMetric, string> = {
-	tmi: "TMI-5",
-	dtps: "DTPS",
-};
-
-function simBalanceSummary(
-	balance: number,
-	survivabilityMetric: SurvivabilityMetric,
-): string {
-	return `${Math.round(balance * 100)}% Threat / ${Math.round((1 - balance) * 100)}% Survivability (${SURVIVABILITY_METRIC_LABELS[survivabilityMetric]})`;
-}
-
 function statsSummary(config: SolverConfiguration): string {
-	if (config.objectiveMode === "simWeighted") {
-		return simBalanceSummary(
-			config.simBalance.balance,
-			config.survivabilityMetric,
-		);
-	}
 	if (config.objectiveMode !== "stats") {
 		return NON_STATS_OBJECTIVE_LABELS[config.objectiveMode];
 	}
@@ -162,6 +161,7 @@ export default function ConfigCard({
 	canDelete,
 	displayBuffs,
 	displayConsumables,
+	displayCalibrationStats,
 	onSelect,
 	onCollapse,
 	onDuplicate,
@@ -170,11 +170,12 @@ export default function ConfigCard({
 	onUpdateConstraints,
 	onUpdateOptimizeStats,
 	onUpdateObjectiveMode,
-	onUpdateSimBalance,
+	onUpdateBalance,
 	onUpdateSurvivabilityMetric,
 	onUpdateResistanceFloors,
 	onBuffChange,
 	onConsumableChange,
+	onCalibrationStatChange,
 	onDropReorder,
 }: ConfigCardProps) {
 	const [renaming, setRenaming] = useState(false);
@@ -439,11 +440,23 @@ export default function ConfigCard({
 						<ToggleButton value="ehp" sx={{ px: 1.5, py: 0.375, fontSize: 12 }}>
 							Maximize Effective HP
 						</ToggleButton>
+						<ToggleButton value="tps" sx={{ px: 1.5, py: 0.375, fontSize: 12 }}>
+							Maximize TPS
+						</ToggleButton>
 						<ToggleButton
-							value="simWeighted"
+							value="dtps"
 							sx={{ px: 1.5, py: 0.375, fontSize: 12 }}
 						>
-							Weighted Sim Metrics
+							Minimize DTPS
+						</ToggleButton>
+						<ToggleButton value="tmi" sx={{ px: 1.5, py: 0.375, fontSize: 12 }}>
+							Minimize TMI-5
+						</ToggleButton>
+						<ToggleButton
+							value="balanced"
+							sx={{ px: 1.5, py: 0.375, fontSize: 12 }}
+						>
+							Balance Threat/Survivability
 						</ToggleButton>
 					</ToggleButtonGroup>
 					{config.objectiveMode === "ehp" && (
@@ -457,26 +470,47 @@ export default function ConfigCard({
 							switch back.
 						</Typography>
 					)}
-					{config.objectiveMode === "simWeighted" && (
+					{(config.objectiveMode === "tps" ||
+						config.objectiveMode === "dtps" ||
+						config.objectiveMode === "tmi" ||
+						config.objectiveMode === "balanced") && (
 						<Typography
 							variant="body2"
 							color="text.secondary"
 							fontStyle="italic"
 						>
 							Runs a real combat simulation each round instead of an instant
-							formula, so this is much slower than the other modes. The slider
-							below balances Threat (TPS) against Survivability (
-							{SURVIVABILITY_METRIC_LABELS[config.survivabilityMetric]}).
-							Encounter, buffs, and consumables settings live in the Advanced
-							Sim Calibration panel below.
+							formula, so this is much slower than the other modes.{" "}
+							{config.objectiveMode === "balanced"
+								? `Blends TPS against ${SURVIVABILITY_METRIC_LABELS[config.survivabilityMetric]} per the slider below.`
+								: `Solves purely for ${
+										config.objectiveMode === "tps"
+											? "TPS"
+											: config.objectiveMode === "dtps"
+												? "DTPS"
+												: "TMI-5"
+									}.`}{" "}
+							TPS, DTPS, and TMI-5 are all shown in the results as informational
+							context regardless of which one is optimized. Encounter, buffs,
+							and consumables settings live in the Advanced Sim Calibration
+							panel below.
 						</Typography>
 					)}
-					{config.objectiveMode === "simWeighted" && (
+					{config.objectiveMode === "balanced" && (
 						<SimBalanceSlider
-							balance={config.simBalance.balance}
-							onChange={onUpdateSimBalance}
+							balance={config.balance}
+							onChange={onUpdateBalance}
 							survivabilityMetric={config.survivabilityMetric}
 							onChangeSurvivabilityMetric={onUpdateSurvivabilityMetric}
+						/>
+					)}
+					{(config.objectiveMode === "tps" ||
+						config.objectiveMode === "dtps" ||
+						config.objectiveMode === "tmi" ||
+						config.objectiveMode === "balanced") && (
+						<CalibrationStatsSection
+							stats={displayCalibrationStats}
+							onChange={onCalibrationStatChange}
 						/>
 					)}
 					{config.objectiveMode === "stats" && (
@@ -504,17 +538,20 @@ export default function ConfigCard({
 						onUpdateResistanceFloors={onUpdateResistanceFloors}
 					/>
 				</ConfigBand>
-				{config.objectiveMode !== "simWeighted" && (
-					<ConfigBand
-						accent="rgba(255,255,255,0.3)"
-						titleColor="rgba(255,255,255,0.85)"
-						tint="rgba(255,255,255,0.025)"
-						title="Assumptions"
-						description="added stats, not solved for"
-					>
-						<BuffSection buffs={displayBuffs} onBuffChange={onBuffChange} />
-					</ConfigBand>
-				)}
+				{config.objectiveMode !== "tps" &&
+					config.objectiveMode !== "dtps" &&
+					config.objectiveMode !== "tmi" &&
+					config.objectiveMode !== "balanced" && (
+						<ConfigBand
+							accent="rgba(255,255,255,0.3)"
+							titleColor="rgba(255,255,255,0.85)"
+							tint="rgba(255,255,255,0.025)"
+							title="Assumptions"
+							description="added stats, not solved for"
+						>
+							<BuffSection buffs={displayBuffs} onBuffChange={onBuffChange} />
+						</ConfigBand>
+					)}
 			</Box>
 		</Box>
 	);

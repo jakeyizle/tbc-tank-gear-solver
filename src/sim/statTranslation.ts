@@ -40,6 +40,36 @@ export const STAT_NAME_TO_TBC_STAT: Partial<Record<StatName, string>> = {
 	SpellCrit: "StatSpellCritRating",
 };
 
+// Canonical "which stats can be sim-calibrated" list - the keys of STAT_NAME_TO_TBC_STAT above,
+// as a plain array. Lives here (a pure, dependency-free data module) rather than in
+// solveSimMetric.ts/calibrateWeights.ts, so src/types/SolverConfig.ts and UI components can pull
+// in "the full default stat list" (for a per-config on/off toggle - see
+// SolverConfiguration.enabledCalibrationStats) without any wasm/proto sim code coming along for
+// the ride.
+export const SIM_CALIBRATION_STAT_NAMES = Object.keys(
+	STAT_NAME_TO_TBC_STAT,
+) as StatName[];
+
+/**
+ * Resolves a per-config `enabledCalibrationStats` selection (see SolverConfiguration) down to
+ * the actual list of stats a calibration round should perturb - falling back to the full
+ * default (`SIM_CALIBRATION_STAT_NAMES`) when `enabled` is undefined/empty, or when every entry
+ * in it turns out to be stale/invalid after filtering (e.g. a stat this build no longer
+ * translates). Shared by solveSimMetric.ts (the actual calibration call) and
+ * solver/index.ts (round1WeightsCache.ts's cache key, which must resolve identically so a
+ * config left at its default and a config that explicitly re-selects every stat hit the same
+ * cache entry) so the two can never drift out of sync.
+ */
+export function resolveCalibrationStats(
+	enabled: StatName[] | undefined,
+): StatName[] {
+	if (!enabled?.length) return SIM_CALIBRATION_STAT_NAMES;
+	const filtered = enabled.filter((s) =>
+		SIM_CALIBRATION_STAT_NAMES.includes(s),
+	);
+	return filtered.length > 0 ? filtered : SIM_CALIBRATION_STAT_NAMES;
+}
+
 export const TBC_STAT_TO_STAT_NAME: Partial<Record<string, StatName>> =
 	Object.fromEntries(
 		Object.entries(STAT_NAME_TO_TBC_STAT).map(([statName, tbcStat]) => [
@@ -70,12 +100,49 @@ export const TBC_STAT_TO_STAT_NAME: Partial<Record<string, StatName>> =
 // the same near-zero problem).
 export const TBC_EP_REFERENCE_STAT = "StatSpellDamage";
 
-/**
- * Metrics where the raw sim value is "lower is better" (damage taken, danger). The solver's
- * objective is always maximized (see decomposedModel.ts's fixed GLP_MAX), so weights for
- * these metrics must be sign-flipped before use as an objectiveStats vector.
- */
-export const LOWER_IS_BETTER_METRICS: ReadonlySet<string> = new Set([
-	"dtps",
-	"tmi",
+// Which stat each metric's EP values are normalized against - see the reference-stat comment
+// above. Single source of truth for UI labels like "relative to Spell Power"/"relative to Armor"
+// (see StatWeightTabs.tsx) - literal "tps"|"dtps"|"tmi" keys rather than importing SimMetric from
+// calibrateWeights.ts, to avoid a circular import (calibrateWeights.ts already imports from this
+// file).
+export const SIM_METRIC_REFERENCE_STAT: Record<
+	"tps" | "dtps" | "tmi",
+	StatName
+> = {
+	tps: TBC_STAT_TO_STAT_NAME[TBC_EP_REFERENCE_STAT] as StatName,
+	dtps: "Armor",
+	tmi: "Armor",
+};
+
+// Stats whose calibration perturbation is one-sided (no negative/"low" probe branch) - see
+// buildStatWeightRequests in vendor/tbc-sim/sim/core/statweight.go, which zeroes statModsLow for
+// exactly these three ratings (their hit/expertise-cap formulas floor at 0%, so a negative probe
+// would often be degenerate). Keep this in sync with that Go code if it ever changes.
+export const ONE_SIDED_CALIBRATION_STATS: ReadonlySet<StatName> = new Set([
+	"MeleeHit",
+	"SpellHit",
+	"Expertise",
 ]);
+
+/**
+ * The actual number of paired-difference samples a calibration batch's per-stat weight/stdev is
+ * derived from - see statweight.go's calcWeightResults: two-sided stats pool the low+high
+ * branches (iterations/2 each, iterations total); one-sided stats (ONE_SIDED_CALIBRATION_STATS)
+ * only ever run the high branch (iterations/2). `iterations` here is the pre-halving value this
+ * app sends as profile.calibration.iterations (see buildStatWeightsRequest.ts) - the Go side
+ * halves it itself before running either branch.
+ *
+ * This matters because the Go sim's own `WeightsStdev`/`EpValuesStdev` (aggregator.
+ * meanAndStdDev(), see utils.go) is the raw *population* standard deviation of the individual
+ * per-iteration values, not a standard error - it does not shrink with more samples on its own.
+ * Converting it into an actual standard error of the mean weight (population stdev / sqrt(n))
+ * requires knowing this effective n - see blendMetricEpValueStdevs.
+ */
+export function effectiveCalibrationSampleSize(
+	statName: StatName,
+	iterations: number,
+): number {
+	return ONE_SIDED_CALIBRATION_STATS.has(statName)
+		? iterations / 2
+		: iterations;
+}

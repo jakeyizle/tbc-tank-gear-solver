@@ -11,38 +11,28 @@ import {
 	type SolveProgress,
 	solveConfig,
 } from "#/solver/solveConfig";
-import type { InputItem, LPItem, Stat, StatName } from "#/solver/types";
+import type { InputItem, LPItem, Stat } from "#/solver/types";
 import type {
 	SimCalibrationProfile,
 	SimMetricsSnapshot,
 } from "#/types/SimCalibrationProfile";
 import type { TbcUiDatabase } from "./buildStatWeightsRequest";
 import {
-	averageSimMetricsSnapshots,
-	averageStatStdevs,
-	averageStats,
-	blendMetricEpValueStdevs,
-	blendMetricEpValues,
 	type CalibratedWeights,
 	type CalibrationProgress,
 	calibrateWeights,
 	measureFinalSimMetrics,
-	runCalibrationBatches,
+	resetSimEnvironment,
 	type SimMetric,
 } from "./calibrateWeights";
 import {
 	type ConsumablesOverride,
 	splitGearAndConsumables,
 } from "./resolveGearAndConsumables";
-import {
-	LOWER_IS_BETTER_METRICS,
-	STAT_NAME_TO_TBC_STAT,
-} from "./statTranslation";
+import { resolveCalibrationStats } from "./statTranslation";
 import type { GearPiece } from "./toTbcItemSpec";
 
-export const SIM_CALIBRATION_STATS = Object.keys(
-	STAT_NAME_TO_TBC_STAT,
-) as StatName[];
+export { SIM_CALIBRATION_STAT_NAMES as SIM_CALIBRATION_STATS } from "./statTranslation";
 
 export type SimMetricSolvePhase = "calibrating" | "solving" | "measuring";
 
@@ -68,6 +58,12 @@ export interface SimMetricSolveResult {
 	// alongside finalStatWeights so the UI can show how much noise is in each weight, not just
 	// the point estimate.
 	finalStatWeightStdevs: Stat[];
+	// The same accepted round's *pure* (unblended) per-metric weight breakdowns - see
+	// calibrateWeights.ts's computePerMetricStatWeights. Lets the Results UI show TPS/DTPS/TMI-5
+	// weights simultaneously regardless of which one (or blend) actually drove the objective, at
+	// no extra sim cost, since the sim always computes all three from the same calibration batch.
+	finalPerMetricStatWeights: Record<SimMetric, Stat[]>;
+	finalPerMetricStatWeightStdevs: Record<SimMetric, Stat[]>;
 	// Round 1's own calibrated weights (precomputed or freshly calibrated - see
 	// solveConfigForSimMetric's precomputedRound1 param) - always populated, since round 0 always
 	// runs. Deliberately separate from finalStatWeights: by round 2+, finalStatWeights reflects a
@@ -163,18 +159,6 @@ export function isSignificantImprovement(
 	return exceedsHysteresisThreshold(delta, stdevDelta);
 }
 
-/**
- * A hard floor/ceiling on a second sim metric, expressed in the *user-facing, real-world* sense
- * ("TMI-5 must not exceed X") - not yet linearized into an LP-facing SecondaryConstraint (see
- * SolverConfiguration.ts), since that requires re-deriving a bound every SLP round around
- * whatever gear that round is centered on (see deriveSecondaryConstraintBound below).
- */
-export interface SecondaryMetricConstraintSpec {
-	metric: SimMetric;
-	targetAbsolute: number;
-	kind: "floor" | "ceiling";
-}
-
 /** Pulls the one absolute value out of a SimMetricsSnapshot that corresponds to `metric` - the
  * public snapshot's field names ("tmi5") don't quite match SimMetric's own ("tmi"), same
  * wrinkle calibrateWeights.ts's own header comment already calls out for the ratio UI's
@@ -184,57 +168,6 @@ export function absoluteValueForMetric(
 	metric: SimMetric,
 ): number {
 	return metric === "tmi" ? snapshot.tmi5 : snapshot[metric];
-}
-
-/**
- * Derives this round's LP-facing secondary constraint from a user-facing spec, re-linearized
- * around whatever gear this round's `constraintVector` was calibrated against (same rationale as
- * the primary objective's own per-round recalibration - see this file's header comment).
- *
- * `constraintVector` already carries the correct sign for a maximizing LP (blendMetricEpValues
- * flips lower-is-better metrics), so a first-order Taylor expansion around the baseline gives:
- * `rawMetric(gear) ≈ currentAbsolute + sign * (constraintScore(gear) - constraintScoreAtBaseline)`
- * where `sign` is +1 for a higher-is-better metric (tps) and -1 for a lower-is-better one
- * (dtps/tmi). Solving the user's desired `rawMetric(gear) <= / >= targetAbsolute` for
- * `constraintScore(gear)` gives the bound below - and for a lower-is-better metric, flips which
- * LP-facing row kind (floor vs ceiling) actually encodes the user's real-world floor/ceiling,
- * since the vector's own sign is already inverted relative to the raw metric.
- *
- * Unlike the primary objective - which only ever accepts a round's proposal over the previous
- * one after clearing a stdev-based noise band (see isSignificantImprovement above) - this bound
- * would otherwise be a hard LP row computed from a single noisy point estimate, with no
- * acknowledgment that `constraintVector` carries real uncertainty (see this session's finding
- * that Defense/Dodge/Parry's TMI weights can have SNR as low as ~0.12-0.16). `constraintMarginScore`
- * - the same "score a gear set under a stdev-vector-as-weights config" trick
- * isSignificantImprovement already uses, evaluated by the caller at this round's linearization
- * point - tightens the bound by `k` stdev-equivalents so the LP is pushed toward satisfying the
- * ceiling/floor with a safety buffer instead of trusting the point estimate exactly. `k = 0`
- * (or an omitted `constraintMarginScore`) reproduces the old, unmargined behavior exactly.
- *
- * Extracted as a pure function (no sim/LP access) so this arithmetic - the one place a sign
- * mistake would silently produce a constraint on the wrong side of the tradeoff - is directly
- * unit-testable.
- */
-export function deriveSecondaryConstraintBound(
-	spec: SecondaryMetricConstraintSpec,
-	constraintVector: Stat[],
-	currentAbsolute: number,
-	constraintScoreAtBaseline: number,
-	constraintMarginScore = 0,
-	k: number = HYSTERESIS_CONFIDENCE_K,
-): { statWeights: Stat[]; bound: number; kind: "floor" | "ceiling" } {
-	const sign = LOWER_IS_BETTER_METRICS.has(spec.metric) ? -1 : 1;
-	const rawBound =
-		constraintScoreAtBaseline + sign * (spec.targetAbsolute - currentAbsolute);
-	const kind =
-		sign === 1 ? spec.kind : spec.kind === "floor" ? "ceiling" : "floor";
-	// constraintMarginScore is always >= 0 (a sum of non-negative stdevs times non-negative gear
-	// stat totals - see the caller), so the adjustment direction depends only on `kind`, not on
-	// the original metric's sign: a ceiling always gets harder to satisfy (bound moves down), a
-	// floor always gets harder to satisfy (bound moves up).
-	const margin = k * constraintMarginScore;
-	const bound = kind === "ceiling" ? rawBound - margin : rawBound + margin;
-	return { statWeights: constraintVector, bound, kind };
 }
 
 /**
@@ -306,17 +239,19 @@ export async function solveConfigForSimMetric(
 	// result depends only on the profile/metricRatios, not the item pool - safe to precompute once
 	// and reuse across solves/configs that share those inputs.
 	precomputedRound1?: CalibratedWeights,
-	// A hard floor/ceiling on a second sim metric (see solveBalancedSimMetric.ts) - when present,
-	// every round derives a second, independent weight vector from the same calibration batch and
-	// feeds it to the LP as a SecondaryConstraint (see SolverConfiguration.ts), re-linearized each
-	// round exactly like the primary objective. Bypasses precomputedRound1 (round 1 needs a fresh
-	// full calibration batch too, since only calibrateWeights()'s single-blend result is ever
-	// cached there - see round1WeightsCache.ts).
-	secondaryConstraintSpec?: SecondaryMetricConstraintSpec,
 ): Promise<SimMetricSolveResult> {
 	const maxIterations = profile.calibration.maxRounds;
 	const eligibleItems = filterItemsForClass(items, db, options.classId);
 	const solvingConsumables = options.enabledConsumableIds.length > 0;
+	// A user can turn individual stats off per config (see SolverConfiguration.
+	// enabledCalibrationStats) to skip their +/- perturbation sims entirely - cheaper calibration
+	// rounds, or excluding a stat whose itemization isn't present in this pool.
+	// resolveCalibrationStats falls back to the full default when unset/empty, or when every
+	// selected entry turns out stale/invalid - a defensive backstop against a corrupted config
+	// producing an all-zero objective (the UI itself already prevents unchecking every stat).
+	const calibrationStats = resolveCalibrationStats(
+		options.enabledCalibrationStats,
+	);
 
 	// `currentGear` is always a clean, slot-ordered, consumable-free gear array (round 0's
 	// hand-picked baseline is already both) - it's the calibration loop's baseline input, kept
@@ -329,6 +264,8 @@ export async function solveConfigForSimMetric(
 	let result: LPItem[] = [];
 	let finalStatWeights: Stat[] = [];
 	let finalStatWeightStdevs: Stat[] = [];
+	let finalPerMetricStatWeights = {} as Record<SimMetric, Stat[]>;
+	let finalPerMetricStatWeightStdevs = {} as Record<SimMetric, Stat[]>;
 	let round1StatWeights: CalibratedWeights = {
 		optimizeStats: [],
 		stdevStats: [],
@@ -351,101 +288,34 @@ export async function solveConfigForSimMetric(
 
 		let optimizeStats: Stat[];
 		let stdevStats: Stat[];
-		// Undefined whenever secondaryConstraintSpec isn't active, or this round reused
-		// precomputedRound1 (which never carries a constraint vector - see this function's
-		// secondaryConstraintSpec doc comment above).
-		let secondaryConstraint:
-			| ReturnType<typeof deriveSecondaryConstraintBound>
-			| undefined;
-		// All three set alongside secondaryConstraint below (which is block-scoped to the
-		// baselineMetrics check, unlike these), and re-read after this round's first solveConfig
-		// call to bootstrap a properly delta-scaled margin - see the bootstrap step after the
-		// solveConfig call below for why this can't be computed up front.
-		let constraintStdevVectorForRound: Stat[] | undefined;
-		let constraintScoreAtBaselineForRound: number | undefined;
-		let constraintCurrentAbsoluteForRound: number | undefined;
+		let perMetricStatWeights: Record<SimMetric, Stat[]> | undefined;
+		let perMetricStatWeightStdevs: Record<SimMetric, Stat[]> | undefined;
 
-		if (iteration === 0 && precomputedRound1 && !secondaryConstraintSpec) {
-			({ optimizeStats, stdevStats } = precomputedRound1);
-		} else if (secondaryConstraintSpec) {
-			const batches = await runCalibrationBatches(
-				currentGear,
-				db,
-				SIM_CALIBRATION_STATS,
-				withConsumablesOverride(profile, currentConsumablesOverride),
-				onCalibrationProgress,
-			);
-			optimizeStats = averageStats(
-				batches.map((b) =>
-					blendMetricEpValues(b.result, SIM_CALIBRATION_STATS, metricRatios),
-				),
-			);
-			stdevStats = averageStatStdevs(
-				batches.map((b) =>
-					blendMetricEpValueStdevs(
-						b.result,
-						SIM_CALIBRATION_STATS,
-						metricRatios,
-					),
-				),
-			);
-			const constraintVector = averageStats(
-				batches.map((b) =>
-					blendMetricEpValues(b.result, SIM_CALIBRATION_STATS, {
-						[secondaryConstraintSpec.metric]: 1,
-					}),
-				),
-			);
-			const constraintStdevVector = averageStatStdevs(
-				batches.map((b) =>
-					blendMetricEpValueStdevs(b.result, SIM_CALIBRATION_STATS, {
-						[secondaryConstraintSpec.metric]: 1,
-					}),
-				),
-			);
-			const baselineMetrics = averageSimMetricsSnapshots(
-				batches
-					.map((b) => b.baselineMetrics)
-					.filter((m): m is SimMetricsSnapshot => m != null),
-			);
-			if (baselineMetrics) {
-				const constraintScoreAtBaseline = scoreGearSet(
-					currentGear,
-					new SolverConfiguration({
-						...options,
-						optimizeStats: constraintVector,
-					}),
-				);
-				const constraintCurrentAbsolute = absoluteValueForMetric(
-					baselineMetrics,
-					secondaryConstraintSpec.metric,
-				);
-				// Unmargined for this first pass - see the bootstrap step after solveConfig below,
-				// which re-derives a properly delta-scaled margin from this round's actual proposal
-				// and re-solves once more. (A previous attempt tried to compute a margin here,
-				// before any proposal existed, by scoring the *entire* current gear under the
-				// constraint's stdev vector - an absolute, whole-gear-scale quantity that doesn't
-				// cancel the way constraintScoreAtBaseline's own absolute value does, so it silently
-				// swallowed all the real slack between the two endpoints and made ordinary
-				// mid-slider solves infeasible. Bootstrapping from the real proposal fixes this.)
-				secondaryConstraint = deriveSecondaryConstraintBound(
-					secondaryConstraintSpec,
-					constraintVector,
-					constraintCurrentAbsolute,
-					constraintScoreAtBaseline,
-				);
-				constraintScoreAtBaselineForRound = constraintScoreAtBaseline;
-				constraintCurrentAbsoluteForRound = constraintCurrentAbsolute;
-				constraintStdevVectorForRound = constraintStdevVector;
-			}
-			// baselineMetrics missing means this wasm build predates the StatWeightsResult.baseline
-			// field (see calibrateWeights.ts) - fall back to an unconstrained round rather than
-			// throwing, since the primary objective's own weights are still perfectly valid.
+		if (iteration === 0 && precomputedRound1) {
+			({
+				optimizeStats,
+				stdevStats,
+				perMetricStatWeights,
+				perMetricStatWeightStdevs,
+			} = precomputedRound1);
 		} else {
-			({ optimizeStats, stdevStats } = await calibrateWeights(
+			// Periodically reset the coordinator wasm instance + worker pool between rounds - see
+			// simWorkerPool.ts's header comment and statWeightsClient.ts's resetSimEnvironment doc
+			// comment for why long-lived reused wasm instances can wedge after enough cumulative
+			// calls. Never before round 1 (nothing has accumulated yet); always placed strictly
+			// between whole calibrateWeights() calls, never mid-batch.
+			if (iteration > 0) {
+				resetSimEnvironment();
+			}
+			({
+				optimizeStats,
+				stdevStats,
+				perMetricStatWeights,
+				perMetricStatWeightStdevs,
+			} = await calibrateWeights(
 				currentGear,
 				db,
-				SIM_CALIBRATION_STATS,
+				calibrationStats,
 				metricRatios,
 				withConsumablesOverride(profile, currentConsumablesOverride),
 				onCalibrationProgress,
@@ -455,13 +325,12 @@ export async function solveConfigForSimMetric(
 			round1StatWeights = { optimizeStats, stdevStats };
 		}
 
-		let proposal = await solveConfig(
+		const proposal = await solveConfig(
 			eligibleItems,
 			{
 				...options,
 				objectiveMode: "stats",
 				optimizeStats,
-				secondaryConstraint,
 			},
 			(progress) =>
 				onProgress?.({
@@ -472,51 +341,13 @@ export async function solveConfigForSimMetric(
 				}),
 		);
 
-		// Bootstrap a properly delta-scaled safety margin for the constraint (see this file's own
-		// notes on the previous, whole-gear-scale attempt at this) from this round's *actual*
-		// proposal, now that it exists, then re-solve once more with it - mirrors
-		// isSignificantImprovement's own "score two specific gear sets under a stdevs-as-weights
-		// config and difference them" trick (this file, above), just applied to the constraint
-		// vector instead of the objective vector. Only ever makes the constraint tighter, never
-		// looser, so skipping this on any given round (e.g. because baselineMetrics was missing)
-		// just means that round's constraint stays at its unmargined - not wrong, just less
-		// conservative - bound.
-		if (
-			secondaryConstraintSpec &&
-			secondaryConstraint &&
-			constraintStdevVectorForRound &&
-			constraintScoreAtBaselineForRound !== undefined &&
-			constraintCurrentAbsoluteForRound !== undefined
-		) {
-			const proposalGear = splitGearAndConsumables(proposal).gear;
-			const stdevConfig = new SolverConfiguration({
-				...options,
-				optimizeStats: constraintStdevVectorForRound,
-			});
-			const constraintMarginScore = Math.abs(
-				scoreGearSet(proposalGear, stdevConfig) -
-					scoreGearSet(currentGear, stdevConfig),
-			);
-			const marginedConstraint = deriveSecondaryConstraintBound(
-				secondaryConstraintSpec,
-				secondaryConstraint.statWeights,
-				constraintCurrentAbsoluteForRound,
-				constraintScoreAtBaselineForRound,
-				constraintMarginScore,
-			);
-			try {
-				proposal = await solveConfig(eligibleItems, {
-					...options,
-					objectiveMode: "stats",
-					optimizeStats,
-					secondaryConstraint: marginedConstraint,
-				});
-			} catch {
-				// The margin is a best-effort safety buffer, not a correctness requirement - it
-				// must never turn a previously-solvable position into a hard failure, so falling
-				// back to the unmargined `proposal` from above is the safe choice here.
-			}
-		}
+		// scoreGearSet (inside isSignificantImprovement) re-derives each piece's score via
+		// getItem(), which only knows about real equipment - a consumable LPItem's `id` is the
+		// CONSUMABLES slug (see resolveGearAndConsumables.ts), not a real item id, so it must be
+		// split out before comparison rather than passing the LP's raw gear+consumables output
+		// straight through.
+		const proposalSplit = splitGearAndConsumables(proposal);
+		const proposalGear = proposalSplit.gear;
 
 		// Round 1 has nothing but the hand-picked baseline to compare against - always accept
 		// it (same as before) rather than running it through a significance test that isn't
@@ -528,8 +359,8 @@ export async function solveConfigForSimMetric(
 			);
 			if (
 				!isSignificantImprovement(
-					result,
-					proposal,
+					currentGear,
+					proposalGear,
 					proposedScore,
 					optimizeStats,
 					stdevStats,
@@ -554,10 +385,13 @@ export async function solveConfigForSimMetric(
 		result = proposal;
 		finalStatWeights = optimizeStats;
 		finalStatWeightStdevs = stdevStats;
-		const split = splitGearAndConsumables(proposal);
-		currentGear = split.gear;
+		finalPerMetricStatWeights =
+			perMetricStatWeights ?? ({} as Record<SimMetric, Stat[]>);
+		finalPerMetricStatWeightStdevs =
+			perMetricStatWeightStdevs ?? ({} as Record<SimMetric, Stat[]>);
+		currentGear = proposalGear;
 		currentConsumablesOverride = solvingConsumables
-			? split.consumables
+			? proposalSplit.consumables
 			: undefined;
 	}
 
@@ -589,6 +423,8 @@ export async function solveConfigForSimMetric(
 		simMetrics,
 		finalStatWeights,
 		finalStatWeightStdevs,
+		finalPerMetricStatWeights,
+		finalPerMetricStatWeightStdevs,
 		round1StatWeights,
 	};
 }

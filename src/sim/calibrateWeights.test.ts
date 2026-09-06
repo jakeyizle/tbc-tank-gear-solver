@@ -5,7 +5,10 @@ import {
 	averageStats,
 	blendMetricEpValueStdevs,
 	blendMetricEpValues,
+	type CalibrationBatch,
+	computePerMetricStatWeights,
 	extractSimMetrics,
+	metricRatiosForBalance,
 } from "./calibrateWeights";
 import type { RaidSimResult, StatWeightsResult } from "./proto/api.js";
 
@@ -13,6 +16,7 @@ import type { RaidSimResult, StatWeightsResult } from "./proto/api.js";
 const STRENGTH = 0;
 const STAMINA = 2;
 const ARMOR = 31;
+const EXPERTISE = 24;
 
 function fakeEpValues(stats: number[]) {
 	return { epValues: { apiVersion: 0, stats, pseudoStats: [] } };
@@ -27,7 +31,7 @@ function fakeResult(overrides: Partial<StatWeightsResult>): StatWeightsResult {
 }
 
 describe("blendMetricEpValues", () => {
-	it("a single nonzero ratio reproduces the old single-metric behavior, sign-flipped for lower-is-better metrics", () => {
+	it("a single nonzero ratio passes epValue through unsigned, even for a lower-is-better metric", () => {
 		const stats: number[] = [];
 		stats[STRENGTH] = 1.5;
 		stats[STAMINA] = 2.0;
@@ -37,14 +41,16 @@ describe("blendMetricEpValues", () => {
 			tmi: 1,
 		});
 
-		// tmi is "lower is better" - epValues are unsigned, so the blend must sign-flip.
+		// tmi's epValue is already "bigger is better" (see this function's own doc comment on
+		// why the Go-side reference-stat normalization makes any further sign flip wrong) - no
+		// re-signing here.
 		expect(blended).toEqual([
-			{ name: "Strength", value: -1.5, type: "flat" },
-			{ name: "Stamina", value: -2.0, type: "flat" },
+			{ name: "Strength", value: 1.5, type: "flat" },
+			{ name: "Stamina", value: 2.0, type: "flat" },
 		]);
 	});
 
-	it("does not sign-flip a higher-is-better metric like tps", () => {
+	it("passes a higher-is-better metric like tps through unsigned too", () => {
 		const stats: number[] = [];
 		stats[STRENGTH] = 3;
 		const result = fakeResult({ tps: fakeEpValues(stats) });
@@ -69,8 +75,8 @@ describe("blendMetricEpValues", () => {
 			dtps: 0.5,
 		});
 
-		// tps: +1*1 = 1; dtps (lower-is-better): 0.5 * -1 * 2 = -1; total 0.
-		expect(blended).toEqual([{ name: "Stamina", value: 0, type: "flat" }]);
+		// tps: 1*1 = 1; dtps: 0.5*2 = 1; total 2.
+		expect(blended).toEqual([{ name: "Stamina", value: 2, type: "flat" }]);
 	});
 
 	it("skips a metric with a zero (or omitted) ratio even if present in the result", () => {
@@ -98,37 +104,85 @@ describe("blendMetricEpValues", () => {
 
 		expect(blended).toEqual([
 			{ name: "Stamina", value: 0, type: "flat" },
-			{ name: "Armor", value: -5, type: "flat" },
+			{ name: "Armor", value: 5, type: "flat" },
 		]);
 	});
 });
 
+describe("metricRatiosForBalance", () => {
+	it("balance=1 gives tps all the weight", () => {
+		expect(metricRatiosForBalance(1, "tmi")).toEqual({ tps: 1, tmi: 0 });
+	});
+
+	it("balance=0 gives the survivability metric all the weight", () => {
+		expect(metricRatiosForBalance(0, "dtps")).toEqual({ tps: 0, dtps: 1 });
+	});
+
+	it("balance=0.5 splits evenly between tps and the survivability metric", () => {
+		expect(metricRatiosForBalance(0.5, "tmi")).toEqual({ tps: 0.5, tmi: 0.5 });
+	});
+
+	it("clamps balance above 1 down to 1", () => {
+		expect(metricRatiosForBalance(1.5, "dtps")).toEqual({ tps: 1, dtps: 0 });
+	});
+
+	it("clamps balance below 0 up to 0", () => {
+		expect(metricRatiosForBalance(-0.5, "tmi")).toEqual({ tps: 0, tmi: 1 });
+	});
+});
+
 describe("blendMetricEpValueStdevs", () => {
-	it("a single nonzero ratio passes the stdev through unsigned (no lower-is-better flip)", () => {
+	it("divides the sim's raw population stdev by sqrt(iterations) to get a standard error, unsigned", () => {
 		const stats: number[] = [];
 		stats[STAMINA] = 2.0;
 		const result = fakeResult({ tmi: fakeEpValueStdevs(stats) });
 
-		const blended = blendMetricEpValueStdevs(result, ["Stamina"], { tmi: 1 });
+		// Stamina is two-sided, so effective n = iterations = 100 -> sqrt(100) = 10.
+		const blended = blendMetricEpValueStdevs(
+			result,
+			["Stamina"],
+			{ tmi: 1 },
+			100,
+		);
 
 		// unlike blendMetricEpValues, tmi being lower-is-better must NOT sign-flip a stdev.
-		expect(blended).toEqual([{ name: "Stamina", value: 2.0, type: "flat" }]);
+		expect(blended).toEqual([{ name: "Stamina", value: 0.2, type: "flat" }]);
 	});
 
-	it("combines multiple metrics' stdevs by summing variances, not the stdevs themselves", () => {
+	it("halves the effective sample size (n = iterations/2) for one-sided stats", () => {
+		const stats: number[] = [];
+		stats[EXPERTISE] = 20;
+		const result = fakeResult({ tmi: fakeEpValueStdevs(stats) });
+
+		// Expertise is one-sided (see ONE_SIDED_CALIBRATION_STATS), so effective n =
+		// iterations/2 = 100 -> sqrt(100) = 10, not sqrt(200).
+		const blended = blendMetricEpValueStdevs(
+			result,
+			["Expertise"],
+			{ tmi: 1 },
+			200,
+		);
+
+		expect(blended).toEqual([{ name: "Expertise", value: 2, type: "flat" }]);
+	});
+
+	it("combines multiple metrics' standard errors by summing variances, not the values themselves", () => {
 		const tpsStats: number[] = [];
-		tpsStats[STAMINA] = 3;
+		tpsStats[STAMINA] = 30;
 		const dtpsStats: number[] = [];
-		dtpsStats[STAMINA] = 4;
+		dtpsStats[STAMINA] = 40;
 		const result = fakeResult({
 			tps: fakeEpValueStdevs(tpsStats),
 			dtps: fakeEpValueStdevs(dtpsStats),
 		});
 
-		const blended = blendMetricEpValueStdevs(result, ["Stamina"], {
-			tps: 1,
-			dtps: 1,
-		});
+		// iterations = 100 -> sqrt(100) = 10, so the per-metric standard errors are 3 and 4.
+		const blended = blendMetricEpValueStdevs(
+			result,
+			["Stamina"],
+			{ tps: 1, dtps: 1 },
+			100,
+		);
 
 		// sqrt(3^2 + 4^2) = 5, the classic 3-4-5 triangle - a plain sum (7) would be wrong.
 		expect(blended).toEqual([{ name: "Stamina", value: 5, type: "flat" }]);
@@ -139,27 +193,93 @@ describe("blendMetricEpValueStdevs", () => {
 		stats[STAMINA] = 100;
 		const result = fakeResult({ tmi: fakeEpValueStdevs(stats) });
 
-		const blended = blendMetricEpValueStdevs(result, ["Stamina"], {
-			tmi: 0,
-			tps: undefined,
-		});
+		const blended = blendMetricEpValueStdevs(
+			result,
+			["Stamina"],
+			{ tmi: 0, tps: undefined },
+			100,
+		);
 
 		expect(blended).toEqual([{ name: "Stamina", value: 0, type: "flat" }]);
 	});
 
 	it("skips a metric with no epValuesStdev for a given stat rather than producing NaN", () => {
 		const stats: number[] = [];
-		stats[ARMOR] = 5;
+		stats[ARMOR] = 50;
 		const result = fakeResult({ tmi: fakeEpValueStdevs(stats) });
 
-		const blended = blendMetricEpValueStdevs(result, ["Stamina", "Armor"], {
-			tmi: 1,
-		});
+		const blended = blendMetricEpValueStdevs(
+			result,
+			["Stamina", "Armor"],
+			{ tmi: 1 },
+			100,
+		);
 
 		expect(blended).toEqual([
 			{ name: "Stamina", value: 0, type: "flat" },
 			{ name: "Armor", value: 5, type: "flat" },
 		]);
+	});
+});
+
+describe("computePerMetricStatWeights", () => {
+	it("derives each metric's own pure breakdown from the same batch, independent of the others", () => {
+		const strengthStats: number[] = [];
+		strengthStats[STRENGTH] = 1;
+		const staminaStats: number[] = [];
+		staminaStats[STAMINA] = 1;
+		const armorStats: number[] = [];
+		armorStats[ARMOR] = 1;
+
+		const batch: CalibrationBatch = {
+			result: fakeResult({
+				tps: fakeEpValues(strengthStats),
+				dtps: fakeEpValues(staminaStats),
+				tmi: fakeEpValues(armorStats),
+			}),
+		};
+
+		const { weights } = computePerMetricStatWeights(
+			[batch],
+			["Strength", "Stamina", "Armor"],
+			100,
+		);
+
+		expect(weights.tps).toEqual([
+			{ name: "Strength", value: 1, type: "flat" },
+			{ name: "Stamina", value: 0, type: "flat" },
+			{ name: "Armor", value: 0, type: "flat" },
+		]);
+		expect(weights.dtps).toEqual([
+			{ name: "Strength", value: 0, type: "flat" },
+			{ name: "Stamina", value: 1, type: "flat" },
+			{ name: "Armor", value: 0, type: "flat" },
+		]);
+		expect(weights.tmi).toEqual([
+			{ name: "Strength", value: 0, type: "flat" },
+			{ name: "Stamina", value: 0, type: "flat" },
+			{ name: "Armor", value: 1, type: "flat" },
+		]);
+	});
+
+	it("averages each metric's stdev across multiple batches independently", () => {
+		// Population stdevs of 20 and 40 - divided by sqrt(iterations=100)=10 first (Stamina is
+		// two-sided) to get per-batch standard errors of 2 and 4.
+		const staminaStdevLow: number[] = [];
+		staminaStdevLow[STAMINA] = 20;
+		const staminaStdevHigh: number[] = [];
+		staminaStdevHigh[STAMINA] = 40;
+
+		const batches: CalibrationBatch[] = [
+			{ result: fakeResult({ tps: fakeEpValueStdevs(staminaStdevLow) }) },
+			{ result: fakeResult({ tps: fakeEpValueStdevs(staminaStdevHigh) }) },
+		];
+
+		const { stdevs } = computePerMetricStatWeights(batches, ["Stamina"], 100);
+
+		// averageStatStdevs divides the mean stdev by sqrt(N), not a plain average - see that
+		// function's own tests: mean(2, 4) = 3, N = 2 -> 3 / sqrt(2).
+		expect(stdevs.tps[0].value).toBeCloseTo(3 / Math.sqrt(2));
 	});
 });
 

@@ -21,7 +21,6 @@ const item = (
 		objectiveScore: 0,
 		uncritabilityScore: 0,
 		resistanceScores: {},
-		constraintScore: 0,
 		...overrides,
 	}) as LPItem;
 

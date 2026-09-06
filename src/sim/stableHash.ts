@@ -1,4 +1,4 @@
-// Shared by round1WeightsCache.ts and simBalanceCache.ts: a stable, order-independent hash of
+// Shared by round1WeightsCache.ts: a stable, order-independent hash of
 // an arbitrary JSON-serializable value, for localStorage cache keys derived from "everything that
 // affects this result" input objects (a SimCalibrationProfile, SolveOptions, etc.) that get built
 // via object spreads in different orders across callsites - a cosmetic shape difference shouldn't

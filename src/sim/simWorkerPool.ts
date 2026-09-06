@@ -45,9 +45,23 @@ export function resolveWorkerCount(
 	return Math.max(1, Math.min(4, Math.floor(cores / 2)));
 }
 
+// How long run() will wait for ANY message (progress or done) on a call before treating the
+// worker as hung and rejecting. Chosen to be far longer than any normal gap between progress
+// ticks, but short enough to fail a stuck solve in well under a minute rather than forever - see
+// this file's header comment and statWeightsClient.ts's measureRaidSim doc comment for the
+// precedent this guards against (a long-lived reused wasm instance wedging after enough
+// cumulative calls).
+const WATCHDOG_TIMEOUT_MS = 45_000;
+
+function createWorker(): Worker {
+	return new Worker(new URL("./simExecutor.worker.ts", import.meta.url), {
+		type: "module",
+	});
+}
+
 export class SimWorkerPool {
 	readonly size: number;
-	private readonly workers: Worker[];
+	private workers: Worker[];
 
 	/**
 	 * @param desiredSize User-configured worker count (see SimCalibrationProfile.ts's
@@ -55,38 +69,78 @@ export class SimWorkerPool {
 	 */
 	constructor(desiredSize?: number) {
 		this.size = resolveWorkerCount(desiredSize, navigator.hardwareConcurrency);
-		this.workers = Array.from(
-			{ length: this.size },
-			() =>
-				new Worker(new URL("./simExecutor.worker.ts", import.meta.url), {
-					type: "module",
-				}),
-		);
+		this.workers = Array.from({ length: this.size }, () => createWorker());
 	}
 
 	/**
 	 * Runs one RaidSimRequest's bytes on pool slot `slot` (wrapping around `size`), forwarding
 	 * progress until the final result resolves.
+	 *
+	 * Rejects (instead of hanging forever) if the worker never posts any message - progress or
+	 * done - for WATCHDOG_TIMEOUT_MS, or if the worker itself errors/crashes. On a watchdog
+	 * timeout specifically, the wedged worker is also terminated and replaced in-place with a
+	 * fresh one, so the slot isn't permanently dead for subsequent calls.
 	 */
 	run(
 		slot: number,
 		requestBytes: Uint8Array,
 		onProgress: (completedIterations: number) => void,
 	): Promise<Uint8Array> {
-		const worker = this.workers[slot % this.workers.length];
+		const workerSlot = slot % this.workers.length;
+		const worker = this.workers[workerSlot];
 		const id = crypto.randomUUID();
 
-		return new Promise((resolve) => {
-			const handler = (e: MessageEvent<DoneMessage | ProgressMessage>) => {
+		return new Promise((resolve, reject) => {
+			let timer: ReturnType<typeof setTimeout>;
+			const startedAt = Date.now();
+
+			const cleanup = () => {
+				clearTimeout(timer);
+				worker.removeEventListener("message", messageHandler);
+				worker.removeEventListener("error", errorHandler);
+			};
+
+			const resetWatchdog = () => {
+				clearTimeout(timer);
+				timer = setTimeout(() => {
+					const elapsedSec = ((Date.now() - startedAt) / 1000).toFixed(1);
+					console.error(
+						`[sim] Worker slot ${workerSlot} stopped responding for ${WATCHDOG_TIMEOUT_MS / 1000}s (${elapsedSec}s since request started) - treating as hung.`,
+					);
+					cleanup();
+					worker.terminate();
+					this.workers[workerSlot] = createWorker();
+					reject(
+						new Error(
+							`Sim worker (slot ${workerSlot}) stopped responding and was recycled. The calibration batch must be re-run.`,
+						),
+					);
+				}, WATCHDOG_TIMEOUT_MS);
+			};
+
+			const messageHandler = (
+				e: MessageEvent<DoneMessage | ProgressMessage>,
+			) => {
 				if (e.data.id !== id) return;
+				resetWatchdog();
 				if (e.data.type === "done") {
-					worker.removeEventListener("message", handler);
+					cleanup();
 					resolve(e.data.resultBytes);
 					return;
 				}
 				onProgress(e.data.completedIterations);
 			};
-			worker.addEventListener("message", handler);
+			const errorHandler = (e: ErrorEvent) => {
+				console.error(`[sim] Worker slot ${workerSlot} errored:`, e.message);
+				cleanup();
+				reject(
+					new Error(`Sim worker (slot ${workerSlot}) errored: ${e.message}`),
+				);
+			};
+
+			worker.addEventListener("message", messageHandler);
+			worker.addEventListener("error", errorHandler);
+			resetWatchdog();
 			// Transfer (not clone) the buffer - with SaveAllValues set unconditionally for every
 			// calibration sim (see statweight.go), a RaidSimRequest/Result can carry full
 			// per-iteration arrays, and a structured-clone copy of that on every single sim call
@@ -96,6 +150,20 @@ export class SimWorkerPool {
 				requestBytes.buffer,
 			]);
 		});
+	}
+
+	/**
+	 * Terminates all current workers and replaces them with a fresh set - used to periodically
+	 * reset accumulated wasm-instance state between calibration rounds (see
+	 * statWeightsClient.ts's resetSimEnvironment), before it can reach the hang threshold
+	 * described in this file's header comment. Keeps this SimWorkerPool's own identity stable so
+	 * callers holding a reference (getPool()) need no changes.
+	 */
+	recycle(): void {
+		for (const worker of this.workers) {
+			worker.terminate();
+		}
+		this.workers = Array.from({ length: this.size }, () => createWorker());
 	}
 
 	/** Terminates every worker in the pool, freeing each one's wasm instance/memory immediately. */

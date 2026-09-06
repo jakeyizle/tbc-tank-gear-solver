@@ -38,7 +38,6 @@ const makeItem = (
 	objectiveScore: 0,
 	uncritabilityScore: 0,
 	resistanceScores: {},
-	constraintScore: 0,
 	...overrides,
 });
 

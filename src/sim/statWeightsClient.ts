@@ -90,19 +90,16 @@ function getPool(workerCount?: number): SimWorkerPool {
 }
 
 /**
- * Tears down the coordinator wasm instance and worker pool so the next call re-instantiates
- * fresh ones. Go's wasm memory only ever grows (its GC reuses space within the linear memory it
- * already has, but never shrinks that memory back to the host) - fine for one solve's worth of
- * calibration batches, but solveBalancedSimMetric.ts now runs up to three full SLP loops
- * back-to-back in the same worker (two endpoints + the final constrained solve), and running
- * all three against the same long-lived instances was observed to run the tab out of memory.
- * Calling this between phases bounds peak memory to roughly one phase's worth instead of all
- * three accumulating, mirroring how a fresh Worker is already spun up per solve (see
- * solver.worker.ts) - this just does the same thing mid-solve, between phases.
+ * Forces a fresh coordinator wasm instance and worker pool on the next call. Meant to be called
+ * between calibration rounds (see solveSimMetric.ts) to periodically reset whatever accumulates
+ * on these long-lived Go+wasm instances before it can reach the hang threshold described in
+ * simWorkerPool.ts's header comment and measureRaidSim's doc comment above.
  */
-export function resetWasmClient(): void {
-	pool?.terminate();
-	pool = undefined;
+export function resetSimEnvironment(): void {
+	console.warn(
+		"[sim] Recycling wasm coordinator + worker pool between calibration rounds.",
+	);
+	pool?.recycle();
 	wasmReady = undefined;
 }
 

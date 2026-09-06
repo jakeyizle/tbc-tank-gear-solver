@@ -1,10 +1,19 @@
 // Persists "Weighted Sim Metrics" round 1's calibrated weights across solves and page reloads,
-// keyed by exactly the inputs that affect them (the SimCalibrationProfile and the metric ratio
-// blend) - round 1 always calibrates around the same fixed PROT_PALADIN_BASELINE_GEAR preset, so
-// its result never depends on the item pool or previously-solved gear (see solveSimMetric.ts's
-// solveConfigForSimMetric). Follows the same localStorage pattern as persistence.ts: one
-// versioned JSON blob, try/catch-wrapped so quota errors or private browsing degrade to "no
-// cache" instead of throwing.
+// keyed by exactly the inputs that affect them (the SimCalibrationProfile and which sim-backed
+// objective is being solved) - round 1 always calibrates around the same fixed
+// PROT_PALADIN_BASELINE_GEAR preset, so its result never depends on the item pool or
+// previously-solved gear (see solveSimMetric.ts's solveConfigForSimMetric). Follows the same
+// localStorage pattern as persistence.ts: one versioned JSON blob, try/catch-wrapped so quota
+// errors or private browsing degrade to "no cache" instead of throwing.
+//
+// This module is called from src/solver/index.ts (the main thread, which alone has
+// `localStorage` - a dedicated Worker's global scope doesn't carry the WindowLocalStorage mixin,
+// which is why this cache must be orchestrated there rather than from inside
+// solver.worker.ts itself). The `CalibratedWeights` import below is type-only (this repo's
+// verbatimModuleSyntax guarantees it's fully erased at build) - it never pulls calibrateWeights.ts's
+// runtime wasm/proto code along with it, so src/solver/index.ts can import this module statically
+// with no risk to the main bundle's size.
+import type { StatName } from "#/solver/types";
 import type { SimCalibrationProfile } from "#/types/SimCalibrationProfile";
 import type { CalibratedWeights } from "./calibrateWeights";
 import { stableHash } from "./stableHash";
@@ -18,6 +27,19 @@ const CACHE_VERSION = 1;
 // without needing a TTL - oldest-savedAt entries are evicted first on write.
 const MAX_ENTRIES = 20;
 
+/** Everything besides the profile that determines round 1's calibrated weights - see
+ * calibrateWeights.ts's metricRatiosForBalance (for `balance`/`survivabilityMetric`, only
+ * meaningful/included for `objectiveMode === "balanced"`) and solveSimMetric.ts's
+ * calibrationStats resolution (which stats actually get calibrated). `calibrationStats` should
+ * be passed in a stable (e.g. sorted) order - array element order affects the hash, unlike the
+ * profile object's key order. */
+export interface Round1CacheKey {
+	objectiveMode: "tps" | "dtps" | "tmi" | "balanced";
+	balance?: number;
+	survivabilityMetric?: "tmi" | "dtps";
+	calibrationStats?: StatName[];
+}
+
 interface CacheEntry extends CalibratedWeights {
 	savedAt: number;
 }
@@ -30,9 +52,9 @@ interface CacheFile {
 // See stableHash.ts's own comment on why this needs to be order-independent.
 function hashKey(
 	profile: SimCalibrationProfile,
-	simMetricWeights: { tps: number; dtps: number; tmi5: number },
+	calibrationKey: Round1CacheKey,
 ): string {
-	return `${CACHE_VERSION}:${stableHash({ profile, simMetricWeights })}`;
+	return `${CACHE_VERSION}:${stableHash({ profile, calibrationKey })}`;
 }
 
 function readCacheFile(): CacheFile {
@@ -51,21 +73,26 @@ function readCacheFile(): CacheFile {
 
 export function getCachedRound1Weights(
 	profile: SimCalibrationProfile,
-	simMetricWeights: { tps: number; dtps: number; tmi5: number },
+	calibrationKey: Round1CacheKey,
 ): CalibratedWeights | undefined {
-	const entry = readCacheFile().entries[hashKey(profile, simMetricWeights)];
+	const entry = readCacheFile().entries[hashKey(profile, calibrationKey)];
 	if (!entry) return undefined;
-	return { optimizeStats: entry.optimizeStats, stdevStats: entry.stdevStats };
+	return {
+		optimizeStats: entry.optimizeStats,
+		stdevStats: entry.stdevStats,
+		perMetricStatWeights: entry.perMetricStatWeights,
+		perMetricStatWeightStdevs: entry.perMetricStatWeightStdevs,
+	};
 }
 
 export function setCachedRound1Weights(
 	profile: SimCalibrationProfile,
-	simMetricWeights: { tps: number; dtps: number; tmi5: number },
+	calibrationKey: Round1CacheKey,
 	weights: CalibratedWeights,
 ): void {
 	try {
 		const file = readCacheFile();
-		file.entries[hashKey(profile, simMetricWeights)] = {
+		file.entries[hashKey(profile, calibrationKey)] = {
 			...weights,
 			savedAt: Date.now(),
 		};

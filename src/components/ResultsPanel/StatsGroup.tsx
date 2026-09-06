@@ -15,6 +15,11 @@ export interface StatDisplay {
 	rating?: number;
 	// Optional extra text shown after the value (e.g. "± 812.40" for a stat weight's stdev).
 	detail?: string;
+	// Renders the value de-emphasized (text.disabled) instead of full-strength - e.g. a
+	// calibrated stat weight whose magnitude doesn't clear its own standard error, so its sign
+	// isn't confidently known (see StatWeightTabs.tsx). Still shown, not hidden - just visually
+	// flagged as noisier than its neighbors.
+	dimmed?: boolean;
 }
 
 interface StatsGroupProps {
@@ -113,6 +118,7 @@ export default function StatsGroup({
 								</Typography>
 								<Typography
 									variant="body2"
+									color={stat.dimmed ? "text.disabled" : undefined}
 									sx={{
 										fontFamily: monoFontFamily,
 										fontWeight: 500,
@@ -150,7 +156,11 @@ export default function StatsGroup({
 								<Box
 									sx={{ display: "flex", alignItems: "baseline", gap: 0.75 }}
 								>
-									<Typography variant="body2" fontWeight="medium">
+									<Typography
+										variant="body2"
+										fontWeight="medium"
+										color={stat.dimmed ? "text.disabled" : undefined}
+									>
 										{formatValue(stat)}
 									</Typography>
 									{stat.detail && (

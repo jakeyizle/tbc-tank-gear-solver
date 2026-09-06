@@ -1,15 +1,13 @@
 import { getBuffs } from "#/data/buffs";
 import { CONSUMABLES } from "#/data/consumables";
-import type {
-	BalanceEndpoint,
-	SurvivabilityMetric,
-} from "#/sim/solveBalancedSimMetric";
+import { SIM_CALIBRATION_STAT_NAMES } from "#/sim/statTranslation";
 import type {
 	Buff,
 	LPItem,
 	ModifierSource,
 	ResistanceFloor,
 	Stat,
+	StatName,
 } from "#/solver/types";
 import type {
 	SimCalibrationProfile,
@@ -22,20 +20,25 @@ export interface SolverConfiguration {
 	uncrushabilitySetting: number;
 	optimizeStats: Stat[];
 	// 'stats' = maximize the weighted sum in optimizeStats (default). 'ehp' = ignore
-	// optimizeStats and let the solver directly maximize armor-mitigated Effective HP.
-	// 'simWeighted' = sim-calibrated objective (Protection Paladin only for now) - see
-	// docs/plans/sim-backed-objectives.md. Like 'ehp', this ignores optimizeStats; the solver
-	// recalibrates its own weight vector via a real combat sim instead, per simBalance.
-	objectiveMode: "stats" | "ehp" | "simWeighted";
-	// A single 0 (pure Survivability) .. 1 (pure Threat) dial for 'simWeighted' mode - see
-	// solveBalancedSimMetric.ts. Replaced an earlier raw {tps,dtps,tmi5} ratio blend, which had
-	// no principled interpretation (different metrics' calibrated weights live on incomparable
-	// scales - see docs/plans/sim-backed-objectives.md's rejection of exactly that mechanism).
-	// Unused (but kept) in other modes.
-	simBalance: { balance: number };
-	// Which metric backs the "Survivability" end of simBalance - see
-	// solveBalancedSimMetric.ts's SurvivabilityMetric. Unused (but kept) in other modes.
-	survivabilityMetric: SurvivabilityMetric;
+	// optimizeStats and let the solver directly maximize armor-mitigated Effective HP. 'tps'/
+	// 'dtps'/'tmi' = sim-calibrated objective (Protection Paladin only for now) - see
+	// docs/plans/sim-backed-objectives.md - purely maximizing (tps) or minimizing (dtps/tmi) that
+	// one metric, no blend with anything else. 'balanced' = a weighted blend of tps against
+	// whichever metric `survivabilityMetric` names, per `balance` - see
+	// calibrateWeights.ts's metricRatiosForBalance. Like 'ehp', all of these ignore
+	// optimizeStats; the solver recalibrates its own weight vector via a real combat sim instead.
+	objectiveMode: "stats" | "ehp" | "tps" | "dtps" | "tmi" | "balanced";
+	// A single 0 (pure Survivability) .. 1 (pure Threat) dial for 'balanced' mode - see
+	// calibrateWeights.ts's metricRatiosForBalance. Unused (but always present) in other modes.
+	balance: number;
+	// Which metric backs the "Survivability" end of `balance`. Unused (but always present) in
+	// other modes.
+	survivabilityMetric: "tmi" | "dtps";
+	// Which stats get a +/- perturbation sim during calibration for 'tps'/'dtps'/'tmi'/'balanced'
+	// modes - see solveSimMetric.ts's resolveCalibrationStats and statTranslation.ts's
+	// SIM_CALIBRATION_STAT_NAMES (the full default list this is a subset of). Unused (but always
+	// present) in 'stats'/'ehp' mode.
+	enabledCalibrationStats: StatName[];
 	resistanceFloors: ResistanceFloor[];
 	abilities: ModifierSource[];
 	talents: ModifierSource[];
@@ -49,18 +52,17 @@ export interface SolveResult {
 	items: LPItem[];
 	baseConfig: BaseConfig;
 	solverConfig: SolverConfiguration;
-	// Absolute TPS/DTPS/TMI-5 for this result's gear - only set for a "simWeighted" solve.
+	// Absolute TPS/DTPS/TMI-5 for this result's gear - only set for a "tps"/"dtps"/"tmi"/"balanced" solve.
+	// All three are always included here, regardless of which one was the actual objective.
 	simMetrics?: SimMetricsSnapshot;
-	// The calibrated per-stat weight vector that produced this result - only set for a
-	// "simWeighted" solve. See solveSimMetric.ts's finalStatWeights.
-	statWeights?: Stat[];
-	// Per-stat uncertainty on statWeights (see solveSimMetric.ts's finalStatWeightStdevs) - only
-	// set for a "simWeighted" solve.
-	statWeightStdevs?: Stat[];
-	// The two real anchors the balance slider interpolates between - see
-	// solveBalancedSimMetric.ts. Only set for a "simWeighted" solve, so the UI can show e.g.
-	// "100% Threat: 5,200 TPS / 9.8 TMI-5" instead of a bare, uninterpretable balance value.
-	simBalanceEndpoints?: { threat: BalanceEndpoint; survival: BalanceEndpoint };
+	// Pure (unblended) per-metric stat weight breakdowns - one vector each for TPS, DTPS, and
+	// TMI-5, all always populated together for a "tps"/"dtps"/"tmi"/"balanced" solve regardless of
+	// which one (or blend) actually drove the objective, since the sim always computes all three
+	// from the same calibration batch - see solveSimMetric.ts's finalPerMetricStatWeights.
+	perMetricStatWeights?: Record<"tps" | "dtps" | "tmi", Stat[]>;
+	// Per-stat uncertainty on perMetricStatWeights (see solveSimMetric.ts's
+	// finalPerMetricStatWeightStdevs) - only set for a "tps"/"dtps"/"tmi"/"balanced" solve.
+	perMetricStatWeightStdevs?: Record<"tps" | "dtps" | "tmi", Stat[]>;
 }
 
 export interface BaseConfig {
@@ -92,8 +94,9 @@ export function createEmptyConfig(
 		uncrushabilitySetting: 1,
 		optimizeStats: [],
 		objectiveMode: "stats",
-		simBalance: { balance: 0.5 },
+		balance: 0.5,
 		survivabilityMetric: "tmi",
+		enabledCalibrationStats: [...SIM_CALIBRATION_STAT_NAMES],
 		resistanceFloors: [],
 		abilities: [],
 		talents: [],

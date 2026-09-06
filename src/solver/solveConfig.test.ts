@@ -162,8 +162,9 @@ describe("solveConfig", () => {
 			uncrushabilitySetting: 0,
 			optimizeStats: OBJECTIVE_STATS,
 			objectiveMode: "stats" as const,
-			simBalance: { balance: 0.5 },
+			balance: 0.5,
 			survivabilityMetric: "tmi" as const,
+			enabledCalibrationStats: [],
 			resistanceFloors: [],
 			abilities: [],
 			talents: [],
@@ -226,8 +227,9 @@ describe("solveConfig", () => {
 			uncrushabilitySetting: 0,
 			optimizeStats: OBJECTIVE_STATS,
 			objectiveMode: "stats" as const,
-			simBalance: { balance: 0.5 },
+			balance: 0.5,
 			survivabilityMetric: "tmi" as const,
+			enabledCalibrationStats: [],
 			resistanceFloors: [],
 			abilities: [],
 			talents: [],
@@ -344,47 +346,6 @@ describe("solveConfig", () => {
 		).toBe(true);
 	}, 60000);
 
-	it("scenario 9b: a secondary constraint (independent weight vector) shapes the solution without touching the objective", async () => {
-		// The objective only rewards Stamina; the secondary constraint is a floor on a
-		// completely different, independently-weighted axis (Dodge) that the objective alone
-		// wouldn't push toward - proves buildScoreVars(..., "constraintScore") and
-		// makeMetricConstraint are wired through runLPModel as their own LP row, not folded into
-		// the objective.
-		const dodgeOnlyStats: Stat[] = [{ name: "Dodge", value: 1, type: "flat" }];
-		const options = baseOptions({
-			optimizeStats: [{ name: "Stamina", value: 1, type: "flat" }],
-			buffs: [TEST_AVOIDANCE_BUFF],
-			secondaryConstraint: {
-				statWeights: dodgeOnlyStats,
-				bound: 5,
-				kind: "floor",
-			},
-		});
-		const result = await solveConfig(testItemPool, options);
-		const config = new SolverConfiguration(options);
-
-		expect(validateSolution(result, config)).toEqual([]);
-		const achieved = computeAchievedStats(result, config);
-		expect(achieved.secondaryConstraintValue).toBeGreaterThanOrEqual(5);
-	}, 30000);
-
-	it("scenario 9c: an unsatisfiable secondary constraint throws a descriptive error naming it", async () => {
-		const dodgeOnlyStats: Stat[] = [{ name: "Dodge", value: 1, type: "flat" }];
-		const options = baseOptions({
-			optimizeStats: [{ name: "Stamina", value: 1, type: "flat" }],
-			// no combination of fixture items comes anywhere near this much Dodge rating
-			secondaryConstraint: {
-				statWeights: dodgeOnlyStats,
-				bound: 100000,
-				kind: "floor",
-			},
-		});
-
-		await expect(solveConfig(testItemPool, options)).rejects.toThrow(
-			/secondary floor/,
-		);
-	}, 30000);
-
 	it("scenario 10: throws a descriptive error instead of returning a bogus result when no gear combination can satisfy the constraints", async () => {
 		// no item/gem/enchant in the fixture pool comes anywhere close to this much Shadow
 		// Resistance, so the resistance constraint makes the LP model infeasible
@@ -405,8 +366,9 @@ describe("solveConfig", () => {
 			uncrushabilitySetting: 0,
 			optimizeStats: OBJECTIVE_STATS,
 			objectiveMode: "stats" as const,
-			simBalance: { balance: 0.5 },
+			balance: 0.5,
 			survivabilityMetric: "tmi" as const,
+			enabledCalibrationStats: [],
 			resistanceFloors: [],
 			abilities: [],
 			talents: [],

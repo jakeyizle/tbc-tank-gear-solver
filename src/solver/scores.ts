@@ -77,11 +77,6 @@ export const calculateScores = (
 	modifierSources: ModifierSource[] = [],
 	avoidanceStatName: "Avoidance" | "ShearAvoidance" = "Avoidance",
 	resistanceStats: StatName[] = [],
-	// A second, independent weight vector for an optional secondary sim-metric constraint (see
-	// SolveOptions.secondaryConstraint) - reuses calculateObjectiveScore's own dot-product logic
-	// against a different Stat[] vector, since the constraint's LP row needs exactly the same
-	// "linear projection of item stats" shape the objective already computes.
-	constraintStats: Stat[] = [],
 ) => {
 	const avoidanceScore = calculateAvoidanceScore(
 		stats,
@@ -102,16 +97,10 @@ export const calculateScores = (
 		resistanceStats,
 		modifierSources,
 	);
-	const constraintScore = calculateObjectiveScore(
-		stats,
-		constraintStats,
-		modifierSources,
-	);
 	return {
 		avoidanceScore,
 		uncritabilityScore,
 		objectiveScore,
 		resistanceScores,
-		constraintScore,
 	};
 };

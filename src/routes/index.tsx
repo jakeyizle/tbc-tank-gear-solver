@@ -283,7 +283,13 @@ function App() {
 						updateConfig={updateConfig}
 					/>
 
-					{configs.some((config) => config.objectiveMode === "simWeighted") && (
+					{configs.some(
+						(config) =>
+							config.objectiveMode === "tps" ||
+							config.objectiveMode === "dtps" ||
+							config.objectiveMode === "tmi" ||
+							config.objectiveMode === "balanced",
+					) && (
 						<SimCalibrationPanel
 							profile={simCalibrationProfile}
 							onChange={updateSimCalibrationProfile}

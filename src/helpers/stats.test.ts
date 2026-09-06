@@ -20,7 +20,6 @@ const makeItem = (stats: Stat[]): LPItem =>
 		objectiveScore: 0,
 		uncritabilityScore: 0,
 		resistanceScores: {},
-		constraintScore: 0,
 	}) as LPItem;
 
 const makeModifierSource = (
@@ -82,7 +81,9 @@ describe("stat aggregation", () => {
 
 	it("excludes an unchecked buff's stats entirely", () => {
 		const modifierSources = [
-			makeModifierSource([{ name: "Stamina", value: 50, type: "flat" }], { checked: false }),
+			makeModifierSource([{ name: "Stamina", value: 50, type: "flat" }], {
+				checked: false,
+			}),
 		];
 		const stamina = calculateStatValue({
 			items: [],
@@ -95,7 +96,9 @@ describe("stat aggregation", () => {
 
 	it("scales a ranked modifier source's stats by its rank", () => {
 		const modifierSources = [
-			makeModifierSource([{ name: "Stamina", value: 5, type: "flat" }], { rank: 3 }),
+			makeModifierSource([{ name: "Stamina", value: 5, type: "flat" }], {
+				rank: 3,
+			}),
 		];
 		const stamina = calculateStatValue({
 			items: [],

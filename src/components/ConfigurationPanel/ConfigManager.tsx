@@ -5,7 +5,13 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { getBuffs } from "#/data/buffs";
 import { CONSUMABLES } from "#/data/consumables";
-import type { ResistanceFloor, Stat } from "#/solver/types";
+import { SIM_CALIBRATION_STAT_NAMES } from "#/sim/statTranslation";
+import {
+	type ResistanceFloor,
+	STAT_LABELS,
+	type Stat,
+	type StatName,
+} from "#/solver/types";
 import type { SolverConfiguration } from "#/types/SolverConfig";
 import ConfigCard from "./ConfigCard";
 
@@ -73,6 +79,21 @@ export default function ConfigManager({
 		updateConfig(config.id, { enabledConsumableIds: newEnabledIds });
 	};
 
+	const handleCalibrationStatChange = (
+		config: SolverConfiguration,
+		statName: StatName,
+	) => {
+		const isEnabled = config.enabledCalibrationStats.includes(statName);
+		// Unlike consumables, an empty calibration-stat list isn't a meaningful state (the sim
+		// would have nothing to calibrate a weight vector from) - refuse to uncheck the last
+		// remaining enabled stat rather than letting the user reach it.
+		if (isEnabled && config.enabledCalibrationStats.length <= 1) return;
+		const newEnabledStats = isEnabled
+			? config.enabledCalibrationStats.filter((s) => s !== statName)
+			: [...config.enabledCalibrationStats, statName];
+		updateConfig(config.id, { enabledCalibrationStats: newEnabledStats });
+	};
+
 	return (
 		<Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
 			<Stack direction="row" alignItems="center" gap={1.5}>
@@ -107,6 +128,13 @@ export default function ConfigManager({
 						...consumable,
 						checked: config.enabledConsumableIds.includes(consumable.id),
 					}));
+					const displayCalibrationStats = SIM_CALIBRATION_STAT_NAMES.map(
+						(name) => ({
+							name,
+							label: STAT_LABELS[name],
+							checked: config.enabledCalibrationStats.includes(name),
+						}),
+					);
 
 					return (
 						<ConfigCard
@@ -117,6 +145,7 @@ export default function ConfigManager({
 							canDelete={configs.length > 1}
 							displayBuffs={displayBuffs}
 							displayConsumables={displayConsumables}
+							displayCalibrationStats={displayCalibrationStats}
 							onSelect={() => onSelectConfig(config.id)}
 							onCollapse={() => onSelectConfig("")}
 							onDuplicate={() => onDuplicateConfig(config.id)}
@@ -127,16 +156,19 @@ export default function ConfigManager({
 							onUpdateObjectiveMode={(mode) =>
 								updateConfig(config.id, { objectiveMode: mode })
 							}
-							onUpdateSimBalance={(balance) =>
-								updateConfig(config.id, { simBalance: { balance } })
+							onUpdateBalance={(balance) =>
+								updateConfig(config.id, { balance })
 							}
-							onUpdateSurvivabilityMetric={(metric) =>
-								updateConfig(config.id, { survivabilityMetric: metric })
+							onUpdateSurvivabilityMetric={(survivabilityMetric) =>
+								updateConfig(config.id, { survivabilityMetric })
 							}
 							onUpdateResistanceFloors={updateResistanceFloors}
 							onBuffChange={(buffId) => handleBuffChange(config, buffId)}
 							onConsumableChange={(consumableId) =>
 								handleConsumableChange(config, consumableId)
+							}
+							onCalibrationStatChange={(statName) =>
+								handleCalibrationStatChange(config, statName)
 							}
 							onDropReorder={(draggedId) =>
 								onReorderConfig(draggedId, config.id)

@@ -244,7 +244,6 @@ const EMPTY_SCORES = {
 	objectiveScore: 0,
 	uncritabilityScore: 0,
 	resistanceScores: {} as Partial<Record<StatName, number>>,
-	constraintScore: 0,
 };
 
 const sumResistanceScores = (
@@ -285,7 +284,6 @@ export const transformItem = (
 				acc.resistanceScores,
 				scores.resistanceScores,
 			),
-			constraintScore: acc.constraintScore + scores.constraintScore,
 		};
 	}, EMPTY_SCORES);
 
@@ -318,11 +316,6 @@ export const transformItem = (
 		gemScores.resistanceScores,
 		socketBonusScores.resistanceScores,
 	].reduce(sumResistanceScores, {});
-	const constraintScore =
-		itemScores.constraintScore +
-		enchantScores.constraintScore +
-		gemScores.constraintScore +
-		socketBonusScores.constraintScore;
 
 	return {
 		...item,
@@ -331,6 +324,5 @@ export const transformItem = (
 		objectiveScore,
 		uncritabilityScore,
 		resistanceScores,
-		constraintScore,
 	};
 };

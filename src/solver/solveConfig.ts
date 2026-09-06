@@ -15,10 +15,7 @@ import {
 	type SubjectTo,
 } from "./decomposedModel";
 import { prepareItemCandidates, transformItem } from "./items";
-import {
-	type SecondaryConstraint,
-	SolverConfiguration,
-} from "./SolverConfiguration";
+import { SolverConfiguration } from "./SolverConfiguration";
 import type {
 	DecomposableItem,
 	Enchant,
@@ -28,26 +25,30 @@ import type {
 	ProcessedItemType,
 	ResistanceFloor,
 	Stat,
+	StatName,
 } from "./types";
 
 export interface SolveOptions {
 	uncrushabilitySetting: number;
 	uncritabilitySetting: number;
 	optimizeStats: Stat[];
-	objectiveMode?: "stats" | "ehp" | "simWeighted";
-	// A single 0 (pure Survivability) .. 1 (pure Threat/TPS) dial for "simWeighted" mode - see
-	// solveBalancedSimMetric.ts for why this replaced a raw {tps,dtps,tmi5} ratio blend.
-	simBalance?: { balance: number };
-	// Which metric backs the "Survivability" end of simBalance - see
-	// solveBalancedSimMetric.ts's SurvivabilityMetric (kept as a plain literal type here, not
-	// imported, since this file is the generic LP core and never imports from src/sim/).
+	// "tps"/"dtps"/"tmi" purely maximize (or minimize) that one sim-calibrated metric - see
+	// solveSimMetric.ts. "balanced" blends tps against `survivabilityMetric` per `balance` - see
+	// calibrateWeights.ts's metricRatiosForBalance. TPS/DTPS/TMI-5 are all measured and shown in
+	// results regardless of which mode is chosen.
+	objectiveMode?: "stats" | "ehp" | "tps" | "dtps" | "tmi" | "balanced";
+	// Only meaningful for "balanced" mode - see calibrateWeights.ts's metricRatiosForBalance.
+	// Kept as plain literal types here (not imported from src/sim/), since this file is the
+	// generic LP core and never imports from the tbc-new sim integration.
+	balance?: number;
 	survivabilityMetric?: "tmi" | "dtps";
+	// Which stats get a +/- perturbation sim during calibration (see calibrateWeights.ts's
+	// statsToWeigh) for "tps"/"dtps"/"tmi"/"balanced" modes - see SolverConfiguration.
+	// enabledCalibrationStats. Optional/undefined falls back to the full default list
+	// (solveSimMetric.ts's SIM_CALIBRATION_STATS).
+	enabledCalibrationStats?: StatName[];
 	simCalibrationProfile?: SimCalibrationProfile;
 	resistanceFloors: ResistanceFloor[];
-	// A hard floor/ceiling on a second, independently-weighted linear metric - see
-	// SolverConfiguration.ts's SecondaryConstraint and decomposedModel.ts's "constraintScore"
-	// axis. Recomputed by the caller every SLP round (see solveSimMetric.ts), not user input.
-	secondaryConstraint?: SecondaryConstraint;
 	areEnchantsGemsLocked: boolean;
 	excludeUniqueGems: boolean;
 	phase: number;
@@ -163,26 +164,6 @@ const makeResistanceConstraint = (
 	};
 };
 
-// A floor ("metric >= bound") or ceiling ("metric <= bound") row on the "constraintScore" axis -
-// structurally identical to makeResistanceConstraint, just GLP_LO vs GLP_UP depending on `kind`.
-// `bound` is already in the marginal/relative units constraintScore itself produces (see
-// SecondaryConstraint's own doc comment) - not a raw absolute sim value.
-const makeMetricConstraint = (
-	vars: LPVar[],
-	bound: number,
-	kind: SecondaryConstraint["kind"],
-	glpk: GLPKType,
-) => {
-	return {
-		name: "secondary_constraint",
-		vars,
-		bnds:
-			kind === "floor"
-				? { type: glpk.GLP_LO, lb: bound, ub: Number.POSITIVE_INFINITY }
-				: { type: glpk.GLP_UP, lb: Number.NEGATIVE_INFINITY, ub: bound },
-	};
-};
-
 // each slot can have 1 (or 2 for finger/trinket) items
 // flasks/elixirs are optional (0 or up to the bound), unlike mandatory gear slots
 const makeSlotConstraint = (
@@ -287,10 +268,6 @@ const describeConstraints = (config: SolverConfiguration): string => {
 			parts.push(`${stat} resistance target ${target.toFixed(2)}`);
 		}
 	}
-	if (config.secondaryConstraint) {
-		const { kind, bound } = config.secondaryConstraint;
-		parts.push(`secondary ${kind} of ${bound.toFixed(2)}`);
-	}
 	return parts.length > 0 ? parts.join(", ") : "the configured constraints";
 };
 
@@ -370,18 +347,6 @@ const runLPModel = async (
 				buildResistanceVars(fixedItems, decomposableItems, stat),
 				stat,
 				target,
-				glpk,
-			),
-		);
-	}
-
-	if (config.secondaryConstraint) {
-		const { bound, kind } = config.secondaryConstraint;
-		constraints.push(
-			makeMetricConstraint(
-				buildScoreVars(fixedItems, decomposableItems, "constraintScore"),
-				bound,
-				kind,
 				glpk,
 			),
 		);

@@ -24,11 +24,13 @@ import {
 } from "./proto/api.js";
 import { Stat as TbcStat } from "./proto/common.js";
 import {
-	LOWER_IS_BETTER_METRICS,
+	effectiveCalibrationSampleSize,
 	STAT_NAME_TO_TBC_STAT,
 } from "./statTranslation";
 import { measureRaidSim, runStatWeightsAsync } from "./statWeightsClient";
 import type { GearPiece } from "./toTbcItemSpec";
+
+export { resetSimEnvironment } from "./statWeightsClient";
 
 export type SimMetric = "tps" | "dtps" | "tmi";
 
@@ -46,12 +48,16 @@ export interface CalibrationProgress {
  * are comparable before summing) into a single `Stat[]` weight vector, one entry per
  * `statsToWeigh` that has a translation entry (see statTranslation.ts).
  *
- * `epValues` are always non-negative (the Go side takes their absolute value), so
- * `LOWER_IS_BETTER_METRICS` still supplies the sign each metric should contribute with - same
- * convention as the solver's objective always maximizing (see decomposedModel.ts's fixed
- * GLP_MAX). A metric ratio of 0 (or omitted) is skipped entirely, and a metric with no
- * `epValues` for a given stat (e.g. its reference-stat weight came out to exactly 0) is
- * skipped for that stat rather than treated as an error.
+ * No sign flip is applied for a lower-is-better metric (dtps/tmi) - `epValue` is already a
+ * "bigger is better" ratio by construction: it's the stat's raw slope against the metric,
+ * divided by the *reference* stat's own raw slope (DTPSReferenceStat = Armor, a mitigation
+ * stat whose slope against DTPS/TMI is itself negative). Two mitigation stats' slopes share
+ * the same sign, so the ratio comes out positive before the Go side's `math.Abs()` even
+ * applies - exactly the standard EP convention (a bigger EP number is always better),
+ * matching what the solver's objective (always maximizing - see decomposedModel.ts's fixed
+ * GLP_MAX) needs directly, with no re-signing. A metric ratio of 0 (or omitted) is skipped
+ * entirely, and a metric with no `epValues` for a given stat (e.g. its reference-stat weight
+ * came out to exactly 0) is skipped for that stat rather than treated as an error.
  *
  * Extracted from calibrateWeights() as a pure function so the blending math can be unit
  * tested against a hand-built StatWeightsResult, without a real wasm/browser environment.
@@ -77,8 +83,7 @@ export function blendMetricEpValues(
 			if (!ratio) continue;
 			const epValue = result[metric]?.epValues?.stats[index];
 			if (epValue == null) continue;
-			const sign = LOWER_IS_BETTER_METRICS.has(metric) ? -1 : 1;
-			blended += ratio * sign * epValue;
+			blended += ratio * epValue;
 		}
 		stats.push({ name: statName, value: blended, type: "flat" });
 	}
@@ -86,21 +91,50 @@ export function blendMetricEpValues(
 }
 
 /**
+ * Builds the metric ratio for the "balance Threat/Survivability" objective mode: a plain
+ * weighted blend of TPS against whichever metric backs "Survivability" - `balance` (clamped to
+ * [0,1]) is the TPS share, `1 - balance` goes to `survivabilityMetric`. Feeding this straight
+ * into `blendMetricEpValues`/`calibrateWeights` reproduces a pure `{tps: 1}` solve at
+ * balance=1 and a pure `{[survivabilityMetric]: 1}` solve at balance=0, with a smooth blend in
+ * between - no endpoint solves or LP constraint needed, since both metrics already share a
+ * common, already-correctly-signed "bigger EP is better" scale (see blendMetricEpValues' own
+ * doc comment).
+ */
+export function metricRatiosForBalance(
+	balance: number,
+	survivabilityMetric: SimMetric,
+): Partial<Record<SimMetric, number>> {
+	const tps = Math.min(1, Math.max(0, balance));
+	return { tps, [survivabilityMetric]: 1 - tps };
+}
+
+/**
  * Sibling to `blendMetricEpValues`: blends the same metrics' `epValuesStdev` into a per-stat
- * uncertainty for the blended weight vector, for the solve loop's hysteresis check (see
- * solveSimMetric.ts) - without this, every round's weight vector is treated as exact, so two
- * items within noise of each other's true value keep trading places forever instead of the loop
- * recognizing it can't actually tell them apart.
+ * *standard error of the mean weight* for the blended weight vector, for the solve loop's
+ * hysteresis check (see solveSimMetric.ts) and for display - without this, every round's weight
+ * vector is treated as exact, so two items within noise of each other's true value keep trading
+ * places forever instead of the loop recognizing it can't actually tell them apart.
  *
- * Each metric's stdev is an independent Monte Carlo estimate (a separate sim batch), so the
- * blended ratios' variances are summed (not the values) before taking the square root - standard
- * propagation of uncertainty through a linear combination. The sign a metric's value would carry
- * (`LOWER_IS_BETTER_METRICS`) is irrelevant here since variance is never negative.
+ * The Go sim's own `epValuesStdev` (statweight.go's aggregator.meanAndStdDev(), see utils.go) is
+ * the raw *population* standard deviation of the individual per-iteration paired-difference
+ * values - it does not shrink with more iterations on its own, and using it directly here would
+ * overstate uncertainty by roughly sqrt(n) (e.g. ~60x at 4000 iterations) - see
+ * effectiveCalibrationSampleSize's own doc comment. Dividing by sqrt(n) here, at the point the
+ * raw value is first read, converts it into an actual standard error of the mean before it's
+ * blended - every downstream consumer (averageStatStdevs' cross-replicate combination, the UI,
+ * the significance test) then automatically gets a correctly-scaled value with no other code
+ * changes needed.
+ *
+ * Each metric's (now-corrected) standard error is an independent Monte Carlo estimate (a
+ * separate sim batch), so the blended ratios' variances are summed (not the values) before
+ * taking the square root - standard propagation of uncertainty through a linear combination.
+ * Sign is irrelevant here since variance is never negative.
  */
 export function blendMetricEpValueStdevs(
 	result: StatWeightsResult,
 	statsToWeigh: StatName[],
 	metricRatios: Partial<Record<SimMetric, number>>,
+	iterations: number,
 ): Stat[] {
 	const stats: Stat[] = [];
 	for (const statName of statsToWeigh) {
@@ -109,6 +143,7 @@ export function blendMetricEpValueStdevs(
 		const index = TbcStat[
 			tbcStatName as keyof typeof TbcStat
 		] as unknown as number;
+		const sampleSize = effectiveCalibrationSampleSize(statName, iterations);
 
 		let varianceSum = 0;
 		for (const [metric, ratio] of Object.entries(metricRatios) as [
@@ -116,9 +151,10 @@ export function blendMetricEpValueStdevs(
 			number | undefined,
 		][]) {
 			if (!ratio) continue;
-			const stdev = result[metric]?.epValuesStdev?.stats[index];
-			if (stdev == null) continue;
-			varianceSum += (ratio * stdev) ** 2;
+			const populationStdev = result[metric]?.epValuesStdev?.stats[index];
+			if (populationStdev == null) continue;
+			const standardError = populationStdev / Math.sqrt(sampleSize);
+			varianceSum += (ratio * standardError) ** 2;
 		}
 		stats.push({ name: statName, value: Math.sqrt(varianceSum), type: "flat" });
 	}
@@ -127,7 +163,9 @@ export function blendMetricEpValueStdevs(
 
 export interface CalibratedWeights {
 	optimizeStats: Stat[];
-	/** Per-stat uncertainty on `optimizeStats` - see blendMetricEpValueStdevs. */
+	/** Per-stat standard error of the mean on `optimizeStats` - see blendMetricEpValueStdevs'
+	 * own doc comment for why this is a standard error (sqrt(n)-corrected), not the sim's raw
+	 * per-iteration population stdev. */
 	stdevStats: Stat[];
 	// The gear's absolute TPS/DTPS/TMI-5 at calibration time, read off this same batch's
 	// unperturbed baseline sim (StatWeightsResult.baseline - see statweight.go's
@@ -136,6 +174,15 @@ export interface CalibratedWeights {
 	// lib.wasm.gz) - callers that need it should treat a missing value as "not yet available"
 	// rather than throwing.
 	baselineMetrics?: SimMetricsSnapshot;
+	// Pure (unblended) per-metric weight breakdowns for all three metrics, derived from the exact
+	// same calibration batches as optimizeStats/stdevStats - free, since the sim always computes
+	// EP values for tps/dtps/tmi (and dps/hps/pdeath) for every perturbed stat, regardless of
+	// which metric(s) metricRatios actually blends into optimizeStats. See
+	// computePerMetricStatWeights. Optional so existing hand-built {optimizeStats, stdevStats}
+	// test fixtures/mocks keep compiling.
+	perMetricStatWeights?: Record<SimMetric, Stat[]>;
+	/** Standard error of the mean on perMetricStatWeights - see stdevStats' own doc comment. */
+	perMetricStatWeightStdevs?: Record<SimMetric, Stat[]>;
 }
 
 export interface CalibrationBatch {
@@ -323,6 +370,38 @@ export async function runCalibrationBatches(
 	return batches;
 }
 
+const ALL_SIM_METRICS: SimMetric[] = ["tps", "dtps", "tmi"];
+
+/**
+ * Derives all three metrics' *pure* (unblended) weight breakdowns from calibration batches
+ * already fetched for some other purpose - each metric's EP values are already present in every
+ * batch's `result` regardless of what `metricRatios` a caller actually blended (see this file's
+ * header comment and blendMetricEpValues' own doc comment on why the sim always computes
+ * tps/dtps/tmi together), so this is pure post-processing with no extra sim cost. Lets a caller
+ * (e.g. the Results UI) show "what would TPS/DTPS/TMI-5 weight this gear at" simultaneously, even
+ * though only one of them (or a blend) actually drove the solve's objective.
+ */
+export function computePerMetricStatWeights(
+	batches: CalibrationBatch[],
+	statsToWeigh: StatName[],
+	iterations: number,
+): { weights: Record<SimMetric, Stat[]>; stdevs: Record<SimMetric, Stat[]> } {
+	const weights = {} as Record<SimMetric, Stat[]>;
+	const stdevs = {} as Record<SimMetric, Stat[]>;
+	for (const metric of ALL_SIM_METRICS) {
+		const ratio: Partial<Record<SimMetric, number>> = { [metric]: 1 };
+		weights[metric] = averageStats(
+			batches.map((b) => blendMetricEpValues(b.result, statsToWeigh, ratio)),
+		);
+		stdevs[metric] = averageStatStdevs(
+			batches.map((b) =>
+				blendMetricEpValueStdevs(b.result, statsToWeigh, ratio, iterations),
+			),
+		);
+	}
+	return { weights, stdevs };
+}
+
 /**
  * Calibrates and blends `metricRatios`' per-stat marginal weights (and their uncertainty) around
  * `gear` via the real sim, for every stat in `statsToWeigh` that has a translation entry.
@@ -349,6 +428,13 @@ export async function calibrateWeights(
 		.map((b) => b.baselineMetrics)
 		.filter((m): m is SimMetricsSnapshot => m != null);
 
+	const { weights: perMetricStatWeights, stdevs: perMetricStatWeightStdevs } =
+		computePerMetricStatWeights(
+			batches,
+			statsToWeigh,
+			profile.calibration.iterations,
+		);
+
 	return {
 		optimizeStats: averageStats(
 			batches.map((b) =>
@@ -357,10 +443,17 @@ export async function calibrateWeights(
 		),
 		stdevStats: averageStatStdevs(
 			batches.map((b) =>
-				blendMetricEpValueStdevs(b.result, statsToWeigh, metricRatios),
+				blendMetricEpValueStdevs(
+					b.result,
+					statsToWeigh,
+					metricRatios,
+					profile.calibration.iterations,
+				),
 			),
 		),
 		baselineMetrics: averageSimMetricsSnapshots(baselineMetricsList),
+		perMetricStatWeights,
+		perMetricStatWeightStdevs,
 	};
 }
 

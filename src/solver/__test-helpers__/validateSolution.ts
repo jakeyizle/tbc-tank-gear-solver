@@ -23,9 +23,6 @@ interface AchievedStats {
 	uncritability: number;
 	objective: number;
 	resistances: Partial<Record<string, number>>;
-	// Only meaningful when config.secondaryConstraint is set - see calculateObjectiveScore's own
-	// dot-product logic, independently recomputed here the same way `objective` is.
-	secondaryConstraintValue: number;
 }
 
 // Independently recomputes achieved stats for a solved item set the same way the app's own
@@ -78,27 +75,11 @@ export const computeAchievedStats = (
 		});
 	}
 
-	const secondaryConstraintValue = (
-		config.secondaryConstraint?.statWeights ?? []
-	).reduce(
-		(sum, stat) =>
-			sum +
-			calculateStatValue({
-				items,
-				modifierSources,
-				baseStats,
-				statName: stat.name,
-			}) *
-				stat.value,
-		0,
-	);
-
 	return {
 		avoidance,
 		uncritability,
 		objective,
 		resistances,
-		secondaryConstraintValue,
 	};
 };
 
@@ -172,18 +153,5 @@ export const validateSolution = (
 			);
 		}
 	}
-	if (config.secondaryConstraint) {
-		const { bound, kind } = config.secondaryConstraint;
-		const value = achieved.secondaryConstraintValue;
-		if (kind === "floor" && value < bound) {
-			issues.push(`secondary floor not met: achieved ${value}, bound ${bound}`);
-		}
-		if (kind === "ceiling" && value > bound) {
-			issues.push(
-				`secondary ceiling exceeded: achieved ${value}, bound ${bound}`,
-			);
-		}
-	}
-
 	return issues;
 };

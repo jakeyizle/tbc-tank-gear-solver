@@ -4,20 +4,16 @@ import {
 	TEST_RACE_ID,
 } from "#/solver/__fixtures__/testItemPool";
 import { solveConfig } from "#/solver/solveConfig";
-import type { InputItem, LPItem } from "#/solver/types";
+import type { InputItem, LPItem, StatName } from "#/solver/types";
 import { DEFAULT_SIM_CALIBRATION_PROFILE } from "#/types/SimCalibrationProfile";
 import type { TbcUiDatabase } from "./buildStatWeightsRequest";
-import {
-	calibrateWeights,
-	measureFinalSimMetrics,
-	runCalibrationBatches,
-} from "./calibrateWeights";
+import { calibrateWeights, measureFinalSimMetrics } from "./calibrateWeights";
 import {
 	absoluteValueForMetric,
-	deriveSecondaryConstraintBound,
 	exceedsHysteresisThreshold,
 	filterItemsForClass,
 	isSignificantImprovement,
+	SIM_CALIBRATION_STATS,
 	solveConfigForSimMetric,
 } from "./solveSimMetric";
 
@@ -31,7 +27,6 @@ vi.mock("./calibrateWeights", async (importOriginal) => {
 		...actual,
 		calibrateWeights: vi.fn(),
 		measureFinalSimMetrics: vi.fn(),
-		runCalibrationBatches: vi.fn(),
 	};
 });
 
@@ -389,9 +384,16 @@ describe("solveConfigForSimMetric", () => {
 		const roundOneStdev = [
 			{ name: "Stamina" as const, value: 0.02, type: "flat" as const },
 		];
+		const perMetricStatWeights = {
+			tps: [{ name: "Stamina" as const, value: 5, type: "flat" as const }],
+			dtps: [{ name: "Stamina" as const, value: 6, type: "flat" as const }],
+			tmi: roundOneStats,
+		};
 		vi.mocked(calibrateWeights).mockResolvedValueOnce({
 			optimizeStats: roundOneStats,
 			stdevStats: roundOneStdev,
+			perMetricStatWeights,
+			perMetricStatWeightStdevs: perMetricStatWeights,
 		});
 		vi.mocked(solveConfig).mockResolvedValueOnce(roundOneProposal);
 
@@ -409,9 +411,16 @@ describe("solveConfigForSimMetric", () => {
 			optimizeStats: roundOneStats,
 			stdevStats: roundOneStdev,
 		});
+		expect(result.finalPerMetricStatWeights).toEqual(perMetricStatWeights);
+		expect(result.finalPerMetricStatWeightStdevs).toEqual(perMetricStatWeights);
 	});
 
 	it("skips calibrating round 1 and uses precomputedRound1 instead when provided", async () => {
+		const perMetricStatWeights = {
+			tps: [{ name: "Stamina" as const, value: 7, type: "flat" as const }],
+			dtps: [{ name: "Stamina" as const, value: 8, type: "flat" as const }],
+			tmi: [{ name: "Stamina" as const, value: 9, type: "flat" as const }],
+		};
 		const precomputed = {
 			optimizeStats: [
 				{ name: "Stamina" as const, value: 3, type: "flat" as const },
@@ -419,6 +428,8 @@ describe("solveConfigForSimMetric", () => {
 			stdevStats: [
 				{ name: "Stamina" as const, value: 0.03, type: "flat" as const },
 			],
+			perMetricStatWeights,
+			perMetricStatWeightStdevs: perMetricStatWeights,
 		};
 		vi.mocked(solveConfig).mockResolvedValueOnce(roundOneProposal);
 
@@ -434,179 +445,93 @@ describe("solveConfigForSimMetric", () => {
 		);
 
 		expect(calibrateWeights).not.toHaveBeenCalled();
-		expect(result.round1StatWeights).toEqual(precomputed);
+		expect(result.round1StatWeights).toEqual({
+			optimizeStats: precomputed.optimizeStats,
+			stdevStats: precomputed.stdevStats,
+		});
 		expect(result.finalStatWeights).toEqual(precomputed.optimizeStats);
+		expect(result.finalPerMetricStatWeights).toEqual(perMetricStatWeights);
+		expect(result.finalPerMetricStatWeightStdevs).toEqual(perMetricStatWeights);
 	});
 
-	it("derives a per-round secondary constraint from one shared calibration batch (no extra sim call) and passes it to solveConfig", async () => {
-		// STAMINA = proto.Stat.StatStamina ordinal (common.proto) - matches calibrateWeights.test.ts's
-		// own constant. tps' epValue is unsigned/higher-is-better (stays +5); tmi's is unsigned but
-		// lower-is-better, so blendMetricEpValues flips it to -2 for the constraint vector.
-		const STAMINA = 2;
-		const tpsStats: number[] = [];
-		tpsStats[STAMINA] = 5;
-		const tmiStats: number[] = [];
-		tmiStats[STAMINA] = 2;
-		const fakeResult = {
-			tps: { epValues: { apiVersion: 0, stats: tpsStats, pseudoStats: [] } },
-			tmi: { epValues: { apiVersion: 0, stats: tmiStats, pseudoStats: [] } },
-			// biome-ignore lint/suspicious/noExplicitAny: partial fake, only the fields blendMetricEpValues reads matter
-		} as any;
-
-		vi.mocked(runCalibrationBatches).mockResolvedValueOnce([
-			{
-				result: fakeResult,
-				// current TMI-5 (8) is above the desired ceiling (5) - constraint should tighten.
-				baselineMetrics: { tps: 0, dtps: 0, tmi5: 8 },
-			},
-		]);
-		// Persistent (not Once) - the bootstrap step below now calls solveConfig a second time per
-		// round whenever a secondary constraint is active (see solveConfigForSimMetric's own
-		// comment on this), and this test only cares about the *first* call's bound.
-		vi.mocked(solveConfig).mockResolvedValue(roundOneProposal);
+	it("passes the full default stat list to calibrateWeights when enabledCalibrationStats is unset", async () => {
+		vi.mocked(calibrateWeights).mockResolvedValueOnce({
+			optimizeStats: [],
+			stdevStats: [],
+		});
+		vi.mocked(solveConfig).mockResolvedValueOnce(roundOneProposal);
 
 		await solveConfigForSimMetric(
 			[],
 			baseOptions,
-			[], // empty baseline gear - scoreGearSet's constraintScoreAtBaseline is trivially 0
+			[],
 			{ items: [], enchants: [], gems: [] },
-			{ tps: 1 },
+			{ tmi: 1 },
 			singleRoundProfile,
-			undefined,
-			undefined,
-			{ metric: "tmi", targetAbsolute: 5, kind: "ceiling" },
 		);
 
-		expect(runCalibrationBatches).toHaveBeenCalledTimes(1);
-		expect(calibrateWeights).not.toHaveBeenCalled();
+		expect(calibrateWeights).toHaveBeenCalledWith(
+			[],
+			expect.anything(),
+			SIM_CALIBRATION_STATS,
+			expect.anything(),
+			expect.anything(),
+			expect.anything(),
+		);
+	});
 
-		const passedOptions = vi.mocked(solveConfig).mock.calls[0][1];
-		// bound = constraintScoreAtBaseline(0) + sign(-1 for tmi) * (target(5) - current(8)) = 3;
-		// a real-world ceiling on a lower-is-better metric becomes a floor on the (already sign-
-		// flipped) constraintScore - see deriveSecondaryConstraintBound's own doc comment. This is
-		// the first (unmargined) call - since the fixture's baseline gear is empty and the round's
-		// own proposal (`roundOneProposal`, mocked identically every call above) never changes
-		// Stamina relative to that baseline, the bootstrap margin computed from that (non-)delta is
-		// exactly 0 too, so the second call ends up with this same bound - see the dedicated
-		// bootstrap tests below for a case where the delta (and therefore the margin) is nonzero.
-		expect(passedOptions.secondaryConstraint).toEqual({
-			statWeights: expect.arrayContaining([
-				{ name: "Stamina", value: -2, type: "flat" },
-			]),
-			bound: 3,
-			kind: "floor",
+	it("passes only the enabled subset to calibrateWeights when enabledCalibrationStats is set", async () => {
+		vi.mocked(calibrateWeights).mockResolvedValueOnce({
+			optimizeStats: [],
+			stdevStats: [],
 		});
-	});
+		vi.mocked(solveConfig).mockResolvedValueOnce(roundOneProposal);
 
-	it("bootstraps a margin from the round's real proposal and re-solves once with a tighter bound", async () => {
-		const STAMINA = 2;
-		const tpsStats: number[] = [];
-		tpsStats[STAMINA] = 5;
-		const tmiStats: number[] = [];
-		tmiStats[STAMINA] = 2;
-		const tmiStdevStats: number[] = [];
-		tmiStdevStats[STAMINA] = 0.5;
-		const fakeResult = {
-			tps: { epValues: { apiVersion: 0, stats: tpsStats, pseudoStats: [] } },
-			tmi: {
-				epValues: { apiVersion: 0, stats: tmiStats, pseudoStats: [] },
-				epValuesStdev: {
-					apiVersion: 0,
-					stats: tmiStdevStats,
-					pseudoStats: [],
-				},
-			},
-			// biome-ignore lint/suspicious/noExplicitAny: partial fake, only the fields blendMetricEpValues/Stdevs read matter
-		} as any;
-
-		vi.mocked(runCalibrationBatches).mockResolvedValueOnce([
-			{
-				result: fakeResult,
-				baselineMetrics: { tps: 0, dtps: 0, tmi5: 8 },
-			},
-		]);
-		// First call proposes real item "34400" (91 Stamina - see isSignificantImprovement's own
-		// fixtures above), a genuine ~51-point jump from the 40-Stamina baseline gear below - a
-		// real, nonzero delta the bootstrap step should pick up. The second call's own return
-		// value doesn't matter for this test beyond confirming it's what the function reports.
-		vi.mocked(solveConfig)
-			.mockResolvedValueOnce(roundTwoProposal)
-			.mockResolvedValueOnce(roundOneProposal);
-
-		const result = await solveConfigForSimMetric(
+		await solveConfigForSimMetric(
 			[],
-			baseOptions,
-			[{ id: "30007", enchant: { id: "" }, gemSlots: [] }], // 40 Stamina baseline
+			{ ...baseOptions, enabledCalibrationStats: ["Stamina", "Armor"] },
+			[],
 			{ items: [], enchants: [], gems: [] },
-			{ tps: 1 },
+			{ tmi: 1 },
 			singleRoundProfile,
-			undefined,
-			undefined,
-			{ metric: "tmi", targetAbsolute: 5, kind: "ceiling" },
 		);
 
-		expect(solveConfig).toHaveBeenCalledTimes(2);
-		const firstBound =
-			vi.mocked(solveConfig).mock.calls[0][1].secondaryConstraint?.bound;
-		const secondBound =
-			vi.mocked(solveConfig).mock.calls[1][1].secondaryConstraint?.bound;
-		expect(firstBound).toBeDefined();
-		// LP-facing kind here is "floor" (see the test above) - a nonzero margin makes a floor
-		// stricter by moving it up.
-		expect(secondBound).toBeGreaterThan(firstBound as number);
-		// The function's result reflects the second (margined) solveConfig call, not the first.
-		expect(result.items).toEqual(roundOneProposal);
+		expect(calibrateWeights).toHaveBeenCalledWith(
+			[],
+			expect.anything(),
+			["Stamina", "Armor"],
+			expect.anything(),
+			expect.anything(),
+			expect.anything(),
+		);
 	});
 
-	it("falls back to the unmargined proposal if the margined re-solve is infeasible", async () => {
-		const STAMINA = 2;
-		const tpsStats: number[] = [];
-		tpsStats[STAMINA] = 5;
-		const tmiStats: number[] = [];
-		tmiStats[STAMINA] = 2;
-		const tmiStdevStats: number[] = [];
-		tmiStdevStats[STAMINA] = 0.5;
-		const fakeResult = {
-			tps: { epValues: { apiVersion: 0, stats: tpsStats, pseudoStats: [] } },
-			tmi: {
-				epValues: { apiVersion: 0, stats: tmiStats, pseudoStats: [] },
-				epValuesStdev: {
-					apiVersion: 0,
-					stats: tmiStdevStats,
-					pseudoStats: [],
-				},
-			},
-			// biome-ignore lint/suspicious/noExplicitAny: partial fake, only the fields blendMetricEpValues/Stdevs read matter
-		} as any;
+	it("falls back to the full default when every enabled entry is stale/invalid", async () => {
+		vi.mocked(calibrateWeights).mockResolvedValueOnce({
+			optimizeStats: [],
+			stdevStats: [],
+		});
+		vi.mocked(solveConfig).mockResolvedValueOnce(roundOneProposal);
 
-		vi.mocked(runCalibrationBatches).mockResolvedValueOnce([
-			{
-				result: fakeResult,
-				baselineMetrics: { tps: 0, dtps: 0, tmi5: 8 },
-			},
-		]);
-		vi.mocked(solveConfig)
-			.mockResolvedValueOnce(roundTwoProposal)
-			.mockRejectedValueOnce(
-				new Error("No gear combination satisfies: secondary floor of 999."),
-			);
-
-		const result = await solveConfigForSimMetric(
+		await solveConfigForSimMetric(
 			[],
-			baseOptions,
-			[{ id: "30007", enchant: { id: "" }, gemSlots: [] }],
+			// "Mana" has no STAT_NAME_TO_TBC_STAT translation entry - simulates a stale config
+			// saved before a stat was removed from the translation table.
+			{ ...baseOptions, enabledCalibrationStats: ["Mana" as StatName] },
+			[],
 			{ items: [], enchants: [], gems: [] },
-			{ tps: 1 },
+			{ tmi: 1 },
 			singleRoundProfile,
-			undefined,
-			undefined,
-			{ metric: "tmi", targetAbsolute: 5, kind: "ceiling" },
 		);
 
-		expect(solveConfig).toHaveBeenCalledTimes(2);
-		// The margined re-solve rejected - the round keeps the first (unmargined) proposal rather
-		// than the whole solve throwing.
-		expect(result.items).toEqual(roundTwoProposal);
+		expect(calibrateWeights).toHaveBeenCalledWith(
+			[],
+			expect.anything(),
+			SIM_CALIBRATION_STATS,
+			expect.anything(),
+			expect.anything(),
+			expect.anything(),
+		);
 	});
 });
 
@@ -620,113 +545,5 @@ describe("absoluteValueForMetric", () => {
 
 	it("maps SimMetric's 'tmi' to the snapshot's 'tmi5' field", () => {
 		expect(absoluteValueForMetric(snapshot, "tmi")).toBe(12.5);
-	});
-});
-
-describe("deriveSecondaryConstraintBound", () => {
-	const stats = [{ name: "Stamina" as const, value: 4, type: "flat" as const }];
-
-	it("keeps the user-facing kind unchanged for a higher-is-better metric (tps)", () => {
-		// ceiling: tps(gear) <= target => constraintScore(gear) <= target - current + baseline
-		const result = deriveSecondaryConstraintBound(
-			{ metric: "tps", targetAbsolute: 100, kind: "ceiling" },
-			stats,
-			/* currentAbsolute */ 80,
-			/* constraintScoreAtBaseline */ 10,
-		);
-		expect(result).toEqual({
-			statWeights: stats,
-			bound: 10 + (100 - 80),
-			kind: "ceiling",
-		});
-	});
-
-	it("flips the LP-facing kind for a lower-is-better metric (tmi), since its vector's sign is already inverted", () => {
-		// user wants a ceiling on real TMI - that's a floor on the sign-flipped constraintScore.
-		const result = deriveSecondaryConstraintBound(
-			{ metric: "tmi", targetAbsolute: 5, kind: "ceiling" },
-			stats,
-			/* currentAbsolute */ 8,
-			/* constraintScoreAtBaseline */ 0,
-		);
-		expect(result).toEqual({
-			statWeights: stats,
-			bound: 0 + -1 * (5 - 8),
-			kind: "floor",
-		});
-	});
-
-	it("flips the LP-facing kind the other way for a floor on a lower-is-better metric", () => {
-		const result = deriveSecondaryConstraintBound(
-			{ metric: "dtps", targetAbsolute: 200, kind: "floor" },
-			stats,
-			/* currentAbsolute */ 150,
-			/* constraintScoreAtBaseline */ 20,
-		);
-		expect(result).toEqual({
-			statWeights: stats,
-			bound: 20 + -1 * (200 - 150),
-			kind: "ceiling",
-		});
-	});
-
-	it("defaults to no margin when constraintMarginScore is omitted (old, unmargined behavior)", () => {
-		const withDefault = deriveSecondaryConstraintBound(
-			{ metric: "tps", targetAbsolute: 100, kind: "ceiling" },
-			stats,
-			80,
-			10,
-		);
-		const withExplicitZero = deriveSecondaryConstraintBound(
-			{ metric: "tps", targetAbsolute: 100, kind: "ceiling" },
-			stats,
-			80,
-			10,
-			0,
-		);
-		expect(withDefault).toEqual(withExplicitZero);
-		expect(withDefault.bound).toBe(10 + (100 - 80));
-	});
-
-	it("tightens a ceiling's bound downward by k * constraintMarginScore", () => {
-		const result = deriveSecondaryConstraintBound(
-			{ metric: "tps", targetAbsolute: 100, kind: "ceiling" },
-			stats,
-			80,
-			10,
-			/* constraintMarginScore */ 5,
-			/* k */ 2,
-		);
-		// rawBound = 10 + (100 - 80) = 30; ceiling moves down by k * margin = 2 * 5 = 10.
-		expect(result.bound).toBe(30 - 10);
-		expect(result.kind).toBe("ceiling");
-	});
-
-	it("tightens a floor's bound upward by k * constraintMarginScore", () => {
-		const result = deriveSecondaryConstraintBound(
-			{ metric: "dtps", targetAbsolute: 200, kind: "floor" },
-			stats,
-			150,
-			20,
-			/* constraintMarginScore */ 5,
-			/* k */ 2,
-		);
-		// rawBound = 20 + -1 * (200 - 150) = -30; the metric's lower-is-better sign flips this to
-		// an LP-facing "ceiling" (see the test above), so it's the ceiling branch that fires here
-		// too - moving the bound down, i.e. tightening the user-facing floor on dtps.
-		expect(result.kind).toBe("ceiling");
-		expect(result.bound).toBe(-30 - 10);
-	});
-
-	it("a zero k reproduces the unmargined bound even with a nonzero constraintMarginScore", () => {
-		const result = deriveSecondaryConstraintBound(
-			{ metric: "tps", targetAbsolute: 100, kind: "ceiling" },
-			stats,
-			80,
-			10,
-			/* constraintMarginScore */ 1000,
-			/* k */ 0,
-		);
-		expect(result.bound).toBe(30);
 	});
 });

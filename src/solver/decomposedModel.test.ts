@@ -36,7 +36,6 @@ const makeDecomposableItem = (
 		objectiveScore: 0,
 		uncritabilityScore: 0,
 		resistanceScores: {},
-		constraintScore: 0,
 	},
 	enchantCandidates: [],
 	sockets: socketIndexesWithCandidates.map((socketIndex) => ({
@@ -51,7 +50,6 @@ const makeDecomposableItem = (
 					objectiveScore: 0,
 					uncritabilityScore: 0,
 					resistanceScores: {},
-					constraintScore: 0,
 				},
 			},
 		],

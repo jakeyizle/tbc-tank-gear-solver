@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { CONSUMABLES } from "#/data/consumables";
 import { loadAppState } from "#/helpers/persistence";
+import { SIM_CALIBRATION_STAT_NAMES } from "#/sim/statTranslation";
 import type { ResistanceFloor, Stat } from "#/solver/types";
 import {
 	createEmptyConfig,
@@ -9,31 +10,48 @@ import {
 
 const ALL_CONSUMABLE_IDS = CONSUMABLES.map((consumable) => consumable.id);
 
-// Migrates configs saved before the three exclusive TPS/DTPS/TMI-5 sim modes were replaced by
-// one "Weighted Sim Metrics" mode - first with a {tps, dtps, tmi5} ratio blend, then with a
-// single 0 (Survivability) .. 1 (Threat) balance (see SimBalanceSlider.tsx). An old "Minimize
-// TMI-5" config becomes balance: 0, with no behavior change; DTPS doesn't have its own axis on
-// the new slider (it's largely redundant with TMI-5 for a tank - see docs/plans/sim-backed-
-// objectives.md), so an old "Minimize DTPS" config also lands on the Survivability end.
-const LEGACY_SIM_MODE_BALANCE: Partial<Record<string, number>> = {
-	tps: 1,
-	dtps: 0,
-	tmi5: 0,
-};
-
-// A config saved under the even-older {tps, dtps, tmi5} ratio blend doesn't have a single
-// principled conversion to a balance value - those ratios never had a comparable scale to begin
-// with (see docs/plans/sim-backed-objectives.md's rejection of that exact mechanism, and this
-// session's investigation into why). This recovers the pure-single-metric cases exactly and
-// falls back to a neutral midpoint for any genuinely-mixed old ratio.
-function legacyRatioToBalance(ratios: {
-	tps: number;
-	dtps: number;
-	tmi5: number;
-}): number {
-	if (ratios.tps > 0 && ratios.dtps === 0 && ratios.tmi5 === 0) return 1;
-	if (ratios.tps === 0 && (ratios.dtps > 0 || ratios.tmi5 > 0)) return 0;
-	return 0.5;
+// Migrates configs saved under an earlier multi-metric sim objective mechanism - three exclusive
+// TPS/DTPS/TMI-5 modes, then a {tps, dtps, tmi5} ratio blend, then a single Threat<->
+// Survivability balance slider (see docs/plans/sim-backed-objectives.md) - onto today's modes,
+// which include a real "balanced" mode again (a plain weighted blend - see
+// calibrateWeights.ts's metricRatiosForBalance). A config already saved under the old balance
+// slider (`mode === "simWeighted"`) maps directly onto "balanced", carrying its `balance`/
+// `survivabilityMetric` across unchanged, since that's the most recently-real feature being
+// migrated. The older `{tps,dtps,tmi5}` ratio-blend format predates even the balance slider and
+// falls back to picking whichever single metric it weighted most heavily - not worth mapping
+// onto "balanced" precisely for a format this obsolete.
+function legacyConfigPatch(
+	c: SolverConfiguration & {
+		simMetricWeights?: { tps: number; dtps: number; tmi5: number };
+		simBalance?: { balance: number };
+		survivabilityMetric?: "tmi" | "dtps";
+	},
+): Partial<SolverConfiguration> {
+	const mode = c.objectiveMode as string | undefined;
+	if (
+		mode === "tps" ||
+		mode === "dtps" ||
+		mode === "tmi" ||
+		mode === "balanced" ||
+		mode === "ehp" ||
+		mode === "stats"
+	) {
+		return { objectiveMode: mode };
+	}
+	if (mode === "tmi5") return { objectiveMode: "tmi" };
+	if (c.simMetricWeights) {
+		const { tps, dtps, tmi5 } = c.simMetricWeights;
+		if (tps >= dtps && tps >= tmi5) return { objectiveMode: "tps" };
+		return { objectiveMode: dtps >= tmi5 ? "dtps" : "tmi" };
+	}
+	if (mode === "simWeighted" && c.simBalance) {
+		return {
+			objectiveMode: "balanced",
+			balance: c.simBalance.balance,
+			survivabilityMetric: c.survivabilityMetric === "dtps" ? "dtps" : "tmi",
+		};
+	}
+	return { objectiveMode: "stats" };
 }
 
 export function useSolverConfigs() {
@@ -41,31 +59,16 @@ export function useSolverConfigs() {
 
 	const [configs, setConfigs] = useState<SolverConfiguration[]>(() =>
 		(_saved?.configs ?? [createEmptyConfig("default", "Default Config")]).map(
-			(c) => {
-				const legacyModeBalance =
-					LEGACY_SIM_MODE_BALANCE[c.objectiveMode as string];
-				const legacyRatios = (
-					c as unknown as {
-						simMetricWeights?: { tps: number; dtps: number; tmi5: number };
-					}
-				).simMetricWeights;
-				return {
-					...c,
-					resistanceFloors: c.resistanceFloors ?? [],
-					enabledConsumableIds: c.enabledConsumableIds ?? ALL_CONSUMABLE_IDS,
-					objectiveMode:
-						legacyModeBalance !== undefined || legacyRatios
-							? "simWeighted"
-							: (c.objectiveMode ?? "stats"),
-					simBalance:
-						c.simBalance ??
-						(legacyRatios
-							? { balance: legacyRatioToBalance(legacyRatios) }
-							: { balance: legacyModeBalance ?? 0.5 }),
-					// Old saves before this feature existed only ever meant TMI-5 by "Survivability."
-					survivabilityMetric: c.survivabilityMetric ?? "tmi",
-				};
-			},
+			(c) => ({
+				...c,
+				resistanceFloors: c.resistanceFloors ?? [],
+				enabledConsumableIds: c.enabledConsumableIds ?? ALL_CONSUMABLE_IDS,
+				balance: c.balance ?? 0.5,
+				survivabilityMetric: c.survivabilityMetric ?? "tmi",
+				enabledCalibrationStats:
+					c.enabledCalibrationStats ?? SIM_CALIBRATION_STAT_NAMES,
+				...legacyConfigPatch(c),
+			}),
 		),
 	);
 	const [activeConfigId, setActiveConfigId] = useState<string>(

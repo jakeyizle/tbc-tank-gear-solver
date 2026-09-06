@@ -5,58 +5,26 @@ import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { useEffect, useState } from "react";
-import type {
-	BalanceEndpoint,
-	SurvivabilityMetric,
-} from "#/sim/solveBalancedSimMetric";
-import { absoluteValueForMetric } from "#/sim/solveSimMetric";
-import { monoFontFamily } from "#/theme";
 
 interface SimBalanceSliderProps {
 	balance: number;
 	onChange: (balance: number) => void;
-	survivabilityMetric: SurvivabilityMetric;
-	onChangeSurvivabilityMetric: (metric: SurvivabilityMetric) => void;
-	// Only available once a "Weighted Sim Metrics" solve has actually run - see
-	// SolveResult.simBalanceEndpoints. Undefined before the first solve, so the slider itself is
-	// always usable; the anchor readout just doesn't appear until there's a real solve to anchor
-	// it to.
-	endpoints?: { threat: BalanceEndpoint; survival: BalanceEndpoint };
-}
-
-const SURVIVABILITY_METRIC_LABELS: Record<SurvivabilityMetric, string> = {
-	tmi: "TMI-5",
-	dtps: "DTPS",
-};
-
-function formatAnchor(
-	endpoint: BalanceEndpoint,
-	survivabilityMetric: SurvivabilityMetric,
-): string {
-	const { tps } = endpoint.simMetrics;
-	const survivalValue = absoluteValueForMetric(
-		endpoint.simMetrics,
-		survivabilityMetric,
-	);
-	return `${tps.toLocaleString(undefined, { maximumFractionDigits: 0 })} TPS / ${survivalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${SURVIVABILITY_METRIC_LABELS[survivabilityMetric]}`;
+	survivabilityMetric: "tmi" | "dtps";
+	onChangeSurvivabilityMetric: (metric: "tmi" | "dtps") => void;
 }
 
 /**
- * A single 0 (Survivability) .. 1 (Threat) dial for the "Weighted Sim Metrics" objective mode -
- * replaced an earlier {tps, dtps, tmi5} ratio entry (SimMetricWeightsEntry.tsx) that had no
- * principled interpretation, since different metrics' calibrated weights live on incomparable
- * scales (see docs/plans/sim-backed-objectives.md's rejection of exactly that "weighted blend"
- * mechanism). This slider is implemented underneath as an epsilon-constraint anchored to two
- * real, sim-verified endpoints (see solveBalancedSimMetric.ts) rather than a raw threshold the
- * user would have no intuition for - the anchor readout below shows those two real endpoints once
- * a solve has produced them, so a slider position is never a bare, uninterpretable number.
+ * A single 0 (Survivability) .. 1 (Threat) dial for the "balanced" objective mode - a plain
+ * weighted blend of TPS against whichever metric `survivabilityMetric` names (see
+ * calibrateWeights.ts's metricRatiosForBalance), not an epsilon-constraint anchored to real
+ * endpoint solves like an earlier version of this component - so there's no endpoint anchor
+ * readout here, just the dial itself and the metric choice.
  */
 export default function SimBalanceSlider({
 	balance,
 	onChange,
 	survivabilityMetric,
 	onChangeSurvivabilityMetric,
-	endpoints,
 }: SimBalanceSliderProps) {
 	// Local, purely-visual drag position - committing every tick straight to `onChange` round-
 	// trips through the full config-list state on every pixel of drag (updateConfig -> setConfigs
@@ -93,7 +61,7 @@ export default function SimBalanceSlider({
 						exclusive
 						value={survivabilityMetric}
 						onChange={(_e, value) =>
-							value && onChangeSurvivabilityMetric(value as SurvivabilityMetric)
+							value && onChangeSurvivabilityMetric(value as "tmi" | "dtps")
 						}
 					>
 						<ToggleButton value="tmi" sx={{ px: 1, py: 0.25, fontSize: 11 }}>
@@ -133,33 +101,6 @@ export default function SimBalanceSlider({
 					Threat
 				</Typography>
 			</Box>
-
-			{endpoints && (
-				<Box
-					sx={{
-						display: "flex",
-						justifyContent: "space-between",
-						gap: 2,
-						px: 0.5,
-					}}
-				>
-					<Typography
-						variant="caption"
-						color="text.disabled"
-						sx={{ fontFamily: monoFontFamily }}
-					>
-						100% Survivability:{" "}
-						{formatAnchor(endpoints.survival, survivabilityMetric)}
-					</Typography>
-					<Typography
-						variant="caption"
-						color="text.disabled"
-						sx={{ fontFamily: monoFontFamily }}
-					>
-						100% Threat: {formatAnchor(endpoints.threat, survivabilityMetric)}
-					</Typography>
-				</Box>
-			)}
 		</Box>
 	);
 }
