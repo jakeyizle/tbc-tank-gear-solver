@@ -43,10 +43,20 @@ export interface CalibrationProgress {
 }
 
 /**
- * Blends one or more metrics' calibrated `epValues` (per-stat weight already normalized
- * against a reference stat - see statweight.go's calcEpResults - so different metrics' numbers
- * are comparable before summing) into a single `Stat[]` weight vector, one entry per
- * `statsToWeigh` that has a translation entry (see statTranslation.ts).
+ * Blends one or more metrics' calibrated `epValues` into a single `Stat[]` weight vector, one
+ * entry per `statsToWeigh` that has a translation entry (see statTranslation.ts).
+ *
+ * IMPORTANT: each metric's `epValue` is normalized against *its own* reference stat (Spell
+ * Power for tps; Armor, hardcoded Go-side, for dtps/tmi/pdeath - see statweight.go's
+ * calcEpResults) - two completely different physical quantities with very different intrinsic
+ * magnitudes (real sim output: tmi/dtps epValues routinely run 5-40x larger than tps epValues
+ * for the same stat). That makes different metrics' numbers comparable *in sign* (a bigger
+ * epValue is always better - see below) but NOT in scale - summing a multi-metric `metricRatios`
+ * directly here, unadjusted, does not distribute influence in proportion to the given ratios (a
+ * caller wanting a meaningful multi-metric blend should normalize each metric's vector to a
+ * common scale first - see blendNormalizedPerMetricWeights - rather than pass a multi-metric
+ * `metricRatios` straight into this function). This function itself is still exactly right for
+ * a single-metric ratio (e.g. `{tmi: 1}`), which is its only caller today (computePerMetricStatWeights).
  *
  * No sign flip is applied for a lower-is-better metric (dtps/tmi) - `epValue` is already a
  * "bigger is better" ratio by construction: it's the stat's raw slope against the metric,
@@ -93,12 +103,12 @@ export function blendMetricEpValues(
 /**
  * Builds the metric ratio for the "balance Threat/Survivability" objective mode: a plain
  * weighted blend of TPS against whichever metric backs "Survivability" - `balance` (clamped to
- * [0,1]) is the TPS share, `1 - balance` goes to `survivabilityMetric`. Feeding this straight
- * into `blendMetricEpValues`/`calibrateWeights` reproduces a pure `{tps: 1}` solve at
- * balance=1 and a pure `{[survivabilityMetric]: 1}` solve at balance=0, with a smooth blend in
- * between - no endpoint solves or LP constraint needed, since both metrics already share a
- * common, already-correctly-signed "bigger EP is better" scale (see blendMetricEpValues' own
- * doc comment).
+ * [0,1]) is the TPS share, `1 - balance` goes to `survivabilityMetric`. Feeding this into
+ * `calibrateWeights` (which blends via blendNormalizedPerMetricWeights, not blendMetricEpValues
+ * directly - see that function's own doc comment on why a raw multi-metric blend doesn't
+ * distribute influence proportionally) reproduces a pure `{tps: 1}` solve at balance=1 and a
+ * pure `{[survivabilityMetric]: 1}` solve at balance=0, with a smooth blend in between - no
+ * endpoint solves or LP constraint needed.
  */
 export function metricRatiosForBalance(
 	balance: number,
@@ -403,6 +413,103 @@ export function computePerMetricStatWeights(
 }
 
 /**
+ * Rescales `stats` to a unit L2 norm (`sqrt(sum of value^2)` over the given stats), returning
+ * both the normalized vector and the `scale` divided out - callers that also need to rescale a
+ * *dependent* vector (e.g. this stat's standard errors) by the exact same factor should reuse
+ * `scale` rather than recomputing a norm of their own (see blendNormalizedPerMetricWeights).
+ *
+ * An all-zero input (e.g. a metric whose reference stat itself calibrated to exactly 0) returns
+ * unchanged with `scale = 1` rather than dividing by zero - a no-op contribution to any blend
+ * either way, since every value is already 0.
+ */
+export function normalizeStatVector(stats: Stat[]): {
+	normalized: Stat[];
+	scale: number;
+} {
+	const norm = Math.sqrt(stats.reduce((sum, stat) => sum + stat.value ** 2, 0));
+	if (norm === 0) return { normalized: stats, scale: 1 };
+	return {
+		normalized: stats.map((stat) => ({ ...stat, value: stat.value / norm })),
+		scale: norm,
+	};
+}
+
+/**
+ * Blends per-metric weight vectors (and their standard errors) that have already been rescaled
+ * to a common unit-norm scale, fixing the "balance slider" bug where a raw `ratio * epValue` sum
+ * (the old approach) let whichever metric happens to have larger-magnitude EP values dominate
+ * regardless of the user's chosen ratio - see this session's investigation: TPS epValues
+ * normalize against Spell Power's own slope, DTPS/TMI epValues normalize against Armor's, two
+ * unrelated quantities whose magnitudes differ by 5-40x in practice, so a "50/50" raw blend was
+ * really ~90%+ dominated by whichever metric had the larger natural scale.
+ *
+ * Normalizing each metric's vector to a common (unit L2 norm) scale before applying the ratio
+ * means "50%" means "each metric's own internal stat-preference pattern gets equal total say" -
+ * a stable, principled interpretation, though still not a literal shared real-world unit (there
+ * isn't one between threat and a mitigation index).
+ *
+ * The same per-metric `scale` used to normalize that metric's weights is also divided into its
+ * stdevs (scaling a random variable by a constant `k` scales its stdev by `k`, so dividing both
+ * by the same `scale` keeps them consistent) - this is what keeps isSignificantImprovement's
+ * delta/stdevDelta ratio meaningful after normalization, not just the point estimate.
+ *
+ * For a pure single-metric ratio (e.g. `{tps: 1}`, used by "Maximize TPS" etc., not just
+ * "balanced"), this reduces to rescaling that one metric's vector by its own norm - a uniform
+ * positive scalar multiply of the whole vector, which does not change which gear an LP
+ * maximization picks (GLP_MAX is invariant to positive rescaling of its objective coefficients),
+ * so single-metric-mode item selection is unaffected by this function existing.
+ */
+export function blendNormalizedPerMetricWeights(
+	perMetricWeights: Record<SimMetric, Stat[]>,
+	perMetricStdevs: Record<SimMetric, Stat[]>,
+	metricRatios: Partial<Record<SimMetric, number>>,
+): { weights: Stat[]; stdevs: Stat[] } {
+	const weightSum = new Map<string, number>();
+	const varianceSum = new Map<string, number>();
+	const statOrder: StatName[] = [];
+
+	for (const [metric, ratio] of Object.entries(metricRatios) as [
+		SimMetric,
+		number | undefined,
+	][]) {
+		if (!ratio) continue;
+		const rawWeights = perMetricWeights[metric];
+		const rawStdevs = perMetricStdevs[metric];
+		if (!rawWeights) continue;
+		const { normalized: normalizedWeights, scale } =
+			normalizeStatVector(rawWeights);
+		const stdevByName = new Map(
+			(rawStdevs ?? []).map((s) => [s.name, s.value]),
+		);
+
+		for (const stat of normalizedWeights) {
+			if (!weightSum.has(stat.name)) statOrder.push(stat.name);
+			weightSum.set(
+				stat.name,
+				(weightSum.get(stat.name) ?? 0) + ratio * stat.value,
+			);
+
+			const normalizedStdev = (stdevByName.get(stat.name) ?? 0) / scale;
+			const term = ratio * normalizedStdev;
+			varianceSum.set(stat.name, (varianceSum.get(stat.name) ?? 0) + term ** 2);
+		}
+	}
+
+	return {
+		weights: statOrder.map((name) => ({
+			name,
+			value: weightSum.get(name) ?? 0,
+			type: "flat" as const,
+		})),
+		stdevs: statOrder.map((name) => ({
+			name,
+			value: Math.sqrt(varianceSum.get(name) ?? 0),
+			type: "flat" as const,
+		})),
+	};
+}
+
+/**
  * Calibrates and blends `metricRatios`' per-stat marginal weights (and their uncertainty) around
  * `gear` via the real sim, for every stat in `statsToWeigh` that has a translation entry.
  * Averages over `profile.calibration.replicates` independent batches (see
@@ -435,22 +542,16 @@ export async function calibrateWeights(
 			profile.calibration.iterations,
 		);
 
+	const { weights: optimizeStats, stdevs: stdevStats } =
+		blendNormalizedPerMetricWeights(
+			perMetricStatWeights,
+			perMetricStatWeightStdevs,
+			metricRatios,
+		);
+
 	return {
-		optimizeStats: averageStats(
-			batches.map((b) =>
-				blendMetricEpValues(b.result, statsToWeigh, metricRatios),
-			),
-		),
-		stdevStats: averageStatStdevs(
-			batches.map((b) =>
-				blendMetricEpValueStdevs(
-					b.result,
-					statsToWeigh,
-					metricRatios,
-					profile.calibration.iterations,
-				),
-			),
-		),
+		optimizeStats,
+		stdevStats,
 		baselineMetrics: averageSimMetricsSnapshots(baselineMetricsList),
 		perMetricStatWeights,
 		perMetricStatWeightStdevs,

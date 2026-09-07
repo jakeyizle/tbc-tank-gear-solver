@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
+import type { Stat, StatName } from "#/solver/types";
 import {
 	averageSimMetricsSnapshots,
 	averageStatStdevs,
 	averageStats,
 	blendMetricEpValueStdevs,
 	blendMetricEpValues,
+	blendNormalizedPerMetricWeights,
 	type CalibrationBatch,
 	computePerMetricStatWeights,
 	extractSimMetrics,
 	metricRatiosForBalance,
+	normalizeStatVector,
+	type SimMetric,
 } from "./calibrateWeights";
 import type { RaidSimResult, StatWeightsResult } from "./proto/api.js";
 
@@ -280,6 +284,147 @@ describe("computePerMetricStatWeights", () => {
 		// averageStatStdevs divides the mean stdev by sqrt(N), not a plain average - see that
 		// function's own tests: mean(2, 4) = 3, N = 2 -> 3 / sqrt(2).
 		expect(stdevs.tps[0].value).toBeCloseTo(3 / Math.sqrt(2));
+	});
+});
+
+function fakeStats(entries: [StatName, number][]): Stat[] {
+	return entries.map(([name, value]) => ({ name, value, type: "flat" }));
+}
+
+function fakePerMetric(
+	entries: Partial<Record<SimMetric, [StatName, number][]>>,
+): Record<SimMetric, Stat[]> {
+	return Object.fromEntries(
+		Object.entries(entries).map(([metric, stats]) => [
+			metric,
+			fakeStats(stats as [StatName, number][]),
+		]),
+	) as Record<SimMetric, Stat[]>;
+}
+
+describe("normalizeStatVector", () => {
+	it("rescales a vector to unit L2 norm", () => {
+		const { normalized, scale } = normalizeStatVector(
+			fakeStats([
+				["Strength", 3],
+				["Stamina", 4],
+			]),
+		);
+
+		// sqrt(3^2 + 4^2) = 5.
+		expect(scale).toBe(5);
+		expect(normalized).toEqual(
+			fakeStats([
+				["Strength", 0.6],
+				["Stamina", 0.8],
+			]),
+		);
+	});
+
+	it("returns an all-zero vector unchanged with scale 1, not NaN", () => {
+		const stats = fakeStats([["Strength", 0]]);
+		expect(normalizeStatVector(stats)).toEqual({
+			normalized: stats,
+			scale: 1,
+		});
+	});
+});
+
+describe("blendNormalizedPerMetricWeights", () => {
+	it("a pure single-metric ratio returns that metric's vector scaled to a unit vector, preserving relative proportions", () => {
+		const weights = fakePerMetric({
+			tps: [
+				["Strength", 3],
+				["Stamina", 4],
+			],
+		});
+		const stdevs = fakePerMetric({
+			tps: [
+				["Strength", 0.3],
+				["Stamina", 0.4],
+			],
+		});
+
+		const { weights: blended } = blendNormalizedPerMetricWeights(
+			weights,
+			stdevs,
+			{
+				tps: 1,
+			},
+		);
+
+		// Same 3:4 ratio as the raw input, just rescaled to a unit vector (magnitude 1) - the LP
+		// picks the same optimal item set under any uniform positive rescale of its objective, so
+		// single-metric-mode item selection is unaffected by this normalization.
+		expect(blended.find((s) => s.name === "Strength")?.value).toBeCloseTo(0.6);
+		expect(blended.find((s) => s.name === "Stamina")?.value).toBeCloseTo(0.8);
+	});
+
+	it("a 50/50 blend gives both metrics comparable influence even when their raw magnitudes differ by 20x", () => {
+		// Mirrors the reported bug: tmi's raw epValues are much larger in magnitude than tps's
+		// (tmi normalizes against Armor's slope, tps against Spell Power's - two unrelated
+		// quantities). A naive raw blend would be dominated almost entirely by tmi; normalizing
+		// each metric to a unit vector first should give each an equal-magnitude say instead.
+		const weights = fakePerMetric({
+			tps: [["Dodge", 0.5]],
+			tmi: [["Dodge", 10]],
+		});
+		const stdevs = fakePerMetric({
+			tps: [["Dodge", 0]],
+			tmi: [["Dodge", 0]],
+		});
+
+		const { weights: blended } = blendNormalizedPerMetricWeights(
+			weights,
+			stdevs,
+			{
+				tps: 0.5,
+				tmi: 0.5,
+			},
+		);
+
+		// Each metric's single-stat vector normalizes to exactly 1 (its own norm), so a 50/50
+		// blend should land at 0.5 + 0.5 = 1, not be dominated by tmi's larger raw magnitude.
+		expect(blended[0].value).toBeCloseTo(1);
+	});
+
+	it("scales stdevs by the same per-metric factor used to normalize that metric's weights", () => {
+		const weights = fakePerMetric({ tps: [["Dodge", 4]] }); // norm = 4
+		const stdevs = fakePerMetric({ tps: [["Dodge", 2]] });
+
+		const { stdevs: blended } = blendNormalizedPerMetricWeights(
+			weights,
+			stdevs,
+			{
+				tps: 1,
+			},
+		);
+
+		// stdev 2 / scale 4 = 0.5.
+		expect(blended[0].value).toBeCloseTo(0.5);
+	});
+
+	it("combines multiple metrics' normalized standard errors by summing variances", () => {
+		const weights = fakePerMetric({
+			tps: [["Dodge", 1]], // norm = 1
+			tmi: [["Dodge", 1]], // norm = 1
+		});
+		const stdevs = fakePerMetric({
+			tps: [["Dodge", 3]],
+			tmi: [["Dodge", 4]],
+		});
+
+		const { stdevs: blended } = blendNormalizedPerMetricWeights(
+			weights,
+			stdevs,
+			{
+				tps: 1,
+				tmi: 1,
+			},
+		);
+
+		// sqrt(3^2 + 4^2) = 5, the classic 3-4-5 triangle.
+		expect(blended[0].value).toBeCloseTo(5);
 	});
 });
 
