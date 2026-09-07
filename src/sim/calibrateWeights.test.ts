@@ -1,5 +1,35 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Stat, StatName } from "#/solver/types";
+import { DEFAULT_SIM_CALIBRATION_PROFILE } from "#/types/SimCalibrationProfile";
+import type { RaidSimResult, StatWeightsResult } from "./proto/api.js";
+import type { SimJob } from "./simJobQueue";
+
+// Mocked so runCalibrationBatches tests below can exercise its replicate-unification logic
+// (concatenating every replicate's jobs into one shared SimJobQueue dispatch) without a real
+// wasm/Worker environment - this file otherwise has zero mocking, since everything else it
+// tests is pure post-processing math over hand-built fixtures.
+vi.mock("./buildStatWeightsRequest", () => ({
+	buildStatWeightsRequest: vi.fn(
+		(_gear, _db, _stats, _iterations, _profile, seedOverride) => ({
+			simOptions: { iterations: _iterations, randomSeed: seedOverride },
+		}),
+	),
+}));
+vi.mock("./statWeightsClient", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("./statWeightsClient")>();
+	return {
+		...actual,
+		buildStatWeightJobs: vi.fn(),
+		computeStatWeightsFromJobResults: vi.fn(),
+		getPool: vi.fn(() => ({ size: 4 })),
+	};
+});
+vi.mock("./simJobQueue", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("./simJobQueue")>();
+	return { ...actual, runSimJobQueue: vi.fn() };
+});
+
+import { buildStatWeightsRequest } from "./buildStatWeightsRequest";
 import {
 	averageSimMetricsSnapshots,
 	averageStatStdevs,
@@ -12,9 +42,14 @@ import {
 	extractSimMetrics,
 	metricRatiosForBalance,
 	normalizeStatVector,
+	runCalibrationBatches,
 	type SimMetric,
 } from "./calibrateWeights";
-import type { RaidSimResult, StatWeightsResult } from "./proto/api.js";
+import { runSimJobQueue } from "./simJobQueue";
+import {
+	buildStatWeightJobs,
+	computeStatWeightsFromJobResults,
+} from "./statWeightsClient";
 
 // Stat enum ordinals from proto/common.ts, for readability below.
 const STRENGTH = 0;
@@ -561,5 +596,104 @@ describe("extractSimMetrics", () => {
 			dtps: 0,
 			tmi5: 0,
 		});
+	});
+});
+
+describe("runCalibrationBatches", () => {
+	function job(id: string): SimJob {
+		return { id, requestBytes: new Uint8Array(), totalIterations: 10 };
+	}
+
+	const gear = [] as unknown as Parameters<typeof runCalibrationBatches>[0];
+	const db = {} as unknown as Parameters<typeof runCalibrationBatches>[1];
+	const statsToWeigh = ["Stamina"] as unknown as Parameters<
+		typeof runCalibrationBatches
+	>[2];
+	const profile = {
+		...DEFAULT_SIM_CALIBRATION_PROFILE,
+		calibration: {
+			...DEFAULT_SIM_CALIBRATION_PROFILE.calibration,
+			replicates: 2,
+		},
+	};
+
+	beforeEach(() => {
+		vi.mocked(buildStatWeightsRequest).mockClear();
+		vi.mocked(buildStatWeightJobs).mockReset();
+		vi.mocked(runSimJobQueue).mockReset();
+		vi.mocked(computeStatWeightsFromJobResults).mockReset();
+	});
+
+	it("concatenates every replicate's jobs into one shared runSimJobQueue dispatch, each replicate keeping its own seed", async () => {
+		vi.mocked(buildStatWeightJobs)
+			.mockImplementationOnce(async () => ({
+				jobs: [job("a"), job("b")],
+				reqData: { replicate: 0 } as never,
+			}))
+			.mockImplementationOnce(async () => ({
+				jobs: [job("c")],
+				reqData: { replicate: 1 } as never,
+			}));
+		vi.mocked(runSimJobQueue).mockImplementation(
+			async (_pool, jobs, callbacks) => {
+				for (const j of jobs) callbacks.onJobDone(j.id, {} as never);
+			},
+		);
+		vi.mocked(computeStatWeightsFromJobResults).mockImplementation(
+			(reqData) => ({ baseline: undefined, __reqData: reqData }) as never,
+		);
+
+		const batches = await runCalibrationBatches(
+			gear,
+			db,
+			statsToWeigh,
+			profile,
+		);
+
+		// One unified dispatch, not one per replicate.
+		expect(runSimJobQueue).toHaveBeenCalledTimes(1);
+		const dispatchedJobs = vi.mocked(runSimJobQueue).mock.calls[0][1];
+		expect(dispatchedJobs.map((j) => j.id).sort()).toEqual(
+			["rep:0:a", "rep:0:b", "rep:1:c"].sort(),
+		);
+
+		// Each replicate got computeStatWeightsFromJobResults called once, with only its own
+		// jobs' results (not the other replicate's).
+		expect(computeStatWeightsFromJobResults).toHaveBeenCalledTimes(2);
+		const rep0Results = vi
+			.mocked(computeStatWeightsFromJobResults)
+			.mock.calls.find(
+				(call) => (call[0] as never as { replicate: number }).replicate === 0,
+			)?.[1];
+		expect(Array.from(rep0Results?.keys() ?? []).sort()).toEqual(["a", "b"]);
+		const rep1Results = vi
+			.mocked(computeStatWeightsFromJobResults)
+			.mock.calls.find(
+				(call) => (call[0] as never as { replicate: number }).replicate === 1,
+			)?.[1];
+		expect(Array.from(rep1Results?.keys() ?? [])).toEqual(["c"]);
+
+		expect(batches).toHaveLength(2);
+
+		// Distinct seeds per replicate.
+		const seed0 = vi.mocked(buildStatWeightsRequest).mock.calls[0][5];
+		const seed1 = vi.mocked(buildStatWeightsRequest).mock.calls[1][5];
+		expect(seed0).toBeDefined();
+		expect(seed1).toBeDefined();
+		expect(seed0).not.toEqual(seed1);
+	});
+
+	it("fails the whole call when a single job fails, without computing any replicate's result", async () => {
+		vi.mocked(buildStatWeightJobs).mockResolvedValue({
+			jobs: [job("a")],
+			reqData: {} as never,
+		});
+		vi.mocked(runSimJobQueue).mockRejectedValue(new Error("sim job failed"));
+
+		await expect(
+			runCalibrationBatches(gear, db, statsToWeigh, profile),
+		).rejects.toThrow("sim job failed");
+
+		expect(computeStatWeightsFromJobResults).not.toHaveBeenCalled();
 	});
 });

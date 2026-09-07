@@ -1,3 +1,4 @@
+import { perfTrace } from "#/helpers/perfTrace";
 import type { CalibratedWeights } from "#/sim/calibrateWeights";
 import type { SolveOptions } from "./solveConfig";
 import { solveGearSet } from "./solveEHP";
@@ -56,6 +57,10 @@ self.onmessage = async (e) => {
 				precomputedRound1,
 			);
 			result = simResult.items;
+			// solveConfigForSimMetric already reset/logged its own trace internally (see its own
+			// perfTrace.reset()/log() calls) - just forward the summary to the main thread so it's
+			// visible without switching DevTools' worker-context dropdown (see src/solver/index.ts).
+			postMessage({ type: "perf", summary: perfTrace.summary() });
 			postMessage({
 				type: "result",
 				items: result,
@@ -66,9 +71,15 @@ self.onmessage = async (e) => {
 			});
 			return;
 		}
+		// Plain "stats"/"ehp" solves don't go through solveConfigForSimMetric (which resets/logs
+		// its own trace), so do the same bookkeeping here - solveConfig.ts's instrumentation
+		// (prepareItemCandidates/GLPK/runLPModel spans) benefits these solve modes too.
+		perfTrace.reset();
 		result = await solveGearSet(items, options, (progress) =>
 			postMessage({ type: "progress", ...progress }),
 		);
+		perfTrace.log("solve");
+		postMessage({ type: "perf", summary: perfTrace.summary() });
 
 		postMessage({ type: "result", items: result });
 	} catch (error) {

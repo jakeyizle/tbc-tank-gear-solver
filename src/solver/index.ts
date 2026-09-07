@@ -1,3 +1,4 @@
+import type { PerfSummaryRow } from "#/helpers/perfTrace";
 import { createTrailingThrottle } from "#/helpers/trailingThrottle";
 import type { CalibratedWeights } from "#/sim/calibrateWeights";
 import {
@@ -73,7 +74,10 @@ type WorkerMessage =
 			perMetricStatWeightStdevs?: Record<"tps" | "dtps" | "tmi", Stat[]>;
 			round1StatWeights?: CalibratedWeights;
 	  }
-	| { type: "error"; message: string };
+	| { type: "error"; message: string }
+	// Investigative timing breakdown for where a solve spent its time - see
+	// src/helpers/perfTrace.ts and solver.worker.ts's own postMessage("perf") call sites.
+	| { type: "perf"; summary: PerfSummaryRow[] };
 
 // Round 1 of a sim-backed solve always calibrates around the same fixed baseline gear preset
 // (see solveSimMetric.ts), so its result depends only on the profile and which metric blend is
@@ -133,11 +137,21 @@ export const solve = async (
 			? createTrailingThrottle(onProgress, 150)
 			: undefined;
 
+		const solveStartedAt = performance.now();
+
 		worker.onmessage = (e) => {
 			const data = e.data as WorkerMessage;
 			if (data.type === "progress") {
 				const { type: _type, ...progress } = data;
 				emitProgress?.(progress);
+				return;
+			}
+
+			if (data.type === "perf") {
+				// Printed on the main thread (not just the Worker's own separate DevTools console
+				// context) so this is visible without switching DevTools' worker-context dropdown -
+				// see src/helpers/perfTrace.ts and solver.worker.ts's postMessage("perf") calls.
+				console.table(data.summary);
 				return;
 			}
 
@@ -148,6 +162,13 @@ export const solve = async (
 			}
 
 			console.log("worker result");
+			// Independent, main-thread-measured end-to-end wall clock, separate from the Worker's
+			// own perfTrace summary above - if this meaningfully exceeds the sum of that summary's
+			// top-level spans, the gap points at costs the Worker-side trace structurally can't see
+			// (Worker spawn/startup latency, postMessage marshaling of the initial payload, etc).
+			console.log(
+				`[perf] main-thread solve() wall clock: ${(performance.now() - solveStartedAt).toFixed(1)}ms`,
+			);
 			worker.terminate();
 			if (data.simMetrics || data.perMetricStatWeights) {
 				onSimResult?.({

@@ -1,150 +1,147 @@
-// Regression coverage for a real bug found while building the parallel worker-pool
-// calibration path: combining split RaidSimResults without checking each one's `.error`
-// first crashed the Go-side combiner with a nil-pointer panic (an errored split's
-// RaidMetrics is never populated) instead of surfacing a clear JS error. These tests fake
-// the wasm globals and the SimWorkerPool so they can exercise runConcurrentSim's error
-// handling without a real wasm/Worker environment (mirroring how statWeights.integration.test.ts
-// notes that a real browser Worker context isn't available under plain Node/vitest).
+// Tests for statWeightsClient.ts's job-based calibration flow (see simJobQueue.ts): building a
+// flat SimJob[] from a StatWeightRequestsData, and reassembling a StatWeightsCalcRequest from
+// completed jobs' results keyed by job id, in original stat order - regardless of completion
+// order, since runSimJobQueue no longer guarantees jobs finish in dispatch order the way the old
+// strictly sequential runConcurrentSim loop did.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	RaidSimRequest,
-	RaidSimRequestSplitRequest,
-	RaidSimRequestSplitResult,
 	RaidSimResult,
-	RaidSimResultCombinationRequest,
+	StatWeightRequestsData,
+	StatWeightsCalcRequest,
+	StatWeightsResult,
+	StatWeightsStatRequestData,
 } from "./proto/api.js";
-import type { SimWorkerPool } from "./simWorkerPool";
-import { runConcurrentSim } from "./statWeightsClient";
+import { Stat } from "./proto/common.js";
+import { computeStatWeightsFromJobResults } from "./statWeightsClient";
 
-/** A fake pool that hands back one pre-built RaidSimResult (as bytes) per slot, in order. */
-function fakePool(resultsBySlot: RaidSimResult[]): SimWorkerPool {
-	return {
-		size: resultsBySlot.length,
-		run: vi.fn(async (slot: number) =>
-			RaidSimResult.toBinary(resultsBySlot[slot]),
-		),
-	} as unknown as SimWorkerPool;
+function iterRequest(iterations: number): RaidSimRequest {
+	return RaidSimRequest.create({ simOptions: { iterations } });
 }
 
-/** Stubs the wasm globals runConcurrentSim calls directly (raidSimRequestSplit/combination). */
-function stubWasmGlobals(splitCount: number) {
-	const globals = globalThis as unknown as {
-		raidSimRequestSplit?: (bytes: Uint8Array) => Uint8Array;
-		raidSimResultCombination?: (bytes: Uint8Array) => Uint8Array;
-	};
-
-	globals.raidSimRequestSplit = vi.fn((bytes: Uint8Array) => {
-		const req = RaidSimRequestSplitRequest.fromBinary(bytes);
-		return RaidSimRequestSplitResult.toBinary(
-			RaidSimRequestSplitResult.create({
-				splitsDone: splitCount,
-				requests: Array.from({ length: splitCount }, () => req.request!),
-			}),
-		);
+/** Regression coverage for the bug this session's investigation found in the old
+ * runConcurrentSim: combining a result with `.error` set (unpopulated RaidMetrics) crashed the
+ * Go-side combiner instead of surfacing a clear JS error - the new job-based flow checks
+ * `.error` per job inside simJobQueue.ts's runSimJobQueue itself (see simJobQueue.test.ts), so
+ * this file only needs to confirm reassembly/compute behavior on already-successful results. */
+describe("computeStatWeightsFromJobResults", () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
 	});
 
-	const combineSpy = vi.fn((bytes: Uint8Array) => {
-		const req = RaidSimResultCombinationRequest.fromBinary(bytes);
-		return RaidSimResult.toBinary(req.results[0]);
+	function stubStatWeightCompute() {
+		const globals = globalThis as unknown as {
+			statWeightCompute?: (bytes: Uint8Array) => Uint8Array;
+		};
+		const calls: unknown[] = [];
+		globals.statWeightCompute = vi.fn((bytes: Uint8Array) => {
+			// Round-trip through the real proto types so the spy can inspect exactly what was
+			// assembled without depending on wasm internals.
+			calls.push(StatWeightsCalcRequest.fromBinary(bytes));
+			return StatWeightsResult.toBinary(StatWeightsResult.create({}));
+		});
+		return { calls };
+	}
+
+	it("reassembles results in original stat order regardless of insertion order into the map", () => {
+		const { calls } = stubStatWeightCompute();
+
+		const reqData = StatWeightRequestsData.create({
+			baseRequest: iterRequest(100),
+			epReferenceStat: Stat.StatSpellDamage,
+			statSimRequests: [
+				StatWeightsStatRequestData.create({
+					statData: { unitStat: Stat.StatStamina },
+					requestLow: iterRequest(50),
+					requestHigh: iterRequest(50),
+				}),
+				StatWeightsStatRequestData.create({
+					statData: { unitStat: Stat.StatArmor },
+					requestLow: iterRequest(50),
+					requestHigh: iterRequest(50),
+				}),
+			],
+		});
+
+		// Insert results in a deliberately scrambled (non-dispatch, non-stat-index) order, as a
+		// real out-of-order-completing job queue would produce.
+		const resultsById = new Map<string, RaidSimResult>();
+		resultsById.set("stat:1:high", RaidSimResult.create({ iterationsDone: 4 }));
+		resultsById.set("base", RaidSimResult.create({ iterationsDone: 1 }));
+		resultsById.set("stat:0:low", RaidSimResult.create({ iterationsDone: 2 }));
+		resultsById.set("stat:1:low", RaidSimResult.create({ iterationsDone: 3 }));
+		resultsById.set("stat:0:high", RaidSimResult.create({ iterationsDone: 5 }));
+
+		computeStatWeightsFromJobResults(reqData, resultsById);
+
+		expect(calls).toHaveLength(1);
+		const calcRequest = calls[0] as {
+			baseResult?: RaidSimResult;
+			statSimResults: {
+				resultLow?: RaidSimResult;
+				resultHigh?: RaidSimResult;
+			}[];
+		};
+		expect(calcRequest.baseResult?.iterationsDone).toBe(1);
+		// Stat index 0 (Stamina) must land in slot 0, stat index 1 (Armor) in slot 1 - not
+		// swapped, even though "stat:1:*" entries were inserted into the map first.
+		expect(calcRequest.statSimResults[0].resultLow?.iterationsDone).toBe(2);
+		expect(calcRequest.statSimResults[0].resultHigh?.iterationsDone).toBe(5);
+		expect(calcRequest.statSimResults[1].resultLow?.iterationsDone).toBe(3);
+		expect(calcRequest.statSimResults[1].resultHigh?.iterationsDone).toBe(4);
 	});
-	globals.raidSimResultCombination = combineSpy;
 
-	return { combineSpy };
-}
+	it("omits resultLow for a one-sided stat with no requestLow, without requiring a job for it", () => {
+		const { calls } = stubStatWeightCompute();
 
-afterEach(() => {
-	vi.restoreAllMocks();
-});
+		const reqData = StatWeightRequestsData.create({
+			baseRequest: iterRequest(100),
+			epReferenceStat: Stat.StatSpellDamage,
+			statSimRequests: [
+				StatWeightsStatRequestData.create({
+					statData: { unitStat: Stat.StatMeleeHitRating },
+					// no requestLow - one-sided stat, mirrors statTranslation.ts's
+					// ONE_SIDED_CALIBRATION_STATS
+					requestHigh: iterRequest(50),
+				}),
+			],
+		});
 
-describe("runConcurrentSim", () => {
-	it("throws instead of combining when any split result has an error", async () => {
-		const { combineSpy } = stubWasmGlobals(2);
-		const pool = fakePool([
-			RaidSimResult.create({ error: { message: "boom" } }),
-			RaidSimResult.create({}),
+		const resultsById = new Map<string, RaidSimResult>([
+			["base", RaidSimResult.create({})],
+			["stat:0:high", RaidSimResult.create({})],
 		]);
 
-		await expect(
-			runConcurrentSim(pool, RaidSimRequest.create({}), () => {}),
-		).rejects.toThrow("Sim split run failed: boom");
-
-		expect(combineSpy).not.toHaveBeenCalled();
+		expect(() =>
+			computeStatWeightsFromJobResults(reqData, resultsById),
+		).not.toThrow();
+		const calcRequest = calls[0] as {
+			statSimResults: { resultLow?: RaidSimResult }[];
+		};
+		expect(calcRequest.statSimResults[0].resultLow).toBeUndefined();
 	});
 
-	it("combines multiple error-free splits", async () => {
-		const { combineSpy } = stubWasmGlobals(2);
-		const pool = fakePool([
-			RaidSimResult.create({ iterationsDone: 100 }),
-			RaidSimResult.create({ iterationsDone: 100 }),
+	it("throws a clear error when a required job result is missing", () => {
+		stubStatWeightCompute();
+
+		const reqData = StatWeightRequestsData.create({
+			baseRequest: iterRequest(100),
+			epReferenceStat: Stat.StatSpellDamage,
+			statSimRequests: [
+				StatWeightsStatRequestData.create({
+					statData: { unitStat: Stat.StatStamina },
+					requestHigh: iterRequest(50),
+				}),
+			],
+		});
+
+		const resultsById = new Map<string, RaidSimResult>([
+			["base", RaidSimResult.create({})],
+			// "stat:0:high" deliberately missing
 		]);
 
-		const result = await runConcurrentSim(
-			pool,
-			RaidSimRequest.create({}),
-			() => {},
-		);
-
-		expect(combineSpy).toHaveBeenCalledOnce();
-		expect(result.error).toBeUndefined();
-	});
-
-	it("skips combination entirely for a single split", async () => {
-		const { combineSpy } = stubWasmGlobals(1);
-		const pool = fakePool([RaidSimResult.create({ iterationsDone: 100 })]);
-
-		const result = await runConcurrentSim(
-			pool,
-			RaidSimRequest.create({}),
-			() => {},
-		);
-
-		expect(combineSpy).not.toHaveBeenCalled();
-		expect(result.iterationsDone).toBe(100);
-	});
-
-	it("reports the running sum of completedIterations across slots as they report in", async () => {
-		stubWasmGlobals(2);
-		let resolveSlot0!: (bytes: Uint8Array) => void;
-		let resolveSlot1!: (bytes: Uint8Array) => void;
-		const pool = {
-			size: 2,
-			run: vi
-				.fn()
-				.mockImplementationOnce(
-					(
-						_slot: number,
-						_bytes: Uint8Array,
-						onProgress: (n: number) => void,
-					) =>
-						new Promise<Uint8Array>((resolve) => {
-							onProgress(40);
-							resolveSlot0 = resolve;
-						}),
-				)
-				.mockImplementationOnce(
-					(
-						_slot: number,
-						_bytes: Uint8Array,
-						onProgress: (n: number) => void,
-					) =>
-						new Promise<Uint8Array>((resolve) => {
-							onProgress(25);
-							resolveSlot1 = resolve;
-						}),
-				),
-		} as unknown as SimWorkerPool;
-
-		const sums: number[] = [];
-		const donePromise = runConcurrentSim(
-			pool,
-			RaidSimRequest.create({}),
-			(sum) => sums.push(sum),
-		);
-
-		expect(sums).toEqual([40, 65]);
-
-		resolveSlot0(RaidSimResult.toBinary(RaidSimResult.create({})));
-		resolveSlot1(RaidSimResult.toBinary(RaidSimResult.create({})));
-		await donePromise;
+		expect(() =>
+			computeStatWeightsFromJobResults(reqData, resultsById),
+		).toThrow(/stat:0:high/);
 	});
 });

@@ -203,9 +203,17 @@ export interface SimMetricsSnapshot {
 const referenceTarget = PROT_PALADIN_REFERENCE_ENCOUNTER.targets[0];
 
 export const DEFAULT_SIM_CALIBRATION_PROFILE: SimCalibrationProfile = {
+	// Both numbers come from a real convergence investigation (see solveSimMetric.ts's
+	// acceptedFingerprints/gearSetFingerprint), not guesses: maxRounds:5 was never enough for the
+	// round-over-round loop to actually converge, while iterations:4000 (the old default) bought
+	// no reliable benefit over 200 despite costing 20x more per round - a real browser-driven
+	// solve at these settings converged genuinely in ~165s versus the old defaults' ~1000s for a
+	// result that never converged at all. Below ~200 iterations, calibration noise gets amplified
+	// (not just linearly) by the LP choosing among many simultaneously-noisy stat weights, making
+	// convergence unreliable even with a generous round budget.
 	calibration: {
-		iterations: 4000,
-		maxRounds: 5,
+		iterations: 200,
+		maxRounds: 20,
 		workerCount: 0,
 		replicates: 1,
 	},

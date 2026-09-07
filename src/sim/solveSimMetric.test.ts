@@ -250,10 +250,16 @@ describe("solveConfigForSimMetric", () => {
 				optimizeStats: roundTwoStats,
 				stdevStats: roundTwoStdev,
 			});
+		// Rounds 2 and 3 both propose the SAME gear round 1 already accepted - the LP found no
+		// new item combination worth switching to, which is what the fingerprint-based
+		// convergence gate (see solveSimMetric.ts's acceptedFingerprints) actually detects; it no
+		// longer depends on isSignificantImprovement's score/stdev, which this session's
+		// investigation found gets fooled by ordinary round-to-round calibration noise even when
+		// nothing real changed.
 		vi.mocked(solveConfig)
 			.mockResolvedValueOnce(roundOneProposal)
-			.mockResolvedValueOnce(roundTwoProposal)
-			.mockResolvedValueOnce(roundTwoProposal);
+			.mockResolvedValueOnce(roundOneProposal)
+			.mockResolvedValueOnce(roundOneProposal);
 
 		const result = await solveConfigForSimMetric(
 			[],
@@ -264,8 +270,8 @@ describe("solveConfigForSimMetric", () => {
 			profile,
 		);
 
-		// Rounds 2 and 3's swaps aren't distinguishable from calibration noise (huge stdev) -
-		// only after both reject does the loop stop, reporting round 1's stats/gear as final.
+		// Rounds 2 and 3 repeat round 1's already-accepted gear - only after both repeat does the
+		// loop stop, reporting round 1's stats/gear as final.
 		expect(calibrateWeights).toHaveBeenCalledTimes(3);
 		expect(result.converged).toBe(true);
 		expect(result.items).toEqual(roundOneProposal);
@@ -299,9 +305,11 @@ describe("solveConfigForSimMetric", () => {
 				optimizeStats: roundTwoStats,
 				stdevStats: roundTwoStdev,
 			});
+		// Round 2 repeats round 1's already-accepted gear (see the fingerprint-based convergence
+		// gate's doc comment above).
 		vi.mocked(solveConfig)
 			.mockResolvedValueOnce(roundOneProposal)
-			.mockResolvedValueOnce(roundTwoProposal);
+			.mockResolvedValueOnce(roundOneProposal);
 
 		const result = await solveConfigForSimMetric(
 			[],
@@ -312,7 +320,7 @@ describe("solveConfigForSimMetric", () => {
 			twoRoundProfile,
 		);
 
-		// Only 1 rejection happened before the round budget ran out - not enough to confirm
+		// Only 1 repeat happened before the round budget ran out - not enough to confirm
 		// convergence, but the last accepted gear is still what's returned.
 		expect(result.converged).toBe(false);
 		expect(result.items).toEqual(roundOneProposal);
@@ -342,16 +350,17 @@ describe("solveConfigForSimMetric", () => {
 				optimizeStats: roundTwoStats,
 				stdevStats: roundTwoStdev,
 			})
-			// Round 3: a real, low-noise improvement over round 1's gear (same numbers as
-			// isSignificantImprovement's own "accepts the swap" test above) - should be accepted,
-			// resetting the streak rather than requiring a 3rd rejection to have mattered.
+			// Round 3: proposes a genuinely different gear set - should be accepted as novel,
+			// resetting the streak rather than requiring a 3rd repeat to have mattered.
 			.mockResolvedValueOnce({
 				optimizeStats: roundOneStats,
 				stdevStats: roundOneStdev,
 			});
 		vi.mocked(solveConfig)
 			.mockResolvedValueOnce(roundOneProposal)
-			.mockResolvedValueOnce(roundTwoProposal)
+			// Round 2 repeats round 1's already-accepted gear (streak becomes 1).
+			.mockResolvedValueOnce(roundOneProposal)
+			// Round 3 proposes a new, never-before-seen gear set (novel - accepted).
 			.mockResolvedValueOnce(roundTwoProposal);
 
 		const result = await solveConfigForSimMetric(
@@ -366,6 +375,52 @@ describe("solveConfigForSimMetric", () => {
 		// Round 3 was accepted (the loop simply ran out of its 3-round budget right after),
 		// never confirming non-improvement - confirms the streak reset, not just the count.
 		expect(result.converged).toBe(false);
+		expect(result.items).toEqual(roundTwoProposal);
+	});
+
+	it("detects thrashing between two gear sets as convergence, not endless 'improvement'", async () => {
+		// Round 1 accepts roundOneProposal; rounds 2-4 alternate
+		// roundTwoProposal/roundOneProposal/roundTwoProposal - a classic 2-cycle between near-tied
+		// items, the exact failure mode this session's investigation set out to fix (a
+		// score-based significance test kept calling every such swap "significant" purely from
+		// ordinary round-to-round calibration noise rotating the weight vector's direction, even
+		// though nothing was really improving - see isSignificantImprovement's doc comment).
+		// Round 3 repeating round 1's exact gear (not just "some earlier round's") is what the
+		// fingerprint-history check must catch - a naive "differs from the immediately-previous
+		// round" check would wrongly call round 3 novel.
+		const stats = [
+			{ name: "Stamina" as const, value: 1, type: "flat" as const },
+		];
+		const stdev = [
+			{ name: "Stamina" as const, value: 0.01, type: "flat" as const },
+		];
+		vi.mocked(calibrateWeights).mockResolvedValue({
+			optimizeStats: stats,
+			stdevStats: stdev,
+		});
+		vi.mocked(solveConfig)
+			.mockResolvedValueOnce(roundOneProposal)
+			.mockResolvedValueOnce(roundTwoProposal)
+			.mockResolvedValueOnce(roundOneProposal)
+			.mockResolvedValueOnce(roundTwoProposal);
+
+		const fourRoundProfile = {
+			...profile,
+			calibration: { ...profile.calibration, maxRounds: 4 },
+		};
+		const result = await solveConfigForSimMetric(
+			[],
+			baseOptions,
+			[],
+			{ items: [], enchants: [], gems: [] },
+			{ tmi: 1 },
+			fourRoundProfile,
+		);
+
+		// Round 2 (novel) accepted, round 3 repeats round 1's gear (streak=1), round 4 repeats
+		// round 2's gear (streak=2) - confirms convergence on the second repeat, whichever earlier
+		// round it matches, without ever needing 4 rounds to detect the cycle.
+		expect(result.converged).toBe(true);
 		expect(result.items).toEqual(roundTwoProposal);
 	});
 

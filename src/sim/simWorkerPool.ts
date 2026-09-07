@@ -18,6 +18,8 @@
 // repeated cost competing with the main thread even at workerCount=1 (reported as UI "hiccups"
 // that persisted after lowering the worker count, which ruled out plain CPU-thread
 // oversubscription as the sole cause).
+import { perfTrace } from "#/helpers/perfTrace";
+
 interface DoneMessage {
 	type: "done";
 	id: string;
@@ -27,6 +29,15 @@ interface ProgressMessage {
 	type: "progress";
 	id: string;
 	completedIterations: number;
+}
+// Posted once, right after a fresh worker's wasm module finishes instantiating (see
+// simExecutor.worker.ts) - lets createWorker() below measure each pool worker's actual
+// wasm-instantiate cost, the thing needed to tell whether statWeightsClient.ts's
+// resetSimEnvironment() (which recycles this whole pool between calibration rounds) is an
+// expensive operation or a nearly-free one.
+interface ReadyMessage {
+	type: "ready";
+	readyMs: number;
 }
 
 /**
@@ -54,9 +65,24 @@ export function resolveWorkerCount(
 const WATCHDOG_TIMEOUT_MS = 45_000;
 
 function createWorker(): Worker {
-	return new Worker(new URL("./simExecutor.worker.ts", import.meta.url), {
-		type: "module",
-	});
+	const worker = new Worker(
+		new URL("./simExecutor.worker.ts", import.meta.url),
+		{
+			type: "module",
+		},
+	);
+	// One-time listener for this worker's single "ready" message - removes itself once fired, so
+	// it never interferes with run()'s own per-call message listeners (which filter by `id`, a
+	// field a "ready" message never carries).
+	const onReady = (
+		e: MessageEvent<ReadyMessage | DoneMessage | ProgressMessage>,
+	) => {
+		if (e.data.type !== "ready") return;
+		perfTrace.record("simWorkerWasmInstantiate", e.data.readyMs);
+		worker.removeEventListener("message", onReady);
+	};
+	worker.addEventListener("message", onReady);
+	return worker;
 }
 
 export class SimWorkerPool {
@@ -125,6 +151,7 @@ export class SimWorkerPool {
 				resetWatchdog();
 				if (e.data.type === "done") {
 					cleanup();
+					perfTrace.record("simWorkerRoundTrip", Date.now() - startedAt);
 					resolve(e.data.resultBytes);
 					return;
 				}

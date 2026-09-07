@@ -32,8 +32,20 @@ const postWorkerMessage = postMessage as (
 	transfer?: Transferable[],
 ) => void;
 
+// Measures this worker's own wasm-instantiate cost, posted back once as a "ready" message so
+// simWorkerPool.ts's createWorker() can record it under "simWorkerWasmInstantiate" - the data
+// needed to tell whether statWeightsClient.ts's resetSimEnvironment() (which recreates every
+// pool worker between calibration rounds) is expensive or nearly free.
+const workerStartedAt = performance.now();
+
 const ready = new Promise<void>((resolve) => {
-	wasmGlobals.wasmready = () => resolve();
+	wasmGlobals.wasmready = () => {
+		postWorkerMessage({
+			type: "ready",
+			readyMs: performance.now() - workerStartedAt,
+		});
+		resolve();
+	};
 	if (!wasmGlobals.Go) {
 		throw new Error("wasm_exec.js did not register globalThis.Go");
 	}

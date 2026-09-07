@@ -4,6 +4,7 @@
 // derivative, since TPS/DTPS/TMI-5 have no closed form. See docs/plans/sim-backed-objectives.md's
 // Phase 3 design and its note on why this needs re-linearizing each round: calibration is a
 // local Taylor approximation around one gear set, and avoidance/block have real curvature.
+import { perfTrace } from "#/helpers/perfTrace";
 import { getItem, transformItem } from "#/solver/items";
 import { SolverConfiguration } from "#/solver/SolverConfiguration";
 import {
@@ -122,19 +123,113 @@ function scoreGearSet(gear: GearPiece[], config: SolverConfiguration): number {
 }
 
 /**
+ * L2 norm of a calibrated weight vector's values - used by the round-diagnostics hook below to
+ * check whether a round-over-round weight vector is drifting in overall scale, which would make
+ * isSignificantImprovement's round-native delta (scored under that round's own weights) an
+ * unreliable signal even when it looks "significant" every round - see solveConfigForSimMetric's
+ * onRoundDiagnostics doc comment.
+ */
+function weightVectorL2Norm(stats: Stat[]): number {
+	return Math.sqrt(stats.reduce((sum, stat) => sum + stat.value ** 2, 0));
+}
+
+/** Stable per-item key for the item-set-stability diagnostic below - two GearPiece entries with
+ * the same id/enchant/gems are "the same pick" regardless of array order. */
+function gearPieceKey(piece: GearPiece): string {
+	return `${piece.id}|${piece.enchant.id}|${[...piece.gemSlots].sort().join(",")}`;
+}
+
+/**
+ * Order-independent identity key for a whole gear set - two GearPiece[] with the same items in
+ * any order produce the same fingerprint. Used by the round-acceptance logic below to detect
+ * both true convergence (this round's proposal fingerprint matches the currently accepted one)
+ * and thrashing (this round's proposal fingerprint matches an *earlier* accepted round's, i.e.
+ * the LP is cycling between a small number of gear sets rather than converging on one) - see
+ * this file's "why not just score-based significance" note above solveConfigForSimMetric's
+ * acceptedFingerprints.
+ */
+function gearSetFingerprint(gear: GearPiece[]): string {
+	return gear.map(gearPieceKey).sort().join(";");
+}
+
+/**
+ * Counts how many item picks differ between two gear sets (as a multiset symmetric difference,
+ * so a swap between two slots counts as 2, not 0, even though the same two ids are present in
+ * both sets) - used by the round-diagnostics hook to tell whether the LP is still actually
+ * changing its item selection, independent of whether isSignificantImprovement's score delta
+ * says the round "improved."
+ */
+function countChangedItems(
+	previous: GearPiece[],
+	proposed: GearPiece[],
+): number {
+	const remaining = new Map<string, number>();
+	for (const piece of previous) {
+		const key = gearPieceKey(piece);
+		remaining.set(key, (remaining.get(key) ?? 0) + 1);
+	}
+	let changed = 0;
+	for (const piece of proposed) {
+		const key = gearPieceKey(piece);
+		const count = remaining.get(key) ?? 0;
+		if (count > 0) {
+			remaining.set(key, count - 1);
+		} else {
+			changed++;
+		}
+	}
+	// Whatever's left in `remaining` was in `previous` but never matched - each one is also a
+	// "changed" slot (the other side of the swap).
+	for (const count of remaining.values()) changed += count;
+	return changed;
+}
+
+/**
+ * Per-round data for the maxRounds/convergence investigation (see docs/plans - this session's
+ * "Investigate sim-solve loop convergence" plan). Purely a read-only reporting hook: passing
+ * `onRoundDiagnostics` to solveConfigForSimMetric changes no solve behavior, it only exposes data
+ * the loop already computes internally (plus two extra scoreGearSet calls under a *fixed*
+ * round-1 weight vector) so a caller can tell "real progress" apart from "the round-native
+ * significance check just looks like progress because the weight vector it's scored under keeps
+ * drifting in scale round to round."
+ */
+export interface RoundDiagnostics {
+	roundIndex: number;
+	accepted: boolean;
+	// undefined only for round 0, which has no significance check to compare against.
+	delta?: number;
+	stdevDelta?: number;
+	significant?: boolean;
+	// How many item slots differ between this round's proposal and the previously accepted gear
+	// (see countChangedItems) - real, ongoing item churn vs. a stabilized pick under a still-
+	// moving yardstick.
+	itemsChangedCount: number;
+	// proposalGear's score minus currentGear's score, both under round 1's weight vector held
+	// fixed for the whole solve (not this round's own weights) - if this plateaus while `delta`
+	// above doesn't, the round-native comparison is the misleading one, not real non-convergence.
+	fixedYardstickDelta: number;
+	// L2 norm of this round's freshly calibrated optimizeStats - large swings here would help
+	// explain why round-native deltas of similar magnitude keep appearing under superficially
+	// different weight vectors.
+	weightVectorL2Norm: number;
+}
+
+/**
  * Whether this round's `proposed` gear is a statistically meaningful improvement over
- * `previous`, given this round's calibrated weights and their uncertainty - see this session's
- * measurement finding that a handful of near-tied items in a realistic pool can cause the loop
- * to oscillate indefinitely between them rather than converging, since each round's noisy
- * calibration can flip which one looks marginally ahead. Scoring both gear sets under a second
- * "stdevConfig" (whose weights are the calibration's own per-stat uncertainty, not the point
- * estimate) reuses the same linear objectiveScore machinery to get a noise band for the delta:
- * `objectiveScore` is a plain weighted sum of stat values (see scores.ts's
- * calculateObjectiveScore), so it's exactly linear in the weight vector - substituting stdevs in
- * place of point estimates and differencing the two gear sets' scores gives
- * Σ_stat stdev[stat] * (proposed.stat - previous.stat), a valid (if conservative - it's an L1,
- * not L2/RMS, combination) noise-band estimate for the delta, with no new stat-aggregation code
- * needed beyond what solveConfig already relies on.
+ * `previous`, given this round's calibrated weights and their uncertainty.
+ *
+ * NOT used to gate round acceptance in solveConfigForSimMetric below - kept only as informational
+ * diagnostics (see RoundDiagnostics' delta/stdevDelta/significant fields). A real investigation
+ * (this session - see docs/plans' "Investigate sim-solve loop convergence" plan) found this test
+ * structurally biased toward "significant" even when nothing real changed: `optimizeStats` is
+ * always renormalized to unit L2 norm (see calibrateWeights.ts's normalizeStatVector), so its
+ * *magnitude* never drifts, but its *direction* rotates slightly every round from ordinary
+ * calibration noise - and since `proposed` was, by LP construction, chosen to be optimal under
+ * this exact freshly-rotated direction while `previous` was not, scoring the two under it is
+ * biased to always favor `proposed`, regardless of whether the gear actually improved. Confirmed
+ * empirically: real solves showed rounds where the LP proposed the *exact same items* as already
+ * accepted (0 changed) yet this function still reported "significant" by a wide margin. See
+ * gearSetFingerprint/acceptedFingerprints below for the replacement, artifact-free test.
  */
 export function isSignificantImprovement(
 	previous: GearPiece[],
@@ -239,9 +334,23 @@ export async function solveConfigForSimMetric(
 	// result depends only on the profile/metricRatios, not the item pool - safe to precompute once
 	// and reuse across solves/configs that share those inputs.
 	precomputedRound1?: CalibratedWeights,
+	// Investigation-only reporting hook - see RoundDiagnostics' doc comment. Never affects solve
+	// behavior; omit it and nothing changes.
+	onRoundDiagnostics?: (diagnostics: RoundDiagnostics) => void,
 ): Promise<SimMetricSolveResult> {
+	// Each real solve gets its own freshly spawned solver.worker.ts (see src/solver/index.ts's
+	// solve()), so a shared perfTrace has no cross-solve contamination risk in production - but
+	// reset explicitly anyway so repeated calls within one process (e.g. many solves in one test
+	// file, or a future non-Worker caller) each report a clean, self-contained breakdown instead
+	// of an ever-growing aggregate.
+	perfTrace.reset();
+	const stopSolveConfigForSimMetric = perfTrace.mark("solveConfigForSimMetric");
+	const roundMsList: number[] = [];
+
 	const maxIterations = profile.calibration.maxRounds;
+	const stopFilterItems = perfTrace.mark("filterItemsForClass");
 	const eligibleItems = filterItemsForClass(items, db, options.classId);
+	const filterItemsMs = stopFilterItems();
 	const solvingConsumables = options.enabledConsumableIds.length > 0;
 	// A user can turn individual stats off per config (see SolverConfiguration.
 	// enabledCalibrationStats) to skip their +/- perturbation sims entirely - cheaper calibration
@@ -273,126 +382,215 @@ export async function solveConfigForSimMetric(
 	let converged = false;
 	let iteration = 0;
 	let noImprovementStreak = 0;
+	// Built once round 0's weights are known, then held fixed for the rest of the solve - see
+	// RoundDiagnostics' fixedYardstickDelta doc comment.
+	let round1Config: SolverConfiguration | undefined;
+	// Fingerprint (see gearSetFingerprint) of every round's accepted gear so far, including round
+	// 0's - the actual convergence gate (see the iteration>0 branch below). A proposal that
+	// repeats ANY earlier accepted fingerprint, not just the immediately-previous one, means the
+	// LP is cycling between a small number of gear sets rather than making new progress -
+	// replaces the score-based isSignificantImprovement check, which this session's investigation
+	// found structurally biased toward "significant" even when nothing real changed (see that
+	// function's doc comment).
+	const acceptedFingerprints: string[] = [];
 
 	for (; iteration < maxIterations; iteration++) {
-		const onCalibrationProgress = (calibrationProgress: CalibrationProgress) =>
-			onProgress?.({
-				iteration: 0,
-				maxIterations: 1,
-				simIteration: iteration,
-				maxSimIterations: maxIterations,
-				phase: "calibrating",
-				calibrationCompletedIterations: calibrationProgress.completedIterations,
-				calibrationTotalIterations: calibrationProgress.totalIterations,
-			});
-
-		let optimizeStats: Stat[];
-		let stdevStats: Stat[];
-		let perMetricStatWeights: Record<SimMetric, Stat[]> | undefined;
-		let perMetricStatWeightStdevs: Record<SimMetric, Stat[]> | undefined;
-
-		if (iteration === 0 && precomputedRound1) {
-			({
-				optimizeStats,
-				stdevStats,
-				perMetricStatWeights,
-				perMetricStatWeightStdevs,
-			} = precomputedRound1);
-		} else {
-			// Periodically reset the coordinator wasm instance + worker pool between rounds - see
-			// simWorkerPool.ts's header comment and statWeightsClient.ts's resetSimEnvironment doc
-			// comment for why long-lived reused wasm instances can wedge after enough cumulative
-			// calls. Never before round 1 (nothing has accumulated yet); always placed strictly
-			// between whole calibrateWeights() calls, never mid-batch.
-			if (iteration > 0) {
-				resetSimEnvironment();
-			}
-			({
-				optimizeStats,
-				stdevStats,
-				perMetricStatWeights,
-				perMetricStatWeightStdevs,
-			} = await calibrateWeights(
-				currentGear,
-				db,
-				calibrationStats,
-				metricRatios,
-				withConsumablesOverride(profile, currentConsumablesOverride),
-				onCalibrationProgress,
-			));
-		}
-		if (iteration === 0) {
-			round1StatWeights = { optimizeStats, stdevStats };
-		}
-
-		const proposal = await solveConfig(
-			eligibleItems,
-			{
-				...options,
-				objectiveMode: "stats",
-				optimizeStats,
-			},
-			(progress) =>
+		const roundIndex = iteration;
+		const stopRound = perfTrace.mark(`round:${roundIndex}`);
+		let resetMs = 0;
+		let calibrateMs = 0;
+		let solveMs = 0;
+		let splitMs = 0;
+		let significanceMs = 0;
+		try {
+			const onCalibrationProgress = (
+				calibrationProgress: CalibrationProgress,
+			) =>
 				onProgress?.({
-					...progress,
+					iteration: 0,
+					maxIterations: 1,
 					simIteration: iteration,
 					maxSimIterations: maxIterations,
-					phase: "solving",
-				}),
-		);
+					phase: "calibrating",
+					calibrationCompletedIterations:
+						calibrationProgress.completedIterations,
+					calibrationTotalIterations: calibrationProgress.totalIterations,
+				});
 
-		// scoreGearSet (inside isSignificantImprovement) re-derives each piece's score via
-		// getItem(), which only knows about real equipment - a consumable LPItem's `id` is the
-		// CONSUMABLES slug (see resolveGearAndConsumables.ts), not a real item id, so it must be
-		// split out before comparison rather than passing the LP's raw gear+consumables output
-		// straight through.
-		const proposalSplit = splitGearAndConsumables(proposal);
-		const proposalGear = proposalSplit.gear;
+			let optimizeStats: Stat[];
+			let stdevStats: Stat[];
+			let perMetricStatWeights: Record<SimMetric, Stat[]> | undefined;
+			let perMetricStatWeightStdevs: Record<SimMetric, Stat[]> | undefined;
 
-		// Round 1 has nothing but the hand-picked baseline to compare against - always accept
-		// it (same as before) rather than running it through a significance test that isn't
-		// meaningful against a gear set that was never itself LP-optimized.
-		if (iteration > 0) {
-			const proposedScore = proposal.reduce(
-				(sum, item) => sum + item.objectiveScore,
-				0,
+			if (iteration === 0 && precomputedRound1) {
+				({
+					optimizeStats,
+					stdevStats,
+					perMetricStatWeights,
+					perMetricStatWeightStdevs,
+				} = precomputedRound1);
+			} else {
+				// Periodically reset the coordinator wasm instance + worker pool between rounds - see
+				// simWorkerPool.ts's header comment and statWeightsClient.ts's resetSimEnvironment doc
+				// comment for why long-lived reused wasm instances can wedge after enough cumulative
+				// calls. Never before round 1 (nothing has accumulated yet); always placed strictly
+				// between whole calibrateWeights() calls, never mid-batch.
+				if (iteration > 0) {
+					const stopReset = perfTrace.mark("resetSimEnvironment");
+					resetSimEnvironment();
+					resetMs = stopReset();
+				}
+				const stopCalibrate = perfTrace.mark("calibrateWeights");
+				({
+					optimizeStats,
+					stdevStats,
+					perMetricStatWeights,
+					perMetricStatWeightStdevs,
+				} = await calibrateWeights(
+					currentGear,
+					db,
+					calibrationStats,
+					metricRatios,
+					withConsumablesOverride(profile, currentConsumablesOverride),
+					onCalibrationProgress,
+				));
+				calibrateMs = stopCalibrate();
+			}
+			if (iteration === 0) {
+				round1StatWeights = { optimizeStats, stdevStats };
+				round1Config = new SolverConfiguration({ ...options, optimizeStats });
+			}
+
+			const stopSolve = perfTrace.mark("solveConfig");
+			const proposal = await solveConfig(
+				eligibleItems,
+				{
+					...options,
+					objectiveMode: "stats",
+					optimizeStats,
+				},
+				(progress) =>
+					onProgress?.({
+						...progress,
+						simIteration: iteration,
+						maxSimIterations: maxIterations,
+						phase: "solving",
+					}),
 			);
-			if (
-				!isSignificantImprovement(
+			solveMs = stopSolve();
+
+			// scoreGearSet (inside isSignificantImprovement) re-derives each piece's score via
+			// getItem(), which only knows about real equipment - a consumable LPItem's `id` is the
+			// CONSUMABLES slug (see resolveGearAndConsumables.ts), not a real item id, so it must be
+			// split out before comparison rather than passing the LP's raw gear+consumables output
+			// straight through.
+			const stopSplit = perfTrace.mark("splitGearAndConsumables");
+			const proposalSplit = splitGearAndConsumables(proposal);
+			splitMs = stopSplit();
+			const proposalGear = proposalSplit.gear;
+
+			// Investigation-only (see RoundDiagnostics) - computed unconditionally, before the
+			// accept/reject branches below, since every one of them needs to report it.
+			const itemsChangedCount = countChangedItems(currentGear, proposalGear);
+			const fixedYardstickDelta = round1Config
+				? scoreGearSet(proposalGear, round1Config) -
+					scoreGearSet(currentGear, round1Config)
+				: 0;
+			const roundWeightNorm = weightVectorL2Norm(optimizeStats);
+			const proposalFingerprint = gearSetFingerprint(proposalGear);
+
+			// Round 1 has nothing but the hand-picked baseline to compare against - always accept
+			// it (same as before) rather than running it through a convergence test that isn't
+			// meaningful against a gear set that was never itself LP-optimized.
+			if (iteration > 0) {
+				// isSignificantImprovement is computed purely for RoundDiagnostics' informational
+				// delta/stdevDelta/significant fields now - see that function's doc comment for why
+				// it's no longer what decides acceptance. The actual gate is fingerprint-based
+				// (isNovel below): does this round's proposal repeat any gear set already accepted
+				// earlier in this solve? That catches both a true fixed point (repeats the
+				// immediately-previous round) and thrashing between a small number of near-tied gear
+				// sets (repeats an *older* round's), neither of which is "real" further progress -
+				// without relying on isSignificantImprovement's score, which this session's
+				// investigation found gets fooled by ordinary round-to-round calibration noise.
+				const proposedScore = proposal.reduce(
+					(sum, item) => sum + item.objectiveScore,
+					0,
+				);
+				const stopSignificance = perfTrace.mark("isSignificantImprovement");
+				const significant = isSignificantImprovement(
 					currentGear,
 					proposalGear,
 					proposedScore,
 					optimizeStats,
 					stdevStats,
 					options,
-				)
-			) {
-				// This round's "better" gear isn't distinguishable from calibration noise - but
-				// a single noisy round is inconclusive, not proof of convergence (see
-				// CONVERGENCE_CONFIRMATION_ROUNDS above). Keep whatever was already accepted (in
-				// `result`/`currentGear`) and retry with a fresh calibration sample around it
-				// before trusting this verdict.
-				noImprovementStreak++;
-				if (noImprovementStreak < CONVERGENCE_CONFIRMATION_ROUNDS) {
-					continue;
+				);
+				significanceMs = stopSignificance();
+				const config = new SolverConfiguration({ ...options, optimizeStats });
+				const stdevConfig = new SolverConfiguration({
+					...options,
+					optimizeStats: stdevStats,
+				});
+				const isNovel = !acceptedFingerprints.includes(proposalFingerprint);
+				onRoundDiagnostics?.({
+					roundIndex,
+					accepted: isNovel,
+					delta: proposedScore - scoreGearSet(currentGear, config),
+					stdevDelta:
+						scoreGearSet(proposalGear, stdevConfig) -
+						scoreGearSet(currentGear, stdevConfig),
+					significant,
+					itemsChangedCount,
+					fixedYardstickDelta,
+					weightVectorL2Norm: roundWeightNorm,
+				});
+				if (!isNovel) {
+					// This round's proposal repeats a gear set already accepted earlier - either a
+					// true fixed point or a thrashing cycle. A single such round is inconclusive, not
+					// proof of convergence (see CONVERGENCE_CONFIRMATION_ROUNDS above - a fresh
+					// calibration sample might still break the cycle). Keep whatever was already
+					// accepted (in `result`/`currentGear`) and retry before trusting this verdict.
+					noImprovementStreak++;
+					if (noImprovementStreak < CONVERGENCE_CONFIRMATION_ROUNDS) {
+						continue;
+					}
+					converged = true;
+					iteration++;
+					break;
 				}
-				converged = true;
-				iteration++;
-				break;
+			} else {
+				onRoundDiagnostics?.({
+					roundIndex,
+					accepted: true,
+					itemsChangedCount,
+					fixedYardstickDelta,
+					weightVectorL2Norm: roundWeightNorm,
+				});
 			}
+			noImprovementStreak = 0;
+			acceptedFingerprints.push(proposalFingerprint);
+			result = proposal;
+			finalStatWeights = optimizeStats;
+			finalStatWeightStdevs = stdevStats;
+			finalPerMetricStatWeights =
+				perMetricStatWeights ?? ({} as Record<SimMetric, Stat[]>);
+			finalPerMetricStatWeightStdevs =
+				perMetricStatWeightStdevs ?? ({} as Record<SimMetric, Stat[]>);
+			currentGear = proposalGear;
+			currentConsumablesOverride = solvingConsumables
+				? proposalSplit.consumables
+				: undefined;
+		} finally {
+			const roundMs = stopRound();
+			roundMsList.push(roundMs);
+			perfTrace.recordGap(`round:${roundIndex}`, roundMs, [
+				resetMs,
+				calibrateMs,
+				solveMs,
+				splitMs,
+				significanceMs,
+			]);
 		}
-		noImprovementStreak = 0;
-		result = proposal;
-		finalStatWeights = optimizeStats;
-		finalStatWeightStdevs = stdevStats;
-		finalPerMetricStatWeights =
-			perMetricStatWeights ?? ({} as Record<SimMetric, Stat[]>);
-		finalPerMetricStatWeightStdevs =
-			perMetricStatWeightStdevs ?? ({} as Record<SimMetric, Stat[]>);
-		currentGear = proposalGear;
-		currentConsumablesOverride = solvingConsumables
-			? proposalSplit.consumables
-			: undefined;
 	}
 
 	// Calibration only ever produces marginal per-stat weights, never an absolute value - run
@@ -400,6 +598,7 @@ export async function solveConfigForSimMetric(
 	// always accurate, even if the loop above hit maxIterations without fully converging (in
 	// which case a calibration round's own internal baseline would reflect the second-to-last
 	// gear guess, not this final one).
+	const stopMeasureFinal = perfTrace.mark("measureFinalSimMetrics");
 	const simMetrics = await measureFinalSimMetrics(
 		currentGear,
 		db,
@@ -415,6 +614,15 @@ export async function solveConfigForSimMetric(
 				calibrationTotalIterations: calibrationProgress.totalIterations,
 			}),
 	);
+	const measureFinalMs = stopMeasureFinal();
+
+	const solveConfigForSimMetricMs = stopSolveConfigForSimMetric();
+	perfTrace.recordGap("solveConfigForSimMetric", solveConfigForSimMetricMs, [
+		filterItemsMs,
+		...roundMsList,
+		measureFinalMs,
+	]);
+	perfTrace.log("sim-backed solve");
 
 	return {
 		items: result,

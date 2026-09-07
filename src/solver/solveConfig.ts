@@ -1,4 +1,5 @@
 import GLPK, { type GLPK as GLPKType, type LP } from "glpk.js";
+import { perfTrace } from "#/helpers/perfTrace";
 import { calculateStatValue } from "#/helpers/stats";
 import type { SimCalibrationProfile } from "#/types/SimCalibrationProfile";
 import { getConsumableLPItems } from "./consumables";
@@ -287,103 +288,127 @@ const runLPModel = async (
 	resistanceTargets: { stat: ResistanceFloor["stat"]; target: number }[],
 	config: SolverConfiguration,
 ) => {
-	const glpk = await GLPK();
-	const headers = allItemHeaders(fixedItems, decomposableItems);
-	const headersByType = groupHeadersByType(headers);
-	const headersByItemId = groupHeadersByItemId(headers);
-	const binaries = allBinaryVarNames(fixedItems, decomposableItems);
+	const stopRunLPModel = perfTrace.mark("runLPModel");
+	let glpkAcquireMs = 0;
+	let buildLpModelMs = 0;
+	let glpkSolveMs = 0;
+	let transformMs = 0;
+	try {
+		const stopGlpkAcquire = perfTrace.mark("glpkModuleAcquire");
+		const glpk = await GLPK();
+		glpkAcquireMs = stopGlpkAcquire();
 
-	const objective = {
-		direction: glpk.GLP_MAX,
-		name: "obj",
-		vars: buildScoreVars(fixedItems, decomposableItems, "objectiveScore"),
-	};
+		const stopBuildModel = perfTrace.mark("buildLpModel");
+		const headers = allItemHeaders(fixedItems, decomposableItems);
+		const headersByType = groupHeadersByType(headers);
+		const headersByItemId = groupHeadersByItemId(headers);
+		const binaries = allBinaryVarNames(fixedItems, decomposableItems);
 
-	const slotConstraint = makeSlotConstraint(headersByType, glpk);
-	const baseItemConstraint = makeBaseItemConstaint(headersByItemId, glpk);
-	const uniqueGemVars = buildUniqueGemVars(fixedItems, decomposableItems);
-	const uniqueGemConstraint = makeUniqueGemConstraint(uniqueGemVars, glpk);
-	const consumableExclusionConstraint = makeConsumableExclusionConstraint(
-		headersByType,
-		glpk,
-	);
-	const linkingConstraints = buildDecomposedLinkingConstraints(
-		decomposableItems,
-		glpk,
-	);
+		const objective = {
+			direction: glpk.GLP_MAX,
+			name: "obj",
+			vars: buildScoreVars(fixedItems, decomposableItems, "objectiveScore"),
+		};
 
-	const constraints: SubjectTo[] = [
-		...slotConstraint,
-		...baseItemConstraint,
-		...uniqueGemConstraint,
-		...consumableExclusionConstraint,
-		...linkingConstraints,
-	];
+		const slotConstraint = makeSlotConstraint(headersByType, glpk);
+		const baseItemConstraint = makeBaseItemConstaint(headersByItemId, glpk);
+		const uniqueGemVars = buildUniqueGemVars(fixedItems, decomposableItems);
+		const uniqueGemConstraint = makeUniqueGemConstraint(uniqueGemVars, glpk);
+		const consumableExclusionConstraint = makeConsumableExclusionConstraint(
+			headersByType,
+			glpk,
+		);
+		const linkingConstraints = buildDecomposedLinkingConstraints(
+			decomposableItems,
+			glpk,
+		);
 
-	if (avoidanceTarget > 0) {
-		constraints.push(
-			makeAvoidanceConstraint(
-				buildScoreVars(fixedItems, decomposableItems, "avoidanceScore"),
-				avoidanceTarget,
-				glpk,
+		const constraints: SubjectTo[] = [
+			...slotConstraint,
+			...baseItemConstraint,
+			...uniqueGemConstraint,
+			...consumableExclusionConstraint,
+			...linkingConstraints,
+		];
+
+		if (avoidanceTarget > 0) {
+			constraints.push(
+				makeAvoidanceConstraint(
+					buildScoreVars(fixedItems, decomposableItems, "avoidanceScore"),
+					avoidanceTarget,
+					glpk,
+				),
+			);
+		}
+
+		if (uncritabilityTarget > 0) {
+			constraints.push(
+				makeUncritableConstraint(
+					buildScoreVars(fixedItems, decomposableItems, "uncritabilityScore"),
+					uncritabilityTarget,
+					glpk,
+				),
+			);
+		}
+
+		for (const { stat, target } of resistanceTargets) {
+			if (target <= 0) continue;
+			constraints.push(
+				makeResistanceConstraint(
+					buildResistanceVars(fixedItems, decomposableItems, stat),
+					stat,
+					target,
+					glpk,
+				),
+			);
+		}
+
+		const model = createModel(objective, constraints, binaries);
+		buildLpModelMs = stopBuildModel();
+
+		const stopGlpkSolve = perfTrace.mark("glpkSolve");
+		const result = await glpk.solve(model, solveOptions(glpk));
+		glpkSolveMs = stopGlpkSolve();
+		if (result.result.status !== glpk.GLP_OPT) {
+			throw new Error(
+				`No gear combination satisfies: ${describeConstraints(config)}.`,
+			);
+		}
+
+		const varValues = result.result.vars as Record<string, number>;
+
+		const stopTransform = perfTrace.mark("transformChosenItems");
+		const chosenFixedItems = fixedItems.filter(
+			(item) => varValues[item.uniqueId] === 1,
+		);
+		const chosenDecomposable = resolveChosenDecomposableItems(
+			decomposableItems,
+			varValues,
+		).map((resolved) =>
+			transformItem(
+				{
+					...resolved.base,
+					gems: resolved.gems,
+					gemSlots: resolved.gemSlots,
+					enchant: resolved.enchant ?? EMPTY_ENCHANT,
+					uniqueId: resolved.uniqueId,
+					locked: false,
+				},
+				config,
 			),
 		);
+		transformMs = stopTransform();
+
+		return [...chosenFixedItems, ...chosenDecomposable];
+	} finally {
+		const runLPModelMs = stopRunLPModel();
+		perfTrace.recordGap("runLPModel", runLPModelMs, [
+			glpkAcquireMs,
+			buildLpModelMs,
+			glpkSolveMs,
+			transformMs,
+		]);
 	}
-
-	if (uncritabilityTarget > 0) {
-		constraints.push(
-			makeUncritableConstraint(
-				buildScoreVars(fixedItems, decomposableItems, "uncritabilityScore"),
-				uncritabilityTarget,
-				glpk,
-			),
-		);
-	}
-
-	for (const { stat, target } of resistanceTargets) {
-		if (target <= 0) continue;
-		constraints.push(
-			makeResistanceConstraint(
-				buildResistanceVars(fixedItems, decomposableItems, stat),
-				stat,
-				target,
-				glpk,
-			),
-		);
-	}
-
-	const model = createModel(objective, constraints, binaries);
-
-	const result = await glpk.solve(model, solveOptions(glpk));
-	if (result.result.status !== glpk.GLP_OPT) {
-		throw new Error(
-			`No gear combination satisfies: ${describeConstraints(config)}.`,
-		);
-	}
-
-	const varValues = result.result.vars as Record<string, number>;
-
-	const chosenFixedItems = fixedItems.filter(
-		(item) => varValues[item.uniqueId] === 1,
-	);
-	const chosenDecomposable = resolveChosenDecomposableItems(
-		decomposableItems,
-		varValues,
-	).map((resolved) =>
-		transformItem(
-			{
-				...resolved.base,
-				gems: resolved.gems,
-				gemSlots: resolved.gemSlots,
-				enchant: resolved.enchant ?? EMPTY_ENCHANT,
-				uniqueId: resolved.uniqueId,
-				locked: false,
-			},
-			config,
-		),
-	);
-
-	return [...chosenFixedItems, ...chosenDecomposable];
 };
 
 // Runs runLPModel repeatedly, tightening the avoidance/uncritability targets until the
@@ -411,57 +436,72 @@ export const runLPModelWithAvoidanceConvergence = async (
 			Math.ceil(MAX_UNCRIT_ROUNDING_ERROR / UNCRIT_STEP),
 		) + 3;
 
+	const stopOuter = perfTrace.mark("runLPModelWithAvoidanceConvergence");
+	// Raw performance.now() deltas here (not perfTrace.mark()) are deliberate - runLPModel already
+	// records its own "runLPModel" span internally (see its own gap-checked breakdown), so this
+	// local sum is purely for this function's own recordGap below, not a second named span.
+	let runLPModelTotalMs = 0;
 	let result: LPItem[];
 	let iteration = 0;
-	while (true) {
-		iteration++;
-		result = await runLPModel(
-			fixedItems,
-			decomposableItems,
-			config.avoidanceTarget,
-			config.uncritabilityTarget,
-			config.resistanceTargets,
-			config,
-		);
+	try {
+		while (true) {
+			iteration++;
+			const runLPModelStart = performance.now();
+			result = await runLPModel(
+				fixedItems,
+				decomposableItems,
+				config.avoidanceTarget,
+				config.uncritabilityTarget,
+				config.resistanceTargets,
+				config,
+			);
+			runLPModelTotalMs += performance.now() - runLPModelStart;
 
-		const itemAvoidance = calculateStatValue({
-			items: result,
-			modifierSources: config.multiplierModifierSources,
-			baseStats: [],
-			statName: config.avoidanceStatName,
-			roundDefenseAndResilience: true,
-		});
-		const itemUncrit = calculateStatValue({
-			items: result,
-			modifierSources: config.multiplierModifierSources,
-			baseStats: [],
-			statName: "Uncritability",
-			roundDefenseAndResilience: true,
-		});
+			const itemAvoidance = calculateStatValue({
+				items: result,
+				modifierSources: config.multiplierModifierSources,
+				baseStats: [],
+				statName: config.avoidanceStatName,
+				roundDefenseAndResilience: true,
+			});
+			const itemUncrit = calculateStatValue({
+				items: result,
+				modifierSources: config.multiplierModifierSources,
+				baseStats: [],
+				statName: "Uncritability",
+				roundDefenseAndResilience: true,
+			});
 
-		const isAvoidanceTargetMet = itemAvoidance >= config.avoidanceTarget;
-		const isUncritTargetMet = itemUncrit >= config.uncritabilityTarget;
-		if (isAvoidanceTargetMet && isUncritTargetMet) {
-			break;
+			const isAvoidanceTargetMet = itemAvoidance >= config.avoidanceTarget;
+			const isUncritTargetMet = itemUncrit >= config.uncritabilityTarget;
+			if (isAvoidanceTargetMet && isUncritTargetMet) {
+				break;
+			}
+
+			console.log(
+				`item avoidance: ${itemAvoidance}, avoidance target: ${config.avoidanceTarget}`,
+			);
+			console.log(
+				`item uncrit: ${itemUncrit}, uncrit target: ${config.uncritabilityTarget}`,
+			);
+			if (!isAvoidanceTargetMet) {
+				config.stepAvoidanceTarget(AVOIDANCE_STEP);
+			}
+			if (!isUncritTargetMet) {
+				config.stepUncritabilityTarget(UNCRIT_STEP);
+			}
+
+			onProgress?.({ iteration, maxIterations });
 		}
 
-		console.log(
-			`item avoidance: ${itemAvoidance}, avoidance target: ${config.avoidanceTarget}`,
-		);
-		console.log(
-			`item uncrit: ${itemUncrit}, uncrit target: ${config.uncritabilityTarget}`,
-		);
-		if (!isAvoidanceTargetMet) {
-			config.stepAvoidanceTarget(AVOIDANCE_STEP);
-		}
-		if (!isUncritTargetMet) {
-			config.stepUncritabilityTarget(UNCRIT_STEP);
-		}
-
-		onProgress?.({ iteration, maxIterations });
+		return result;
+	} finally {
+		perfTrace.record("avoidanceConvergenceIterations", iteration);
+		const outerMs = stopOuter();
+		perfTrace.recordGap("runLPModelWithAvoidanceConvergence", outerMs, [
+			runLPModelTotalMs,
+		]);
 	}
-
-	return result;
 };
 
 export const solveConfig = async (
@@ -469,27 +509,48 @@ export const solveConfig = async (
 	options: SolveOptions,
 	onProgress?: (progress: SolveProgress) => void,
 ): Promise<LPItem[]> => {
+	const stopSolveConfig = perfTrace.mark("solveConfig");
 	console.log("worker started");
 	console.log({ items, options });
 
 	const config = new SolverConfiguration(options);
+	const stopPrepare = perfTrace.mark("prepareItemCandidates");
 	const { fixedItems, decomposableItems } = prepareItemCandidates(
 		items,
 		config,
 	);
+	const prepareMs = stopPrepare();
+
+	const stopConsumables = perfTrace.mark("getConsumableLPItems");
 	if (options.enabledConsumableIds.length > 0) {
 		fixedItems.push(
 			...getConsumableLPItems(config, options.enabledConsumableIds),
 		);
 	}
+	const consumablesMs = stopConsumables();
+
 	console.log(`avoidance target: ${config.avoidanceTarget}`);
 	console.log(`uncritability target: ${config.uncritabilityTarget}`);
 	console.log(`items: ${fixedItems.length + decomposableItems.length}`);
 
-	return runLPModelWithAvoidanceConvergence(
-		fixedItems,
-		decomposableItems,
-		config,
-		onProgress,
-	);
+	// Raw performance.now() delta (not perfTrace.mark()) - runLPModelWithAvoidanceConvergence
+	// already records its own named span internally, this local value is purely for this
+	// function's own recordGap below.
+	const convergenceStart = performance.now();
+	try {
+		return await runLPModelWithAvoidanceConvergence(
+			fixedItems,
+			decomposableItems,
+			config,
+			onProgress,
+		);
+	} finally {
+		const convergenceMs = performance.now() - convergenceStart;
+		const solveConfigMs = stopSolveConfig();
+		perfTrace.recordGap("solveConfig", solveConfigMs, [
+			prepareMs,
+			consumablesMs,
+			convergenceMs,
+		]);
+	}
 };

@@ -22,7 +22,15 @@ const STORAGE_KEY = "round1WeightsCache";
 // Bump whenever round 1's calibration semantics change in a way that would make an old entry
 // wrong without the profile itself changing - e.g. PROT_PALADIN_BASELINE_GEAR, the wasm sim
 // build, or buildStatWeightsRequest's request shape.
-const CACHE_VERSION = 1;
+//
+// Bumped 1 -> 2: calibrateWeights.ts's multi-metric blending changed from a raw
+// `ratio * epValue` sum (which let whichever metric had larger-magnitude EP values dominate
+// regardless of the user's chosen balance - see blendNormalizedPerMetricWeights' doc comment)
+// to normalizing each metric's vector to a common scale before applying the ratio. A cached
+// "balanced"-mode entry from before that change holds `optimizeStats`/`stdevStats` computed
+// under the old, biased blend - stale in a way the profile/balance/survivabilityMetric key
+// alone wouldn't detect, so it must be invalidated here instead.
+const CACHE_VERSION = 2;
 // Bounds growth as a user experiments with different profiles/ratios over a long session,
 // without needing a TTL - oldest-savedAt entries are evicted first on write.
 const MAX_ENTRIES = 20;

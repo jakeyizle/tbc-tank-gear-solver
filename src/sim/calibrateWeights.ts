@@ -8,6 +8,7 @@
 // extra sim cost - the "Weighted Sim Metrics" objective mode generalizes the old
 // pick-exactly-one-metric modes this way (ratio {tmi: 1, others: 0} reproduces the old
 // "Minimize TMI-5" mode exactly).
+import { perfTrace } from "#/helpers/perfTrace";
 import type { Stat, StatName } from "#/solver/types";
 import type {
 	SimCalibrationProfile,
@@ -19,15 +20,23 @@ import {
 } from "./buildStatWeightsRequest";
 import {
 	type RaidSimResult,
+	type StatWeightRequestsData,
 	StatWeightsRequest,
 	type StatWeightsResult,
 } from "./proto/api.js";
 import { Stat as TbcStat } from "./proto/common.js";
+import type { SimJob } from "./simJobQueue";
+import { runSimJobQueue } from "./simJobQueue";
 import {
 	effectiveCalibrationSampleSize,
 	STAT_NAME_TO_TBC_STAT,
 } from "./statTranslation";
-import { measureRaidSim, runStatWeightsAsync } from "./statWeightsClient";
+import {
+	buildStatWeightJobs,
+	computeStatWeightsFromJobResults,
+	getPool,
+	measureRaidSim,
+} from "./statWeightsClient";
 import type { GearPiece } from "./toTbcItemSpec";
 
 export { resetSimEnvironment } from "./statWeightsClient";
@@ -204,22 +213,25 @@ export interface CalibrationBatch {
 }
 
 /**
- * Runs one real sim calibration batch around `gear` - the expensive, only-do-this-once-per-round
- * part of calibrateWeights() below, pulled out so a caller that needs more than one blend of the
- * same batch (e.g. an objective vector AND an independent secondary-constraint vector) can call
- * `blendMetricEpValues`/`blendMetricEpValueStdevs` against the same `result` twice, at no extra
- * sim cost, instead of running this twice.
+ * Builds one replicate's flat SimJob[] (see statWeightsClient.ts's buildStatWeightJobs) around
+ * `gear`, tagging every job id with `replicateIndex` so runCalibrationBatches can concatenate
+ * every replicate's jobs into one shared SimJobQueue and later route each result back to the
+ * right replicate - see runCalibrationBatches' own doc comment for why replicates must share one
+ * queue rather than each independently claiming the pool.
  */
-export async function runCalibrationBatch(
+async function buildReplicateJobBundle(
 	gear: GearPiece[],
 	db: TbcUiDatabase,
 	statsToWeigh: StatName[],
 	profile: SimCalibrationProfile,
-	onProgress?: (progress: CalibrationProgress) => void,
-	// See runCalibrationBatches - only ever passed by that loop, to guarantee each replicate gets
-	// an independent seed rather than relying on enough wall-clock time elapsing between calls.
-	seedOverride?: string,
-): Promise<CalibrationBatch> {
+	replicateIndex: number,
+	seedOverride: string,
+): Promise<{
+	replicateIndex: number;
+	jobs: SimJob[];
+	reqData: StatWeightRequestsData;
+}> {
+	const stopBuildRequest = perfTrace.mark("buildStatWeightsRequest");
 	const requestJson = buildStatWeightsRequest(
 		gear,
 		db,
@@ -228,6 +240,9 @@ export async function runCalibrationBatch(
 		profile,
 		seedOverride,
 	);
+	stopBuildRequest();
+
+	const stopEncode = perfTrace.mark("statWeightsRequestEncode");
 	const request = StatWeightsRequest.fromJson(
 		requestJson as unknown as Parameters<typeof StatWeightsRequest.fromJson>[0],
 		{
@@ -235,25 +250,30 @@ export async function runCalibrationBatch(
 		},
 	);
 	const requestBytes = StatWeightsRequest.toBinary(request);
+	stopEncode();
 
-	const result = await runStatWeightsAsync(
-		requestBytes,
-		(metrics) => {
-			onProgress?.({
-				completedIterations: metrics.completedIterations,
-				totalIterations: metrics.totalIterations,
-				completedSims: metrics.completedSims,
-				totalSims: metrics.totalSims,
-			});
-		},
-		profile.calibration.workerCount,
-	);
-
+	const { jobs, reqData } = await buildStatWeightJobs(requestBytes);
 	return {
-		result,
-		baselineMetrics: result.baseline
-			? extractSimMetrics(result.baseline)
-			: undefined,
+		replicateIndex,
+		reqData,
+		jobs: jobs.map((job) => ({
+			...job,
+			id: `rep:${replicateIndex}:${job.id}`,
+		})),
+	};
+}
+
+/** Splits a `rep:${replicateIndex}:${originalJobId}` id back into its parts - originalJobId may
+ * itself contain colons (e.g. "stat:3:low"), so only the first two segments are replicate
+ * bookkeeping. */
+function parseReplicateJobId(jobId: string): {
+	replicateIndex: number;
+	originalId: string;
+} {
+	const [, replicateIndexStr, ...rest] = jobId.split(":");
+	return {
+		replicateIndex: Number(replicateIndexStr),
+		originalId: rest.join(":"),
 	};
 }
 
@@ -320,10 +340,21 @@ export function averageSimMetricsSnapshots(
  * Runs `profile.calibration.replicates` (default 1 - today's behavior) independent calibration
  * batches around the same `gear` and returns all of them, for a caller to blend and average
  * (see calibrateWeights() below) - a brute-force variance reduction for noisy metrics like
- * TMI-5: averaging N independent Monte Carlo estimates shrinks the effective noise by sqrt(N),
- * at the cost of N times the sim time. Runs sequentially (not in parallel) so each batch's own
- * `Date.now()`-derived fallback seed would already differ - explicit per-replicate seeds
- * (below) just make that guaranteed rather than incidental.
+ * TMI-5: averaging N independent Monte Carlo estimates shrinks the effective noise by sqrt(N).
+ *
+ * Every replicate's jobs (baseline + every stat's low/high perturbation - see
+ * buildStatWeightJobs) are concatenated into ONE shared SimJobQueue dispatch, rather than each
+ * replicate claiming the SimWorkerPool one after another (today's behavior pre-dating this
+ * comment) or independently (which would be unsafe - see simJobQueue.ts's header comment on why
+ * two concurrent run() calls on the same pool slot corrupts that worker's sim). This is what
+ * actually lets `replicates > 1` run concurrently instead of multiplying wall-clock time
+ * linearly: with everything sharing one queue, the pool's fixed worker count naturally spreads
+ * across however many total jobs exist, from however many replicates.
+ *
+ * Building each replicate's request/jobs is cheap and side-effect-free (see
+ * buildStatWeightJobs's own doc comment), so it's done for every replicate up front, before any
+ * sim runs - this is also what lets `totalIterations`/`totalSims` be known exactly from the
+ * start instead of growing as replicates are discovered.
  */
 export async function runCalibrationBatches(
 	gear: GearPiece[],
@@ -332,51 +363,130 @@ export async function runCalibrationBatches(
 	profile: SimCalibrationProfile,
 	onProgress?: (progress: CalibrationProgress) => void,
 ): Promise<CalibrationBatch[]> {
+	const stopRunCalibrationBatches = perfTrace.mark("runCalibrationBatches");
 	const replicates = Math.max(1, profile.calibration.replicates ?? 1);
-	const progressPerReplicate: CalibrationProgress[] = new Array(
-		replicates,
-	).fill({
-		completedIterations: 0,
-		totalIterations: 0,
-		completedSims: 0,
-		totalSims: 0,
-	});
-	const reportAggregateProgress = () => {
-		if (!onProgress) return;
-		onProgress(
-			progressPerReplicate.reduce(
-				(acc, p) => ({
-					completedIterations: acc.completedIterations + p.completedIterations,
-					totalIterations: acc.totalIterations + p.totalIterations,
-					completedSims: acc.completedSims + p.completedSims,
-					totalSims: acc.totalSims + p.totalSims,
-				}),
-				{
-					completedIterations: 0,
-					totalIterations: 0,
-					completedSims: 0,
-					totalSims: 0,
-				},
+	const baseSeed = Date.now();
+
+	// Snapshots taken before/after the concurrent Promise.all below, rather than threading a
+	// single call's elapsed value through - replicates build their jobs concurrently, so several
+	// of them may be recording into these same named spans simultaneously; a before/after delta
+	// on the shared trace correctly isolates just this call's contribution regardless.
+	const childSpanNames = [
+		"buildStatWeightsRequest",
+		"statWeightsRequestEncode",
+		"statWeightRequestsWasmCall",
+	];
+	const childTotalsBefore = childSpanNames.map((name) =>
+		perfTrace.totalFor(name),
+	);
+
+	const stopBuildBundles = perfTrace.mark("buildReplicateJobBundles");
+	const bundles = await Promise.all(
+		Array.from({ length: replicates }, (_, i) =>
+			buildReplicateJobBundle(
+				gear,
+				db,
+				statsToWeigh,
+				profile,
+				i,
+				String(baseSeed + i),
 			),
+		),
+	);
+	const buildBundlesMs = stopBuildBundles();
+	perfTrace.recordGap(
+		"buildReplicateJobBundles",
+		buildBundlesMs,
+		childSpanNames.map(
+			(name, i) => perfTrace.totalFor(name) - childTotalsBefore[i],
+		),
+	);
+
+	const allJobs: SimJob[] = bundles.flatMap((bundle) => bundle.jobs);
+	const jobsById = new Map(allJobs.map((job) => [job.id, job]));
+	const totalIterations = allJobs.reduce(
+		(sum, j) => sum + j.totalIterations,
+		0,
+	);
+	const totalSims = allJobs.length;
+	const resultsByReplicate = new Map<number, Map<string, RaidSimResult>>(
+		bundles.map((bundle) => [bundle.replicateIndex, new Map()]),
+	);
+
+	// Mirrors statWeightsClient.ts's runStatWeightsAsync progress bookkeeping - see its own
+	// comment on why a job's final iteration count only ever arrives bundled with its "done"
+	// result, never as a trailing progress message of its own.
+	const inFlightIterations = new Map<string, number>();
+	let completedIterationsFromDoneJobs = 0;
+	let simsDone = 0;
+	const reportProgress = () => {
+		if (!onProgress) return;
+		const inFlightTotal = Array.from(inFlightIterations.values()).reduce(
+			(a, b) => a + b,
+			0,
 		);
+		onProgress({
+			completedIterations: completedIterationsFromDoneJobs + inFlightTotal,
+			totalIterations,
+			completedSims: simsDone,
+			totalSims,
+		});
 	};
 
-	const batches: CalibrationBatch[] = [];
-	const baseSeed = Date.now();
-	for (let i = 0; i < replicates; i++) {
-		const batch = await runCalibrationBatch(
-			gear,
-			db,
-			statsToWeigh,
-			profile,
-			(progress) => {
-				progressPerReplicate[i] = progress;
-				reportAggregateProgress();
+	const pool = getPool(profile.calibration.workerCount);
+	const stopDispatch = perfTrace.mark("simJobQueueDispatch");
+	let dispatchMs = 0;
+	try {
+		await runSimJobQueue(pool, allJobs, {
+			onJobProgress: (jobId, completed) => {
+				inFlightIterations.set(jobId, completed);
+				reportProgress();
 			},
-			String(baseSeed + i),
-		);
-		batches.push(batch);
+			onJobDone: (jobId, result) => {
+				inFlightIterations.delete(jobId);
+				completedIterationsFromDoneJobs +=
+					jobsById.get(jobId)?.totalIterations ?? 0;
+				simsDone++;
+				const { replicateIndex, originalId } = parseReplicateJobId(jobId);
+				const resultsMap = resultsByReplicate.get(replicateIndex);
+				if (!resultsMap) {
+					throw new Error(
+						`SimJobQueue produced a result for unknown replicate ${replicateIndex} (job "${jobId}")`,
+					);
+				}
+				resultsMap.set(originalId, result);
+				reportProgress();
+			},
+		});
+	} finally {
+		dispatchMs = stopDispatch();
 	}
+
+	const stopCompute = perfTrace.mark("computeStatWeights");
+	const batches = bundles.map((bundle): CalibrationBatch => {
+		const resultsMap = resultsByReplicate.get(bundle.replicateIndex);
+		if (!resultsMap) {
+			throw new Error(
+				`Missing results for replicate ${bundle.replicateIndex} - this indicates a bug in runCalibrationBatches, not a sim failure (runSimJobQueue would have rejected the whole call above if any job failed).`,
+			);
+		}
+		const result = computeStatWeightsFromJobResults(bundle.reqData, resultsMap);
+		return {
+			result,
+			baselineMetrics: result.baseline
+				? extractSimMetrics(result.baseline)
+				: undefined,
+		};
+	});
+	const computeMs = stopCompute();
+
+	const runCalibrationBatchesMs = stopRunCalibrationBatches();
+	perfTrace.recordGap("runCalibrationBatches", runCalibrationBatchesMs, [
+		buildBundlesMs,
+		dispatchMs,
+		computeMs,
+	]);
+
 	return batches;
 }
 
