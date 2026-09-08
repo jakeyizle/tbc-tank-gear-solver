@@ -29,6 +29,7 @@ import type { SimJob } from "./simJobQueue";
 import { runSimJobQueue } from "./simJobQueue";
 import {
 	effectiveCalibrationSampleSize,
+	SIM_METRIC_REFERENCE_STAT,
 	STAT_NAME_TO_TBC_STAT,
 } from "./statTranslation";
 import {
@@ -51,32 +52,82 @@ export interface CalibrationProgress {
 	totalSims: number;
 }
 
+/** Looks up a StatName's tbc-new proto.Stat enum ordinal, or undefined if this repo has no
+ * translation entry for it (see STAT_NAME_TO_TBC_STAT). */
+function tbcStatIndex(statName: StatName): number | undefined {
+	const tbcStatName = STAT_NAME_TO_TBC_STAT[statName];
+	if (!tbcStatName) return undefined;
+	return TbcStat[tbcStatName as keyof typeof TbcStat] as unknown as number;
+}
+
+/** The tbc-new proto.Stat enum ordinal of `metric`'s own EP reference stat (see
+ * SIM_METRIC_REFERENCE_STAT). */
+function referenceStatIndex(metric: SimMetric): number | undefined {
+	return tbcStatIndex(SIM_METRIC_REFERENCE_STAT[metric]);
+}
+
 /**
- * Blends one or more metrics' calibrated `epValues` into a single `Stat[]` weight vector, one
- * entry per `statsToWeigh` that has a translation entry (see statTranslation.ts).
+ * A stat's EP value for one metric: its raw calibrated slope against that metric, divided by
+ * the metric's own reference stat's raw slope (Spell Power for tps; Armor for dtps/tmi - see
+ * SIM_METRIC_REFERENCE_STAT) - the standard EP convention, and exactly what tbc-new's own
+ * upstream UI computes client-side (ui/core/components/stat_weights_action.tsx's
+ * EpWeightsMenu.normaliseEpValue: `value / refWeight`, no further sign adjustment).
  *
- * IMPORTANT: each metric's `epValue` is normalized against *its own* reference stat (Spell
- * Power for tps; Armor, hardcoded Go-side, for dtps/tmi/pdeath - see statweight.go's
- * calcEpResults) - two completely different physical quantities with very different intrinsic
- * magnitudes (real sim output: tmi/dtps epValues routinely run 5-40x larger than tps epValues
- * for the same stat). That makes different metrics' numbers comparable *in sign* (a bigger
- * epValue is always better - see below) but NOT in scale - summing a multi-metric `metricRatios`
- * directly here, unadjusted, does not distribute influence in proportion to the given ratios (a
- * caller wanting a meaningful multi-metric blend should normalize each metric's vector to a
- * common scale first - see blendNormalizedPerMetricWeights - rather than pass a multi-metric
- * `metricRatios` straight into this function). This function itself is still exactly right for
- * a single-metric ratio (e.g. `{tmi: 1}`), which is its only caller today (computePerMetricStatWeights).
+ * Deliberately reads the raw `weights` field and redoes this division here, rather than reading
+ * the wasm sim's own precomputed `epValues` field: statweight.go's calcEpResults
+ * (vendor/tbc-sim/sim/core/statweight.go:369) unconditionally wraps this same ratio in
+ * `math.Abs()` before returning it as `epValues`, discarding real sign information whenever a
+ * stat's true slope disagrees with its reference stat's sign - which happens for perfectly
+ * ordinary stats, not just edge cases (Dodge Rating's real TPS slope is negative: pushing more
+ * of the incoming attack-resolution roll past the point where Block can still occur measurably
+ * reduces Holy Shield's block-gated proc damage - see this session's real wasm-level
+ * measurement, `tps.weights[Dodge] ≈ -0.27`, which `epValues` reported back as a wrong-signed
+ * `+0.49`). The upstream UI already treats the Go-computed `epValues` as untrustworthy for
+ * exactly this reason (it always overwrites it client-side rather than displaying it directly),
+ * so recomputing here instead of trusting the wasm response matches upstream's own convention,
+ * not just a local workaround.
  *
- * No sign flip is applied for a lower-is-better metric (dtps/tmi) - `epValue` is already a
- * "bigger is better" ratio by construction: it's the stat's raw slope against the metric,
- * divided by the *reference* stat's own raw slope (DTPSReferenceStat = Armor, a mitigation
- * stat whose slope against DTPS/TMI is itself negative). Two mitigation stats' slopes share
- * the same sign, so the ratio comes out positive before the Go side's `math.Abs()` even
- * applies - exactly the standard EP convention (a bigger EP number is always better),
- * matching what the solver's objective (always maximizing - see decomposedModel.ts's fixed
- * GLP_MAX) needs directly, with no re-signing. A metric ratio of 0 (or omitted) is skipped
- * entirely, and a metric with no `epValues` for a given stat (e.g. its reference-stat weight
- * came out to exactly 0) is skipped for that stat rather than treated as an error.
+ * Returns undefined when the reference stat's own weight is exactly 0 (mirrors statweight.go's
+ * own bailout: a reference stat with zero measured slope makes the ratio meaningless/undefined,
+ * not just small) or when either weight is otherwise missing.
+ */
+function epValueForStat(
+	result: StatWeightsResult,
+	metric: SimMetric,
+	statIndex: number,
+): number | undefined {
+	const weights = result[metric]?.weights?.stats;
+	if (!weights) return undefined;
+	const refIndex = referenceStatIndex(metric);
+	const refWeight = refIndex == null ? undefined : weights[refIndex];
+	if (!refWeight) return undefined;
+	const rawWeight = weights[statIndex];
+	if (rawWeight == null) return undefined;
+	return rawWeight / refWeight;
+}
+
+/**
+ * Blends one or more metrics' EP values (see epValueForStat) into a single `Stat[]` weight
+ * vector, one entry per `statsToWeigh` that has a translation entry (see statTranslation.ts).
+ *
+ * IMPORTANT: each metric's EP value is normalized against *its own* reference stat (Spell Power
+ * for tps; Armor for dtps/tmi/pdeath - see SIM_METRIC_REFERENCE_STAT) - two completely different
+ * physical quantities with very different intrinsic magnitudes (real sim output: tmi/dtps EP
+ * values routinely run 5-40x larger than tps EP values for the same stat). That makes different
+ * metrics' numbers comparable *in sign* (a bigger EP value is always better for that metric) but
+ * NOT in scale - summing a multi-metric `metricRatios` directly here, unadjusted, does not
+ * distribute influence in proportion to the given ratios (a caller wanting a meaningful
+ * multi-metric blend should normalize each metric's vector to a common scale first - see
+ * blendNormalizedPerMetricWeights - rather than pass a multi-metric `metricRatios` straight into
+ * this function). This function itself is still exactly right for a single-metric ratio (e.g.
+ * `{tmi: 1}`), which is its only caller today (computePerMetricStatWeights).
+ *
+ * A stat's sign is preserved, not forced positive: a stat that's genuinely bad for a metric
+ * (e.g. Dodge for tps - see epValueForStat's own comment) blends in as a negative contribution,
+ * exactly as a real "bigger is better" EP convention requires. A metric ratio of 0 (or omitted)
+ * is skipped entirely, and a metric with no usable EP value for a given stat (its own reference
+ * stat calibrated to exactly 0, or the stat itself has no calibrated weight) is skipped for that
+ * stat rather than treated as an error.
  *
  * Extracted from calibrateWeights() as a pure function so the blending math can be unit
  * tested against a hand-built StatWeightsResult, without a real wasm/browser environment.
@@ -88,11 +139,8 @@ export function blendMetricEpValues(
 ): Stat[] {
 	const stats: Stat[] = [];
 	for (const statName of statsToWeigh) {
-		const tbcStatName = STAT_NAME_TO_TBC_STAT[statName];
-		if (!tbcStatName) continue;
-		const index = TbcStat[
-			tbcStatName as keyof typeof TbcStat
-		] as unknown as number;
+		const index = tbcStatIndex(statName);
+		if (index == null) continue;
 
 		let blended = 0;
 		for (const [metric, ratio] of Object.entries(metricRatios) as [
@@ -100,7 +148,7 @@ export function blendMetricEpValues(
 			number | undefined,
 		][]) {
 			if (!ratio) continue;
-			const epValue = result[metric]?.epValues?.stats[index];
+			const epValue = epValueForStat(result, metric, index);
 			if (epValue == null) continue;
 			blended += ratio * epValue;
 		}
@@ -128,16 +176,45 @@ export function metricRatiosForBalance(
 }
 
 /**
- * Sibling to `blendMetricEpValues`: blends the same metrics' `epValuesStdev` into a per-stat
- * *standard error of the mean weight* for the blended weight vector, for the solve loop's
- * hysteresis check (see solveSimMetric.ts) and for display - without this, every round's weight
- * vector is treated as exact, so two items within noise of each other's true value keep trading
- * places forever instead of the loop recognizing it can't actually tell them apart.
+ * epValueForStat's sibling for standard deviation: a stat's raw population stdev (from
+ * `weightsStdev`, statweight.go's aggregator.meanAndStdDev()) converted into the same EP scale
+ * as epValueForStat's mean, by dividing by the reference stat's own weight magnitude. Always
+ * non-negative (a spread can't have a sign), which is also true of statweight.go's own
+ * `epValuesStdev` (its `math.Abs(stdev)` at statweight.go:370 is a genuine no-op there, since
+ * dividing by `math.Abs(refWeight)` already guarantees a non-negative result) - so, unlike
+ * epValueForStat's mean, this one recomputation would agree with the wasm-provided
+ * `epValuesStdev` field exactly. It's still recomputed from `weightsStdev` here rather than read
+ * directly, purely to stay symmetric with epValueForStat and depend on only one raw field
+ * (`weights`) for the reference-weight lookup.
+ */
+function epValueStdevForStat(
+	result: StatWeightsResult,
+	metric: SimMetric,
+	statIndex: number,
+): number | undefined {
+	const weights = result[metric]?.weights?.stats;
+	const weightsStdev = result[metric]?.weightsStdev?.stats;
+	if (!weights || !weightsStdev) return undefined;
+	const refIndex = referenceStatIndex(metric);
+	const refWeight = refIndex == null ? undefined : weights[refIndex];
+	if (!refWeight) return undefined;
+	const rawStdev = weightsStdev[statIndex];
+	if (rawStdev == null) return undefined;
+	return rawStdev / Math.abs(refWeight);
+}
+
+/**
+ * Sibling to `blendMetricEpValues`: blends the same metrics' EP standard deviations (see
+ * epValueStdevForStat) into a per-stat *standard error of the mean weight* for the blended
+ * weight vector, for the solve loop's hysteresis check (see solveSimMetric.ts) and for display -
+ * without this, every round's weight vector is treated as exact, so two items within noise of
+ * each other's true value keep trading places forever instead of the loop recognizing it can't
+ * actually tell them apart.
  *
- * The Go sim's own `epValuesStdev` (statweight.go's aggregator.meanAndStdDev(), see utils.go) is
- * the raw *population* standard deviation of the individual per-iteration paired-difference
- * values - it does not shrink with more iterations on its own, and using it directly here would
- * overstate uncertainty by roughly sqrt(n) (e.g. ~60x at 4000 iterations) - see
+ * epValueStdevForStat's result is still the raw *population* standard deviation of the
+ * individual per-iteration paired-difference values (just rescaled onto the EP axis) - it does
+ * not shrink with more iterations on its own, and using it directly here would overstate
+ * uncertainty by roughly sqrt(n) (e.g. ~60x at 4000 iterations) - see
  * effectiveCalibrationSampleSize's own doc comment. Dividing by sqrt(n) here, at the point the
  * raw value is first read, converts it into an actual standard error of the mean before it's
  * blended - every downstream consumer (averageStatStdevs' cross-replicate combination, the UI,
@@ -157,11 +234,8 @@ export function blendMetricEpValueStdevs(
 ): Stat[] {
 	const stats: Stat[] = [];
 	for (const statName of statsToWeigh) {
-		const tbcStatName = STAT_NAME_TO_TBC_STAT[statName];
-		if (!tbcStatName) continue;
-		const index = TbcStat[
-			tbcStatName as keyof typeof TbcStat
-		] as unknown as number;
+		const index = tbcStatIndex(statName);
+		if (index == null) continue;
 		const sampleSize = effectiveCalibrationSampleSize(statName, iterations);
 
 		let varianceSum = 0;
@@ -170,9 +244,9 @@ export function blendMetricEpValueStdevs(
 			number | undefined,
 		][]) {
 			if (!ratio) continue;
-			const populationStdev = result[metric]?.epValuesStdev?.stats[index];
-			if (populationStdev == null) continue;
-			const standardError = populationStdev / Math.sqrt(sampleSize);
+			const epStdev = epValueStdevForStat(result, metric, index);
+			if (epStdev == null) continue;
+			const standardError = epStdev / Math.sqrt(sampleSize);
 			varianceSum += (ratio * standardError) ** 2;
 		}
 		stats.push({ name: statName, value: Math.sqrt(varianceSum), type: "flat" });

@@ -54,15 +54,28 @@ import {
 // Stat enum ordinals from proto/common.ts, for readability below.
 const STRENGTH = 0;
 const STAMINA = 2;
-const ARMOR = 31;
+const SPELL_DAMAGE = 5; // SIM_METRIC_REFERENCE_STAT.tps (StatSpellDamage)
+const ARMOR = 31; // SIM_METRIC_REFERENCE_STAT.dtps/tmi (StatArmor)
 const EXPERTISE = 24;
 
-function fakeEpValues(stats: number[]) {
-	return { epValues: { apiVersion: 0, stats, pseudoStats: [] } };
+// blendMetricEpValues/blendMetricEpValueStdevs now recompute the EP ratio themselves from the
+// raw `weights`/`weightsStdev` fields (see epValueForStat's doc comment on why - the wasm sim's
+// own precomputed `epValues` field silently discards real sign information via an unconditional
+// math.Abs()), so fixtures below build `weights`/`weightsStdev` directly, including a reference
+// stat entry (SPELL_DAMAGE for tps, ARMOR for dtps/tmi) alongside whatever's under test - a
+// fixture that omits it is deliberately testing the "no reference weight" skip case.
+function fakeWeights(stats: number[]) {
+	return { weights: { apiVersion: 0, stats, pseudoStats: [] } };
 }
 
-function fakeEpValueStdevs(stats: number[]) {
-	return { epValuesStdev: { apiVersion: 0, stats, pseudoStats: [] } };
+function fakeWeightStdevs(stats: number[]) {
+	return { weightsStdev: { apiVersion: 0, stats, pseudoStats: [] } };
+}
+
+/** blendMetricEpValueStdevs needs both `weights` (for the reference-weight lookup) and
+ * `weightsStdev` (the value under test) on the same metric. */
+function fakeMetric(weights: number[], weightsStdev: number[]) {
+	return { ...fakeWeights(weights), ...fakeWeightStdevs(weightsStdev) };
 }
 
 function fakeResult(overrides: Partial<StatWeightsResult>): StatWeightsResult {
@@ -70,43 +83,44 @@ function fakeResult(overrides: Partial<StatWeightsResult>): StatWeightsResult {
 }
 
 describe("blendMetricEpValues", () => {
-	it("a single nonzero ratio passes epValue through unsigned, even for a lower-is-better metric", () => {
+	it("computes EP as raw weight / reference-stat weight, preserving a genuinely negative sign", () => {
 		const stats: number[] = [];
-		stats[STRENGTH] = 1.5;
-		stats[STAMINA] = 2.0;
-		const result = fakeResult({ tmi: fakeEpValues(stats) });
+		stats[SPELL_DAMAGE] = 6; // tps's own reference stat (SIM_METRIC_REFERENCE_STAT.tps)
+		stats[STRENGTH] = 3;
+		stats[STAMINA] = -3; // a stat with a real negative slope against this metric
+		const result = fakeResult({ tps: fakeWeights(stats) });
 
 		const blended = blendMetricEpValues(result, ["Strength", "Stamina"], {
-			tmi: 1,
+			tps: 1,
 		});
 
-		// tmi's epValue is already "bigger is better" (see this function's own doc comment on
-		// why the Go-side reference-stat normalization makes any further sign flip wrong) - no
-		// re-signing here.
 		expect(blended).toEqual([
-			{ name: "Strength", value: 1.5, type: "flat" },
-			{ name: "Stamina", value: 2.0, type: "flat" },
+			{ name: "Strength", value: 0.5, type: "flat" },
+			{ name: "Stamina", value: -0.5, type: "flat" },
 		]);
 	});
 
-	it("passes a higher-is-better metric like tps through unsigned too", () => {
+	it("a lower-is-better metric (tmi) still comes out positive when both slopes share a sign", () => {
 		const stats: number[] = [];
-		stats[STRENGTH] = 3;
-		const result = fakeResult({ tps: fakeEpValues(stats) });
+		stats[ARMOR] = -2; // tmi/dtps's own reference stat, itself negative-sloped (more armor -> less damage taken)
+		stats[STAMINA] = -6; // also negative-sloped (more stamina -> lower TMI) -> ratio is positive
+		const result = fakeResult({ tmi: fakeWeights(stats) });
 
-		const blended = blendMetricEpValues(result, ["Strength"], { tps: 1 });
+		const blended = blendMetricEpValues(result, ["Stamina"], { tmi: 1 });
 
-		expect(blended).toEqual([{ name: "Strength", value: 3, type: "flat" }]);
+		expect(blended).toEqual([{ name: "Stamina", value: 3, type: "flat" }]);
 	});
 
 	it("sums multiple nonzero-ratio metrics for the same stat", () => {
 		const tpsStats: number[] = [];
+		tpsStats[SPELL_DAMAGE] = 1;
 		tpsStats[STAMINA] = 1;
 		const dtpsStats: number[] = [];
+		dtpsStats[ARMOR] = 1;
 		dtpsStats[STAMINA] = 2;
 		const result = fakeResult({
-			tps: fakeEpValues(tpsStats),
-			dtps: fakeEpValues(dtpsStats),
+			tps: fakeWeights(tpsStats),
+			dtps: fakeWeights(dtpsStats),
 		});
 
 		const blended = blendMetricEpValues(result, ["Stamina"], {
@@ -114,14 +128,15 @@ describe("blendMetricEpValues", () => {
 			dtps: 0.5,
 		});
 
-		// tps: 1*1 = 1; dtps: 0.5*2 = 1; total 2.
+		// tps: 1 * (1/1) = 1; dtps: 0.5 * (2/1) = 1; total 2.
 		expect(blended).toEqual([{ name: "Stamina", value: 2, type: "flat" }]);
 	});
 
 	it("skips a metric with a zero (or omitted) ratio even if present in the result", () => {
 		const stats: number[] = [];
+		stats[ARMOR] = 1;
 		stats[STAMINA] = 100;
-		const result = fakeResult({ tmi: fakeEpValues(stats) });
+		const result = fakeResult({ tmi: fakeWeights(stats) });
 
 		const blended = blendMetricEpValues(result, ["Stamina"], {
 			tmi: 0,
@@ -131,11 +146,11 @@ describe("blendMetricEpValues", () => {
 		expect(blended).toEqual([{ name: "Stamina", value: 0, type: "flat" }]);
 	});
 
-	it("skips a metric with no epValues for a given stat rather than producing NaN", () => {
+	it("skips a stat with no weight of its own for a given metric rather than producing NaN", () => {
 		const stats: number[] = [];
 		stats[ARMOR] = 5;
-		// Stamina has no entry in this metric's epValues at all.
-		const result = fakeResult({ tmi: fakeEpValues(stats) });
+		// Stamina has no entry in this metric's weights at all.
+		const result = fakeResult({ tmi: fakeWeights(stats) });
 
 		const blended = blendMetricEpValues(result, ["Stamina", "Armor"], {
 			tmi: 1,
@@ -143,8 +158,22 @@ describe("blendMetricEpValues", () => {
 
 		expect(blended).toEqual([
 			{ name: "Stamina", value: 0, type: "flat" },
-			{ name: "Armor", value: 5, type: "flat" },
+			// Armor is dtps/tmi's own reference stat here, so its EP against itself is 1 - not
+			// its raw weight (5) - see epValueForStat.
+			{ name: "Armor", value: 1, type: "flat" },
 		]);
+	});
+
+	it("skips every stat for a metric whose own reference-stat weight is exactly 0 (mirrors statweight.go's bailout)", () => {
+		const stats: number[] = [];
+		stats[STAMINA] = 100;
+		// No ARMOR entry at all - tmi/dtps's reference stat weight reads as 0/undefined, which
+		// statweight.go's own calcEpResults treats as "no usable EP value", not "EP value of 0".
+		const result = fakeResult({ tmi: fakeWeights(stats) });
+
+		const blended = blendMetricEpValues(result, ["Stamina"], { tmi: 1 });
+
+		expect(blended).toEqual([{ name: "Stamina", value: 0, type: "flat" }]);
 	});
 });
 
@@ -172,9 +201,11 @@ describe("metricRatiosForBalance", () => {
 
 describe("blendMetricEpValueStdevs", () => {
 	it("divides the sim's raw population stdev by sqrt(iterations) to get a standard error, unsigned", () => {
-		const stats: number[] = [];
-		stats[STAMINA] = 2.0;
-		const result = fakeResult({ tmi: fakeEpValueStdevs(stats) });
+		const weights: number[] = [];
+		weights[ARMOR] = 1; // tmi's reference stat weight - magnitude 1, so it doesn't rescale the result
+		const stdevs: number[] = [];
+		stdevs[STAMINA] = 2.0;
+		const result = fakeResult({ tmi: fakeMetric(weights, stdevs) });
 
 		// Stamina is two-sided, so effective n = iterations = 100 -> sqrt(100) = 10.
 		const blended = blendMetricEpValueStdevs(
@@ -184,14 +215,17 @@ describe("blendMetricEpValueStdevs", () => {
 			100,
 		);
 
-		// unlike blendMetricEpValues, tmi being lower-is-better must NOT sign-flip a stdev.
+		// A stdev is never negative, regardless of the metric's own "bigger/smaller is better"
+		// convention or the reference stat's sign.
 		expect(blended).toEqual([{ name: "Stamina", value: 0.2, type: "flat" }]);
 	});
 
 	it("halves the effective sample size (n = iterations/2) for one-sided stats", () => {
-		const stats: number[] = [];
-		stats[EXPERTISE] = 20;
-		const result = fakeResult({ tmi: fakeEpValueStdevs(stats) });
+		const weights: number[] = [];
+		weights[ARMOR] = 1;
+		const stdevs: number[] = [];
+		stdevs[EXPERTISE] = 20;
+		const result = fakeResult({ tmi: fakeMetric(weights, stdevs) });
 
 		// Expertise is one-sided (see ONE_SIDED_CALIBRATION_STATS), so effective n =
 		// iterations/2 = 100 -> sqrt(100) = 10, not sqrt(200).
@@ -205,14 +239,37 @@ describe("blendMetricEpValueStdevs", () => {
 		expect(blended).toEqual([{ name: "Expertise", value: 2, type: "flat" }]);
 	});
 
+	it("divides by the reference stat's weight MAGNITUDE, keeping the stdev non-negative even when the reference weight is negative", () => {
+		const weights: number[] = [];
+		weights[ARMOR] = -2; // a real, negative-sloped reference weight (see blendMetricEpValues)
+		const stdevs: number[] = [];
+		stdevs[STAMINA] = 4.0;
+		const result = fakeResult({ tmi: fakeMetric(weights, stdevs) });
+
+		// epStdev = 4.0 / |-2| = 2.0; SE = 2.0 / sqrt(100) = 0.2 - not negative, and not flipped
+		// by the reference weight's sign.
+		const blended = blendMetricEpValueStdevs(
+			result,
+			["Stamina"],
+			{ tmi: 1 },
+			100,
+		);
+
+		expect(blended).toEqual([{ name: "Stamina", value: 0.2, type: "flat" }]);
+	});
+
 	it("combines multiple metrics' standard errors by summing variances, not the values themselves", () => {
-		const tpsStats: number[] = [];
-		tpsStats[STAMINA] = 30;
-		const dtpsStats: number[] = [];
-		dtpsStats[STAMINA] = 40;
+		const tpsWeights: number[] = [];
+		tpsWeights[SPELL_DAMAGE] = 1;
+		const tpsStdevs: number[] = [];
+		tpsStdevs[STAMINA] = 30;
+		const dtpsWeights: number[] = [];
+		dtpsWeights[ARMOR] = 1;
+		const dtpsStdevs: number[] = [];
+		dtpsStdevs[STAMINA] = 40;
 		const result = fakeResult({
-			tps: fakeEpValueStdevs(tpsStats),
-			dtps: fakeEpValueStdevs(dtpsStats),
+			tps: fakeMetric(tpsWeights, tpsStdevs),
+			dtps: fakeMetric(dtpsWeights, dtpsStdevs),
 		});
 
 		// iterations = 100 -> sqrt(100) = 10, so the per-metric standard errors are 3 and 4.
@@ -228,9 +285,11 @@ describe("blendMetricEpValueStdevs", () => {
 	});
 
 	it("skips a metric with a zero (or omitted) ratio", () => {
-		const stats: number[] = [];
-		stats[STAMINA] = 100;
-		const result = fakeResult({ tmi: fakeEpValueStdevs(stats) });
+		const weights: number[] = [];
+		weights[ARMOR] = 1;
+		const stdevs: number[] = [];
+		stdevs[STAMINA] = 100;
+		const result = fakeResult({ tmi: fakeMetric(weights, stdevs) });
 
 		const blended = blendMetricEpValueStdevs(
 			result,
@@ -242,10 +301,13 @@ describe("blendMetricEpValueStdevs", () => {
 		expect(blended).toEqual([{ name: "Stamina", value: 0, type: "flat" }]);
 	});
 
-	it("skips a metric with no epValuesStdev for a given stat rather than producing NaN", () => {
-		const stats: number[] = [];
-		stats[ARMOR] = 50;
-		const result = fakeResult({ tmi: fakeEpValueStdevs(stats) });
+	it("skips a stat with no stdev of its own for a given metric rather than producing NaN", () => {
+		const weights: number[] = [];
+		weights[ARMOR] = 1;
+		const stdevs: number[] = [];
+		stdevs[ARMOR] = 50;
+		// Stamina has no entry in this metric's weightsStdev at all.
+		const result = fakeResult({ tmi: fakeMetric(weights, stdevs) });
 
 		const blended = blendMetricEpValueStdevs(
 			result,
@@ -259,22 +321,40 @@ describe("blendMetricEpValueStdevs", () => {
 			{ name: "Armor", value: 5, type: "flat" },
 		]);
 	});
+
+	it("skips every stat for a metric whose own reference-stat weight is exactly 0 (mirrors statweight.go's bailout)", () => {
+		const stdevs: number[] = [];
+		stdevs[STAMINA] = 100;
+		// No ARMOR entry in `weights` at all.
+		const result = fakeResult({ tmi: fakeMetric([], stdevs) });
+
+		const blended = blendMetricEpValueStdevs(
+			result,
+			["Stamina"],
+			{ tmi: 1 },
+			100,
+		);
+
+		expect(blended).toEqual([{ name: "Stamina", value: 0, type: "flat" }]);
+	});
 });
 
 describe("computePerMetricStatWeights", () => {
 	it("derives each metric's own pure breakdown from the same batch, independent of the others", () => {
 		const strengthStats: number[] = [];
+		strengthStats[SPELL_DAMAGE] = 1; // tps's own reference stat
 		strengthStats[STRENGTH] = 1;
 		const staminaStats: number[] = [];
+		staminaStats[ARMOR] = 1; // dtps's own reference stat
 		staminaStats[STAMINA] = 1;
 		const armorStats: number[] = [];
-		armorStats[ARMOR] = 1;
+		armorStats[ARMOR] = 1; // tmi's own reference stat - Armor itself here, see below
 
 		const batch: CalibrationBatch = {
 			result: fakeResult({
-				tps: fakeEpValues(strengthStats),
-				dtps: fakeEpValues(staminaStats),
-				tmi: fakeEpValues(armorStats),
+				tps: fakeWeights(strengthStats),
+				dtps: fakeWeights(staminaStats),
+				tmi: fakeWeights(armorStats),
 			}),
 		};
 
@@ -292,7 +372,10 @@ describe("computePerMetricStatWeights", () => {
 		expect(weights.dtps).toEqual([
 			{ name: "Strength", value: 0, type: "flat" },
 			{ name: "Stamina", value: 1, type: "flat" },
-			{ name: "Armor", value: 0, type: "flat" },
+			// Armor is dtps's own reference stat and has a weight entry here (shared with
+			// Stamina's fixture array), so its EP against itself is 1, not 0 - see
+			// epValueForStat's doc comment: a reference stat's EP relative to itself is always 1.
+			{ name: "Armor", value: 1, type: "flat" },
 		]);
 		expect(weights.tmi).toEqual([
 			{ name: "Strength", value: 0, type: "flat" },
@@ -304,14 +387,24 @@ describe("computePerMetricStatWeights", () => {
 	it("averages each metric's stdev across multiple batches independently", () => {
 		// Population stdevs of 20 and 40 - divided by sqrt(iterations=100)=10 first (Stamina is
 		// two-sided) to get per-batch standard errors of 2 and 4.
+		const refWeight: number[] = [];
+		refWeight[SPELL_DAMAGE] = 1;
 		const staminaStdevLow: number[] = [];
 		staminaStdevLow[STAMINA] = 20;
 		const staminaStdevHigh: number[] = [];
 		staminaStdevHigh[STAMINA] = 40;
 
 		const batches: CalibrationBatch[] = [
-			{ result: fakeResult({ tps: fakeEpValueStdevs(staminaStdevLow) }) },
-			{ result: fakeResult({ tps: fakeEpValueStdevs(staminaStdevHigh) }) },
+			{
+				result: fakeResult({
+					tps: fakeMetric(refWeight, staminaStdevLow),
+				}),
+			},
+			{
+				result: fakeResult({
+					tps: fakeMetric(refWeight, staminaStdevHigh),
+				}),
+			},
 		];
 
 		const { stdevs } = computePerMetricStatWeights(batches, ["Stamina"], 100);
