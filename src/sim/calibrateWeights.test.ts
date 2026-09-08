@@ -463,6 +463,112 @@ describe("blendNormalizedPerMetricWeights", () => {
 	});
 });
 
+describe("blendNormalizedPerMetricWeights with metricScales", () => {
+	it("divides a metric's vector by the given metricScales entry directly, not a computed norm", () => {
+		const weights = fakePerMetric({ tps: [["Strength", 3]] });
+		const stdevs = fakePerMetric({ tps: [["Strength", 0.3]] });
+
+		const { weights: blended, stdevs: blendedStdevs } =
+			blendNormalizedPerMetricWeights(weights, stdevs, { tps: 1 }, { tps: 6 });
+
+		// 3 / 6 = 0.5 - not 3/3=1 (plain L2 norm of a single-value vector is just its own value).
+		expect(blended[0].value).toBeCloseTo(0.5);
+		expect(blendedStdevs[0].value).toBeCloseTo(0.05);
+	});
+
+	it("a metric wasting weight on an unreachable stat gets a larger effective share when its real measured scale is smaller than plain L2's norm", () => {
+		// Mirrors the real finding: tps puts a large raw weight on Expertise (unreachable in the
+		// real item pool, so an LP-measured scale would come out small/degenerate for it in
+		// isolation) and a smaller one on Strength; tmi puts its weight on Stamina. A real
+		// LP-measured scale for tps (reflecting only what it can actually achieve) is smaller than
+		// tps's own plain L2 norm (sqrt(8^2+1^2)=8.06), giving Strength a bigger effective share.
+		const weights = fakePerMetric({
+			tps: [
+				["Expertise", 8],
+				["Strength", 1],
+			],
+			tmi: [["Stamina", 1]],
+		});
+		const stdevs = fakePerMetric({
+			tps: [
+				["Expertise", 0],
+				["Strength", 0],
+			],
+			tmi: [["Stamina", 0]],
+		});
+		const ratios = { tps: 0.5, tmi: 0.5 };
+
+		const plainL2 = blendNormalizedPerMetricWeights(weights, stdevs, ratios);
+		const measured = blendNormalizedPerMetricWeights(weights, stdevs, ratios, {
+			tps: 2,
+			tmi: 1,
+		});
+
+		const strengthPlain = plainL2.weights.find(
+			(s) => s.name === "Strength",
+		)?.value;
+		const strengthMeasured = measured.weights.find(
+			(s) => s.name === "Strength",
+		)?.value;
+		expect(strengthMeasured).toBeGreaterThan(strengthPlain as number);
+	});
+
+	it("falls back to plain L2 for a metric with no metricScales entry, a non-positive, or a non-finite one", () => {
+		const weights = fakePerMetric({ tps: [["Strength", 3]] });
+		const stdevs = fakePerMetric({ tps: [["Strength", 0]] });
+		const expected = blendNormalizedPerMetricWeights(weights, stdevs, {
+			tps: 1,
+		});
+
+		expect(
+			blendNormalizedPerMetricWeights(weights, stdevs, { tps: 1 }, {}),
+		).toEqual(expected);
+		expect(
+			blendNormalizedPerMetricWeights(weights, stdevs, { tps: 1 }, { tps: 0 }),
+		).toEqual(expected);
+		expect(
+			blendNormalizedPerMetricWeights(weights, stdevs, { tps: 1 }, { tps: -5 }),
+		).toEqual(expected);
+		expect(
+			blendNormalizedPerMetricWeights(
+				weights,
+				stdevs,
+				{ tps: 1 },
+				{ tps: Number.NaN },
+			),
+		).toEqual(expected);
+	});
+
+	it("a pure single-metric ratio still just uniformly rescales, regardless of metricScales", () => {
+		const weights = fakePerMetric({
+			tps: [
+				["Expertise", 8],
+				["Strength", 1],
+			],
+		});
+		const stdevs = fakePerMetric({
+			tps: [
+				["Expertise", 0],
+				["Strength", 0],
+			],
+		});
+
+		const { weights: blended } = blendNormalizedPerMetricWeights(
+			weights,
+			stdevs,
+			{ tps: 1 },
+			{ tps: 4 },
+		);
+
+		// Same 8:1 ratio as the raw input - a single-metric blend only ever rescales by one
+		// positive scalar, regardless of which scale source computed it, so the LP would still
+		// pick the same items as an unnormalized (or plain-L2-normalized) solve.
+		const expertise = blended.find((s) => s.name === "Expertise")?.value ?? 0;
+		const strength = blended.find((s) => s.name === "Strength")?.value ?? 0;
+		expect(expertise / strength).toBeCloseTo(8);
+	});
+});
+
 describe("averageStats", () => {
 	it("averages values for stats appearing in every replicate", () => {
 		const averaged = averageStats([

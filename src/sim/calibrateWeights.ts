@@ -545,18 +545,53 @@ export function normalizeStatVector(stats: Stat[]): {
 }
 
 /**
+ * Shared by `blendNormalizedPerMetricWeights` and `logBlendDiagnostics`: uses `overrideScale`
+ * (e.g. a real LP-measured achievable score swing - see solveSimMetric.ts's
+ * `measureMetricAchievableScale`) directly as the divisor when it's a usable positive finite
+ * number, falling back to plain L2 normalization (`normalizeStatVector`) otherwise.
+ */
+function normalizeStatVectorWithOverride(
+	stats: Stat[],
+	overrideScale: number | undefined,
+): { normalized: Stat[]; scale: number } {
+	if (overrideScale && Number.isFinite(overrideScale) && overrideScale > 0) {
+		return {
+			normalized: stats.map((stat) => ({
+				...stat,
+				value: stat.value / overrideScale,
+			})),
+			scale: overrideScale,
+		};
+	}
+	return normalizeStatVector(stats);
+}
+
+/**
  * Blends per-metric weight vectors (and their standard errors) that have already been rescaled
- * to a common unit-norm scale, fixing the "balance slider" bug where a raw `ratio * epValue` sum
- * (the old approach) let whichever metric happens to have larger-magnitude EP values dominate
- * regardless of the user's chosen ratio - see this session's investigation: TPS epValues
- * normalize against Spell Power's own slope, DTPS/TMI epValues normalize against Armor's, two
- * unrelated quantities whose magnitudes differ by 5-40x in practice, so a "50/50" raw blend was
- * really ~90%+ dominated by whichever metric had the larger natural scale.
+ * to a common scale, fixing the "balance slider" bug where a raw `ratio * epValue` sum (the old
+ * approach) let whichever metric happens to have larger-magnitude EP values dominate regardless
+ * of the user's chosen ratio - see this session's investigation: TPS epValues normalize against
+ * Spell Power's own slope, DTPS/TMI epValues normalize against Armor's, two unrelated quantities
+ * whose magnitudes differ by 5-40x in practice, so a "50/50" raw blend was really ~90%+
+ * dominated by whichever metric had the larger natural scale.
  *
- * Normalizing each metric's vector to a common (unit L2 norm) scale before applying the ratio
- * means "50%" means "each metric's own internal stat-preference pattern gets equal total say" -
- * a stable, principled interpretation, though still not a literal shared real-world unit (there
- * isn't one between threat and a mitigation index).
+ * Normalizing each metric's vector to a common scale before applying the ratio means "50%" means
+ * "each metric's own internal stat-preference pattern gets equal total say" - a stable,
+ * principled interpretation, though still not a literal shared real-world unit (there isn't one
+ * between threat and a mitigation index).
+ *
+ * `metricScales`, when provided, overrides the per-metric normalization: instead of computing an
+ * L2 norm, a metric with a positive finite entry there divides its raw vector (and stdevs)
+ * directly by that number. This is meant to carry a *real, LP-measured* achievable score swing
+ * for that metric (see solveSimMetric.ts's `measureMetricAchievableScale`) - abstract vector-norm
+ * normalization (plain or item-range-weighted) was tried and confirmed, by real user data, to
+ * still let the LP's actual item choice end up lopsided even when the blended *vector* looked
+ * balanced: neither approach can see how stats correlate across real items or interact with hard
+ * avoidance/uncrit constraints, both of which an actual LP solve captures automatically. A metric
+ * missing a usable entry (omitted map, non-positive/non-finite value) falls back to plain L2
+ * normalization (`normalizeStatVector`) - covers round 1's pool-independent calibration (see
+ * solveSimMetric.ts's own comment on why round 1 stays pool-unaware, for round1WeightsCache.ts's
+ * sake), single-metric-mode calls, and a degenerate per-metric measurement.
  *
  * The same per-metric `scale` used to normalize that metric's weights is also divided into its
  * stdevs (scaling a random variable by a constant `k` scales its stdev by `k`, so dividing both
@@ -564,15 +599,16 @@ export function normalizeStatVector(stats: Stat[]): {
  * delta/stdevDelta ratio meaningful after normalization, not just the point estimate.
  *
  * For a pure single-metric ratio (e.g. `{tps: 1}`, used by "Maximize TPS" etc., not just
- * "balanced"), this reduces to rescaling that one metric's vector by its own norm - a uniform
- * positive scalar multiply of the whole vector, which does not change which gear an LP
- * maximization picks (GLP_MAX is invariant to positive rescaling of its objective coefficients),
- * so single-metric-mode item selection is unaffected by this function existing.
+ * "balanced"), this reduces to rescaling that one metric's vector by a single positive scalar -
+ * which does not change which gear an LP maximization picks (GLP_MAX is invariant to positive
+ * rescaling of its objective coefficients), so single-metric-mode item selection is unaffected by
+ * this function existing, regardless of which scale source is used.
  */
 export function blendNormalizedPerMetricWeights(
 	perMetricWeights: Record<SimMetric, Stat[]>,
 	perMetricStdevs: Record<SimMetric, Stat[]>,
 	metricRatios: Partial<Record<SimMetric, number>>,
+	metricScales?: Partial<Record<SimMetric, number>>,
 ): { weights: Stat[]; stdevs: Stat[] } {
 	const weightSum = new Map<string, number>();
 	const varianceSum = new Map<string, number>();
@@ -587,7 +623,7 @@ export function blendNormalizedPerMetricWeights(
 		const rawStdevs = perMetricStdevs[metric];
 		if (!rawWeights) continue;
 		const { normalized: normalizedWeights, scale } =
-			normalizeStatVector(rawWeights);
+			normalizeStatVectorWithOverride(rawWeights, metricScales?.[metric]);
 		const stdevByName = new Map(
 			(rawStdevs ?? []).map((s) => [s.name, s.value]),
 		);
@@ -620,19 +656,80 @@ export function blendNormalizedPerMetricWeights(
 }
 
 /**
- * Calibrates and blends `metricRatios`' per-stat marginal weights (and their uncertainty) around
- * `gear` via the real sim, for every stat in `statsToWeigh` that has a translation entry.
- * Averages over `profile.calibration.replicates` independent batches (see
- * runCalibrationBatches) - a no-op average over a single batch when replicates is 1/unset.
+ * Diagnostic-only console output for a genuine multi-metric blend (2+ nonzero ratios, i.e. the
+ * "balanced" objective mode - a pure single-metric ratio is skipped, nothing interesting to show)
+ * - prints each metric's normalization scale and top contributing stats, so a user reporting the
+ * balance slider still looking skewed toward one metric can share real numbers from their own
+ * live solve instead of this needing to be reproduced in a synthetic test pool. Never affects
+ * solve behavior. Safe to remove once the balance-slider investigation concludes.
  */
-export async function calibrateWeights(
+function logBlendDiagnostics(
+	perMetricWeights: Record<SimMetric, Stat[]>,
+	metricRatios: Partial<Record<SimMetric, number>>,
+	metricScales: Partial<Record<SimMetric, number>> | undefined,
+	blended: Stat[],
+): void {
+	const activeMetrics = (
+		Object.entries(metricRatios) as [SimMetric, number | undefined][]
+	).filter(([, ratio]) => !!ratio);
+	if (activeMetrics.length < 2) return;
+
+	console.log(
+		`[sim] Balance blend diagnostics (ratios: ${activeMetrics.map(([m, r]) => `${m}=${r}`).join(", ")}, metricScales: ${metricScales ? JSON.stringify(metricScales) : "none (falling back to plain L2)"})`,
+	);
+	const contributionByMetric = new Map<SimMetric, Map<string, number>>();
+	for (const [metric, ratio] of activeMetrics) {
+		const raw = perMetricWeights[metric];
+		if (!raw) continue;
+		const { normalized, scale } = normalizeStatVectorWithOverride(
+			raw,
+			metricScales?.[metric],
+		);
+		console.log(`  ${metric}: scale=${scale.toFixed(4)}`);
+		contributionByMetric.set(
+			metric,
+			new Map(normalized.map((s) => [s.name, (ratio ?? 0) * s.value])),
+		);
+	}
+
+	const rows = [...blended]
+		.sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+		.map((s) => {
+			const perMetric = Object.fromEntries(
+				activeMetrics.map(([metric]) => [
+					metric,
+					(contributionByMetric.get(metric)?.get(s.name) ?? 0).toFixed(4),
+				]),
+			);
+			return { stat: s.name, total: s.value.toFixed(4), ...perMetric };
+		});
+	console.table(rows);
+}
+
+export interface PerMetricCalibration {
+	perMetricStatWeights: Record<SimMetric, Stat[]>;
+	perMetricStatWeightStdevs: Record<SimMetric, Stat[]>;
+	baselineMetrics?: SimMetricsSnapshot;
+}
+
+/**
+ * The sim-expensive phase of calibration, without blending: runs a real sim calibration batch
+ * (or several - see runCalibrationBatches) around `gear` and derives each metric's *pure*
+ * per-stat weight breakdown, for every stat in `statsToWeigh` that has a translation entry.
+ *
+ * Split out from `calibrateWeights` (which composes this with a plain-L2 blend - see its own doc
+ * comment) so a caller that needs to do LP work *between* calibration and blending - measuring
+ * each metric's real achievable score swing via an actual solve, rather than guessing at a
+ * normalization scale - can call this directly instead. See solveSimMetric.ts's
+ * `measureMetricAchievableScale` and its round loop for that caller.
+ */
+export async function calibratePerMetricWeights(
 	gear: GearPiece[],
 	db: TbcUiDatabase,
 	statsToWeigh: StatName[],
-	metricRatios: Partial<Record<SimMetric, number>>,
 	profile: SimCalibrationProfile,
 	onProgress?: (progress: CalibrationProgress) => void,
-): Promise<CalibratedWeights> {
+): Promise<PerMetricCalibration> {
 	const batches = await runCalibrationBatches(
 		gear,
 		db,
@@ -652,6 +749,40 @@ export async function calibrateWeights(
 			profile.calibration.iterations,
 		);
 
+	return {
+		perMetricStatWeights,
+		perMetricStatWeightStdevs,
+		baselineMetrics: averageSimMetricsSnapshots(baselineMetricsList),
+	};
+}
+
+/**
+ * Calibrates and blends `metricRatios`' per-stat marginal weights (and their uncertainty) around
+ * `gear` via the real sim, for every stat in `statsToWeigh` that has a translation entry -
+ * `calibratePerMetricWeights` followed by a plain-L2 `blendNormalizedPerMetricWeights` (no
+ * `metricScales` override). This is exactly what round 1's pool-independent calibration needs
+ * (see solveSimMetric.ts's own comment on why round 1 stays pool-unaware, for
+ * round1WeightsCache.ts's sake) - a caller that also wants LP-measured per-metric scales should
+ * call `calibratePerMetricWeights` and `blendNormalizedPerMetricWeights` directly instead, the
+ * way solveSimMetric.ts's round loop does for rounds 2+.
+ */
+export async function calibrateWeights(
+	gear: GearPiece[],
+	db: TbcUiDatabase,
+	statsToWeigh: StatName[],
+	metricRatios: Partial<Record<SimMetric, number>>,
+	profile: SimCalibrationProfile,
+	onProgress?: (progress: CalibrationProgress) => void,
+): Promise<CalibratedWeights> {
+	const { perMetricStatWeights, perMetricStatWeightStdevs, baselineMetrics } =
+		await calibratePerMetricWeights(
+			gear,
+			db,
+			statsToWeigh,
+			profile,
+			onProgress,
+		);
+
 	const { weights: optimizeStats, stdevs: stdevStats } =
 		blendNormalizedPerMetricWeights(
 			perMetricStatWeights,
@@ -659,10 +790,17 @@ export async function calibrateWeights(
 			metricRatios,
 		);
 
+	logBlendDiagnostics(
+		perMetricStatWeights,
+		metricRatios,
+		undefined,
+		optimizeStats,
+	);
+
 	return {
 		optimizeStats,
 		stdevStats,
-		baselineMetrics: averageSimMetricsSnapshots(baselineMetricsList),
+		baselineMetrics,
 		perMetricStatWeights,
 		perMetricStatWeightStdevs,
 	};

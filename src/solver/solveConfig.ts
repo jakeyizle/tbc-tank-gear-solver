@@ -293,10 +293,29 @@ const runLPModel = async (
 	let buildLpModelMs = 0;
 	let glpkSolveMs = 0;
 	let transformMs = 0;
+	// glpk.js's web build spins up a brand-new dedicated Worker + WASM instance on every GLPK()
+	// call (see node_modules/glpk.js/src/glpk-web.js's createWorker/default export) - nothing
+	// terminates it afterward, so every runLPModel call (the round's main solve, every
+	// avoidance-convergence retry iteration below, and every one of measureMetricAchievableScale's
+	// concurrent solveConfig calls) permanently leaked one more worker. Confirmed as the real
+	// cause of the long-standing "stuck at N/N sims" reports: a live console-log trace showed 3 of
+	// 4 concurrent measureMetricAchievableScale solves hang forever inside `await GLPK()` itself
+	// (never reaching "starting glpk.solve") once enough prior rounds had accumulated leaked
+	// workers - since solveConfig already runs inside its own Worker, spawning yet more nested
+	// workers eventually hits a browser resource ceiling and new Worker() creation just never
+	// fires its onmessage/onerror. Declared here (not inside the try) so the finally below can
+	// terminate it regardless of which stage below throws.
+	let glpk: Awaited<ReturnType<typeof GLPK>> | undefined;
 	try {
 		const stopGlpkAcquire = perfTrace.mark("glpkModuleAcquire");
-		const glpk = await GLPK();
+		console.log(
+			`[lp] acquiring glpk worker (t=${performance.now().toFixed(0)}ms)`,
+		);
+		glpk = await GLPK();
 		glpkAcquireMs = stopGlpkAcquire();
+		console.log(
+			`[lp] acquired glpk worker in ${glpkAcquireMs.toFixed(0)}ms (t=${performance.now().toFixed(0)}ms)`,
+		);
 
 		const stopBuildModel = perfTrace.mark("buildLpModel");
 		const headers = allItemHeaders(fixedItems, decomposableItems);
@@ -367,8 +386,19 @@ const runLPModel = async (
 		buildLpModelMs = stopBuildModel();
 
 		const stopGlpkSolve = perfTrace.mark("glpkSolve");
+		// Live (not perfTrace-buffered) timing around the single glpk.solve() call - past
+		// investigation found multi-minute "stuck" reports were actually one pathologically slow
+		// glpk.solve() call, not a runaway loop (the outer avoidance-convergence loop is bounded -
+		// see runLPModelWithAvoidanceConvergence's maxIterations). Logging the variable/constraint
+		// counts alongside the timing lets a slow solve be correlated with problem size.
+		console.log(
+			`[lp] starting glpk.solve (t=${performance.now().toFixed(0)}ms, ${model.objective.vars.length} vars, ${constraints.length} constraints)`,
+		);
 		const result = await glpk.solve(model, solveOptions(glpk));
 		glpkSolveMs = stopGlpkSolve();
+		console.log(
+			`[lp] glpk.solve done in ${glpkSolveMs.toFixed(0)}ms (t=${performance.now().toFixed(0)}ms, status=${result.result.status})`,
+		);
 		if (result.result.status !== glpk.GLP_OPT) {
 			throw new Error(
 				`No gear combination satisfies: ${describeConstraints(config)}.`,
@@ -401,6 +431,22 @@ const runLPModel = async (
 
 		return [...chosenFixedItems, ...chosenDecomposable];
 	} finally {
+		// See this function's glpk-declaration comment above - without this, every call leaks a
+		// dedicated Worker + WASM instance for the rest of the process's lifetime. Guarded with
+		// typeof (not just glpk?.) because vite.config.ts's test-only alias swaps in glpk.js's
+		// Node-native synchronous build, which has no worker and no terminate method at all.
+		//
+		// MUST pass `false` here: glpk.js's terminate(cleanup=true default) also revokes a
+		// MODULE-LEVEL (shared across every GLPK() instance in this process) Blob URL and clears a
+		// module-level cached WASM binary (see glpk-web.js's workerURL/wasmBinary/cleanupResources).
+		// Calling the default form the instant any one concurrent solve finished revoked that
+		// shared Blob URL out from under a *sibling* solve's own `new Worker(getWorkerURL())` that
+		// was still loading its script from it - confirmed live: this is what caused a solve stuck
+		// mid-way through a concurrent measureMetricAchievableScale batch with zero further output,
+		// no error, no rejection, just a permanently silent worker. `false` still terminates this
+		// call's own dedicated worker (the actual leak this fixes) without touching state other
+		// concurrent instances may still be using.
+		if (typeof glpk?.terminate === "function") glpk.terminate(false);
 		const runLPModelMs = stopRunLPModel();
 		perfTrace.recordGap("runLPModel", runLPModelMs, [
 			glpkAcquireMs,
@@ -436,6 +482,22 @@ export const runLPModelWithAvoidanceConvergence = async (
 			Math.ceil(MAX_UNCRIT_ROUNDING_ERROR / UNCRIT_STEP),
 		) + 3;
 
+	// The real, meaningful thresholds - captured before the loop mutates config.avoidanceTarget/
+	// uncritabilityTarget via stepAvoidanceTarget/stepUncritabilityTarget below. Those two fields
+	// do double duty as both "the hard constraint fed to this iteration's LP solve" AND, if
+	// compared against directly, "the bar the rounded result must clear" - conflating them was a
+	// real bug: every failed iteration permanently raises config's own field, so checking the
+	// rounded result against `config.avoidanceTarget` compares it to an ever-climbing bar instead
+	// of the one fixed target that actually matters, even after the real target has long been
+	// cleared (confirmed live: a run's rounded avoidance cleared the real target on iteration 2,
+	// but iteration 2's own already-stepped comparison target had moved past it too, so the loop
+	// kept escalating both sides in lockstep and never recognized success, right up until the
+	// maxIterations bailout). The constraint fed to runLPModel below should keep escalating (that
+	// part compensates for defense skill's floor-rounding, same as before) - only the success
+	// check needs to stay pinned to the original target.
+	const originalAvoidanceTarget = config.avoidanceTarget;
+	const originalUncritabilityTarget = config.uncritabilityTarget;
+
 	const stopOuter = perfTrace.mark("runLPModelWithAvoidanceConvergence");
 	// Raw performance.now() deltas here (not perfTrace.mark()) are deliberate - runLPModel already
 	// records its own "runLPModel" span internally (see its own gap-checked breakdown), so this
@@ -446,6 +508,9 @@ export const runLPModelWithAvoidanceConvergence = async (
 	try {
 		while (true) {
 			iteration++;
+			console.log(
+				`[lp] avoidance-convergence iteration ${iteration}/${maxIterations} starting (t=${performance.now().toFixed(0)}ms)`,
+			);
 			const runLPModelStart = performance.now();
 			result = await runLPModel(
 				fixedItems,
@@ -472,17 +537,34 @@ export const runLPModelWithAvoidanceConvergence = async (
 				roundDefenseAndResilience: true,
 			});
 
-			const isAvoidanceTargetMet = itemAvoidance >= config.avoidanceTarget;
-			const isUncritTargetMet = itemUncrit >= config.uncritabilityTarget;
+			const isAvoidanceTargetMet = itemAvoidance >= originalAvoidanceTarget;
+			const isUncritTargetMet = itemUncrit >= originalUncritabilityTarget;
 			if (isAvoidanceTargetMet && isUncritTargetMet) {
 				break;
 			}
 
+			// maxIterations is a rounding-error-based expectation, not a hard guarantee (see its
+			// own comment above) - stepping the target every failed iteration should converge
+			// within it, but without this check a pool/config combination where it doesn't
+			// (observed live: a run stuck for 2000s+ with no error) spins forever, since
+			// stepAvoidanceTarget/stepUncritabilityTarget only ever raise the bar higher. Bail out
+			// with the closest result found instead of hanging indefinitely.
+			if (iteration >= maxIterations) {
+				console.warn(
+					`runLPModelWithAvoidanceConvergence: gave up after ${iteration} iterations without reaching ` +
+						`avoidance target ${originalAvoidanceTarget} (got ${itemAvoidance}, LP was solving against ` +
+						`escalated constraint ${config.avoidanceTarget}) / uncrit target ${originalUncritabilityTarget} ` +
+						`(got ${itemUncrit}, LP was solving against escalated constraint ${config.uncritabilityTarget}) ` +
+						"- returning the closest result found instead of continuing indefinitely.",
+				);
+				break;
+			}
+
 			console.log(
-				`item avoidance: ${itemAvoidance}, avoidance target: ${config.avoidanceTarget}`,
+				`item avoidance: ${itemAvoidance}, real target: ${originalAvoidanceTarget}, LP constraint this iteration: ${config.avoidanceTarget}`,
 			);
 			console.log(
-				`item uncrit: ${itemUncrit}, uncrit target: ${config.uncritabilityTarget}`,
+				`item uncrit: ${itemUncrit}, real target: ${originalUncritabilityTarget}, LP constraint this iteration: ${config.uncritabilityTarget}`,
 			);
 			if (!isAvoidanceTargetMet) {
 				config.stepAvoidanceTarget(AVOIDANCE_STEP);

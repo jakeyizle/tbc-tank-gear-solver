@@ -19,8 +19,10 @@ import type {
 } from "#/types/SimCalibrationProfile";
 import type { TbcUiDatabase } from "./buildStatWeightsRequest";
 import {
+	blendNormalizedPerMetricWeights,
 	type CalibratedWeights,
 	type CalibrationProgress,
+	calibratePerMetricWeights,
 	calibrateWeights,
 	measureFinalSimMetrics,
 	resetSimEnvironment,
@@ -293,6 +295,69 @@ export function filterItemsForClass(
 	});
 }
 
+/** Negates every stat's value - maximizing a negated vector's LP is how to find the gear that
+ * *minimizes* the original vector's score under the same constraints, since `solveConfig` only
+ * ever maximizes. See measureMetricAchievableScale's own doc comment for why this matters. */
+function negateVector(stats: Stat[]): Stat[] {
+	return stats.map((stat) => ({ ...stat, value: -stat.value }));
+}
+
+/**
+ * Measures a single metric's real, LP-grounded achievable score *range* across the whole
+ * eligible item pool - runs two real (sim-free, fast) LP solves using `rawVector` (that metric's
+ * own unblended per-stat weights, straight from `calibratePerMetricWeights`) and its negation as
+ * the objective, against the exact same real item pool/options/hard-constraints the round is
+ * already solving with, and returns the gap between the best and worst gear the pool can produce
+ * under that vector.
+ *
+ * Deliberately NOT measured against `currentGear` (an earlier version of this function did,
+ * comparing the metric's own optimum to the round's current gear) - that produced a
+ * self-reinforcing feedback loop, confirmed with real data from this session's Node-only
+ * wasm+LP harness: once gear already leans toward one metric, that metric's own remaining
+ * "headroom over current gear" shrinks, which (since a smaller scale means *less* division, so a
+ * *larger* effective normalized weight) makes it dominate even more in the next round, regardless
+ * of the user's chosen ratio. Best-minus-worst across the whole pool is a fixed property of the
+ * pool and this round's freshly-calibrated vector, not of the solve's own history, so it can't
+ * spiral that way.
+ *
+ * This still replaces the earlier, purely heuristic per-stat item-range proxy (which ignored
+ * stat correlations and hard avoidance/uncrit constraints entirely) - actually running the
+ * solver, twice, can't get correlations or constraints wrong, since it's the same solver the
+ * round itself uses.
+ *
+ * Returns `undefined` (rather than 0 or a negative number) when the pool has no differentiable
+ * effect on this vector at all - a genuine degenerate case, not an error - so the caller falls
+ * back to plain L2 normalization for just that one metric (see calibrateWeights.ts's
+ * blendNormalizedPerMetricWeights).
+ */
+export async function measureMetricAchievableScale(
+	rawVector: Stat[],
+	eligibleItems: InputItem[],
+	options: Omit<SolveOptions, "optimizeStats" | "objectiveMode">,
+): Promise<number | undefined> {
+	const [bestProposal, worstProposal] = await Promise.all([
+		solveConfig(eligibleItems, {
+			...options,
+			objectiveMode: "stats",
+			optimizeStats: rawVector,
+		}),
+		solveConfig(eligibleItems, {
+			...options,
+			objectiveMode: "stats",
+			optimizeStats: negateVector(rawVector),
+		}),
+	]);
+	const config = new SolverConfiguration({
+		...options,
+		optimizeStats: rawVector,
+	});
+	const scale =
+		scoreGearSet(splitGearAndConsumables(bestProposal).gear, config) -
+		scoreGearSet(splitGearAndConsumables(worstProposal).gear, config);
+
+	return Number.isFinite(scale) && scale > 0 ? scale : undefined;
+}
+
 /**
  * Solves for a weighted blend of `metricRatios`, recalibrating sim weights each round around
  * the previous round's result until the chosen item set stabilizes (or `maxIterations` is
@@ -361,7 +426,6 @@ export async function solveConfigForSimMetric(
 	const calibrationStats = resolveCalibrationStats(
 		options.enabledCalibrationStats,
 	);
-
 	// `currentGear` is always a clean, slot-ordered, consumable-free gear array (round 0's
 	// hand-picked baseline is already both) - it's the calibration loop's baseline input, kept
 	// separate from `result` (the last accepted round's full LP output, gear + any chosen
@@ -429,17 +493,10 @@ export async function solveConfigForSimMetric(
 					perMetricStatWeights,
 					perMetricStatWeightStdevs,
 				} = precomputedRound1);
-			} else {
-				// Periodically reset the coordinator wasm instance + worker pool between rounds - see
-				// simWorkerPool.ts's header comment and statWeightsClient.ts's resetSimEnvironment doc
-				// comment for why long-lived reused wasm instances can wedge after enough cumulative
-				// calls. Never before round 1 (nothing has accumulated yet); always placed strictly
-				// between whole calibrateWeights() calls, never mid-batch.
-				if (iteration > 0) {
-					const stopReset = perfTrace.mark("resetSimEnvironment");
-					resetSimEnvironment();
-					resetMs = stopReset();
-				}
+			} else if (iteration === 0) {
+				// Round 1 stays pool-independent for round1WeightsCache.ts's sake - see
+				// calibrateWeights' own doc comment - so it uses the plain-L2-blending wrapper
+				// rather than measuring LP-grounded per-metric scales against this specific pool.
 				const stopCalibrate = perfTrace.mark("calibrateWeights");
 				({
 					optimizeStats,
@@ -455,12 +512,94 @@ export async function solveConfigForSimMetric(
 					onCalibrationProgress,
 				));
 				calibrateMs = stopCalibrate();
+			} else {
+				// Periodically reset the coordinator wasm instance + worker pool between rounds - see
+				// simWorkerPool.ts's header comment and statWeightsClient.ts's resetSimEnvironment doc
+				// comment for why long-lived reused wasm instances can wedge after enough cumulative
+				// calls. Always placed strictly between whole calibration calls, never mid-batch.
+				const stopReset = perfTrace.mark("resetSimEnvironment");
+				console.log(
+					`[sim] round ${roundIndex}: resetting sim environment (t=${performance.now().toFixed(0)}ms)`,
+				);
+				resetSimEnvironment();
+				resetMs = stopReset();
+
+				const stopCalibrate = perfTrace.mark("calibrateWeights");
+				const perMetricCalibration = await calibratePerMetricWeights(
+					currentGear,
+					db,
+					calibrationStats,
+					withConsumablesOverride(profile, currentConsumablesOverride),
+					onCalibrationProgress,
+				);
+				perMetricStatWeights = perMetricCalibration.perMetricStatWeights;
+				perMetricStatWeightStdevs =
+					perMetricCalibration.perMetricStatWeightStdevs;
+				calibrateMs = stopCalibrate();
+				// Watch this line for a "stuck at N/N sims" report: onCalibrationProgress's last tick
+				// freezes the UI's progress text as soon as the sim work itself finishes, but
+				// calibratePerMetricWeights still has to run computeStatWeightsFromJobResults/
+				// computePerMetricStatWeights afterward - if a hang's last log line is BEFORE this one,
+				// the sim/worker-pool side is stuck; if it's AFTER, the LP side (measureMetricScales or
+				// the round's own solveConfig/glpk.solve below - see solveConfig.ts's logging) is stuck.
+				console.log(
+					`[sim] round ${roundIndex}: calibration done in ${calibrateMs.toFixed(0)}ms (t=${performance.now().toFixed(0)}ms)`,
+				);
+
+				// Measure each active metric's real, LP-grounded achievable score swing against
+				// this exact pool/options/hard-constraints - see measureMetricAchievableScale's own
+				// doc comment for why this replaces an earlier per-stat item-range heuristic that
+				// couldn't see stat correlations or the avoidance/uncrit constraints. Skipped
+				// entirely for a single-metric ratio (e.g. "Maximize TPS") - a lone metric's own
+				// scale never affects which items the LP picks, so measuring it would just be two
+				// wasted solveConfig calls.
+				const activeMetrics = (
+					Object.entries(metricRatios) as [SimMetric, number | undefined][]
+				).filter(([, ratio]) => !!ratio);
+				let metricScales: Partial<Record<SimMetric, number>> | undefined;
+				if (activeMetrics.length >= 2) {
+					// This runs 2 solveConfig("stats") LP calls per active metric with no onProgress
+					// wired up at all - the UI's progress text has nothing new to show for the whole
+					// duration of this block, so it's a prime suspect for a "stuck" report landing here.
+					console.log(
+						`[sim] round ${roundIndex}: measuring achievable scale for [${activeMetrics.map(([m]) => m).join(", ")}] (${activeMetrics.length * 2} silent LP solves, t=${performance.now().toFixed(0)}ms)`,
+					);
+					const stopMeasureScales = perfTrace.mark("measureMetricScales");
+					const scales = await Promise.all(
+						activeMetrics.map(([metric]) =>
+							measureMetricAchievableScale(
+								perMetricStatWeights?.[metric] ?? [],
+								eligibleItems,
+								options,
+							),
+						),
+					);
+					metricScales = Object.fromEntries(
+						activeMetrics.map(([metric], i) => [metric, scales[i]]),
+					);
+					const measureScalesMs = stopMeasureScales();
+					console.log(
+						`[sim] round ${roundIndex}: measured scales in ${measureScalesMs.toFixed(0)}ms:`,
+						metricScales,
+					);
+				}
+
+				({ weights: optimizeStats, stdevs: stdevStats } =
+					blendNormalizedPerMetricWeights(
+						perMetricStatWeights,
+						perMetricStatWeightStdevs,
+						metricRatios,
+						metricScales,
+					));
 			}
 			if (iteration === 0) {
 				round1StatWeights = { optimizeStats, stdevStats };
 				round1Config = new SolverConfiguration({ ...options, optimizeStats });
 			}
 
+			console.log(
+				`[sim] round ${roundIndex}: starting round's LP solve (t=${performance.now().toFixed(0)}ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then.`,
+			);
 			const stopSolve = perfTrace.mark("solveConfig");
 			const proposal = await solveConfig(
 				eligibleItems,
@@ -478,6 +617,9 @@ export async function solveConfigForSimMetric(
 					}),
 			);
 			solveMs = stopSolve();
+			console.log(
+				`[sim] round ${roundIndex}: LP solve done in ${solveMs.toFixed(0)}ms (t=${performance.now().toFixed(0)}ms)`,
+			);
 
 			// scoreGearSet (inside isSignificantImprovement) re-derives each piece's score via
 			// getItem(), which only knows about real equipment - a consumable LPItem's `id` is the

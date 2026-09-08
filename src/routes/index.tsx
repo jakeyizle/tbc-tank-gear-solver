@@ -216,6 +216,7 @@ function App() {
 				talents,
 				areEnchantsGemsLocked,
 				excludeUniqueGems,
+				independentConfigs,
 				phase,
 				configs,
 				activeConfigId,

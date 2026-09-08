@@ -4,15 +4,21 @@ import {
 	TEST_RACE_ID,
 } from "#/solver/__fixtures__/testItemPool";
 import { solveConfig } from "#/solver/solveConfig";
-import type { InputItem, LPItem, StatName } from "#/solver/types";
+import type { InputItem, LPItem, Stat, StatName } from "#/solver/types";
 import { DEFAULT_SIM_CALIBRATION_PROFILE } from "#/types/SimCalibrationProfile";
 import type { TbcUiDatabase } from "./buildStatWeightsRequest";
-import { calibrateWeights, measureFinalSimMetrics } from "./calibrateWeights";
+import {
+	calibratePerMetricWeights,
+	calibrateWeights,
+	measureFinalSimMetrics,
+	type SimMetric,
+} from "./calibrateWeights";
 import {
 	absoluteValueForMetric,
 	exceedsHysteresisThreshold,
 	filterItemsForClass,
 	isSignificantImprovement,
+	measureMetricAchievableScale,
 	SIM_CALIBRATION_STATS,
 	solveConfigForSimMetric,
 } from "./solveSimMetric";
@@ -26,6 +32,7 @@ vi.mock("./calibrateWeights", async (importOriginal) => {
 	return {
 		...actual,
 		calibrateWeights: vi.fn(),
+		calibratePerMetricWeights: vi.fn(),
 		measureFinalSimMetrics: vi.fn(),
 	};
 });
@@ -63,6 +70,67 @@ describe("filterItemsForClass", () => {
 
 	it("returns an empty pool unchanged", () => {
 		expect(filterItemsForClass([], fakeDb, "2")).toEqual([]);
+	});
+});
+
+describe("measureMetricAchievableScale", () => {
+	// Real fixture items (same ones isSignificantImprovement below uses): 30007 (The Darkener's
+	// Grasp) carries 40 Stamina, 34400 (Crown of Dath'Remar) carries 91.
+	const rawVector = [
+		{ name: "Stamina" as const, value: 1, type: "flat" as const },
+	];
+	const eligibleItems = [item("30007"), item("34400")];
+
+	const baseOptions = {
+		uncrushabilitySetting: 0,
+		uncritabilitySetting: 0,
+		resistanceFloors: [],
+		areEnchantsGemsLocked: false,
+		excludeUniqueGems: false,
+		phase: 3,
+		raceId: TEST_RACE_ID,
+		classId: TEST_CLASS_ID,
+		talentSources: [],
+		buffs: [],
+		abilitySources: [],
+		enabledConsumableIds: [],
+	};
+
+	const fakeProposalItem = (id: string) =>
+		({
+			id,
+			enchant: { id: "" },
+			gemSlots: [],
+			type: "Head",
+		}) as unknown as LPItem;
+
+	it("returns the best proposal's score minus the worst proposal's score, both scored under rawVector", async () => {
+		// Promise.all invokes solveConfig(rawVector) then solveConfig(negated) synchronously, in
+		// that order - first queued mock resolution is the "best" solve, second is the "worst".
+		vi.mocked(solveConfig)
+			.mockResolvedValueOnce([fakeProposalItem("34400")]) // best: real Stamina 91
+			.mockResolvedValueOnce([fakeProposalItem("30007")]); // worst: real Stamina 40
+
+		// scale = 91 - 40 = 51.
+		const scale = await measureMetricAchievableScale(
+			rawVector,
+			eligibleItems,
+			baseOptions,
+		);
+		expect(scale).toBeCloseTo(51);
+	});
+
+	it("returns undefined when the pool has no differentiable effect on the vector (best === worst)", async () => {
+		vi.mocked(solveConfig)
+			.mockResolvedValueOnce([fakeProposalItem("30007")])
+			.mockResolvedValueOnce([fakeProposalItem("30007")]);
+
+		const scale = await measureMetricAchievableScale(
+			rawVector,
+			eligibleItems,
+			baseOptions,
+		);
+		expect(scale).toBeUndefined();
 	});
 });
 
@@ -215,10 +283,28 @@ describe("solveConfigForSimMetric", () => {
 	beforeEach(() => {
 		vi.mocked(solveConfig).mockReset();
 		vi.mocked(calibrateWeights).mockReset();
+		vi.mocked(calibratePerMetricWeights).mockReset();
 		vi.mocked(measureFinalSimMetrics)
 			.mockReset()
 			.mockResolvedValue({ tps: 0, dtps: 0, tmi5: 0 });
 	});
+
+	// Rounds 2+ (unlike round 1) go through calibratePerMetricWeights + a REAL
+	// blendNormalizedPerMetricWeights call (single-metric ratio {tmi: 1} here, so it always falls
+	// back to plain L2 - metricScales is never even computed for a single active metric) instead
+	// of a mocked calibrateWeights - see solveSimMetric.ts's round loop. Every fixture below is a
+	// single-stat, value-1 vector, whose L2 norm is exactly 1, so the real blend leaves it
+	// numerically unchanged - letting these tests keep asserting on the same plain
+	// optimizeStats/stdevStats shapes calibrateWeights used to hand back directly.
+	function mockRoundTwoPlusWeights(optimizeStats: Stat[], stdevStats: Stat[]) {
+		return {
+			perMetricStatWeights: { tmi: optimizeStats } as Record<SimMetric, Stat[]>,
+			perMetricStatWeightStdevs: { tmi: stdevStats } as Record<
+				SimMetric,
+				Stat[]
+			>,
+		};
+	}
 
 	it("returns the accepted round's stat weights, not a later rejected round's", async () => {
 		const roundOneStats = [
@@ -234,22 +320,20 @@ describe("solveConfigForSimMetric", () => {
 			{ name: "Stamina" as const, value: 1000, type: "flat" as const },
 		];
 
-		vi.mocked(calibrateWeights)
-			.mockResolvedValueOnce({
-				optimizeStats: roundOneStats,
-				stdevStats: roundOneStdev,
-			})
-			.mockResolvedValueOnce({
-				optimizeStats: roundTwoStats,
-				stdevStats: roundTwoStdev,
-			})
+		vi.mocked(calibrateWeights).mockResolvedValueOnce({
+			optimizeStats: roundOneStats,
+			stdevStats: roundOneStdev,
+		});
+		vi.mocked(calibratePerMetricWeights)
+			.mockResolvedValueOnce(
+				mockRoundTwoPlusWeights(roundTwoStats, roundTwoStdev),
+			)
 			// A single noisy rejection is inconclusive (see CONVERGENCE_CONFIRMATION_ROUNDS) -
 			// this third round is rejected the same way, confirming convergence only after 2
 			// consecutive non-significant rounds.
-			.mockResolvedValueOnce({
-				optimizeStats: roundTwoStats,
-				stdevStats: roundTwoStdev,
-			});
+			.mockResolvedValueOnce(
+				mockRoundTwoPlusWeights(roundTwoStats, roundTwoStdev),
+			);
 		// Rounds 2 and 3 both propose the SAME gear round 1 already accepted - the LP found no
 		// new item combination worth switching to, which is what the fingerprint-based
 		// convergence gate (see solveSimMetric.ts's acceptedFingerprints) actually detects; it no
@@ -272,7 +356,8 @@ describe("solveConfigForSimMetric", () => {
 
 		// Rounds 2 and 3 repeat round 1's already-accepted gear - only after both repeat does the
 		// loop stop, reporting round 1's stats/gear as final.
-		expect(calibrateWeights).toHaveBeenCalledTimes(3);
+		expect(calibrateWeights).toHaveBeenCalledTimes(1);
+		expect(calibratePerMetricWeights).toHaveBeenCalledTimes(2);
 		expect(result.converged).toBe(true);
 		expect(result.items).toEqual(roundOneProposal);
 		expect(result.finalStatWeights).toEqual(roundOneStats);
@@ -296,15 +381,13 @@ describe("solveConfigForSimMetric", () => {
 			calibration: { ...profile.calibration, maxRounds: 2 },
 		};
 
-		vi.mocked(calibrateWeights)
-			.mockResolvedValueOnce({
-				optimizeStats: roundOneStats,
-				stdevStats: roundOneStdev,
-			})
-			.mockResolvedValueOnce({
-				optimizeStats: roundTwoStats,
-				stdevStats: roundTwoStdev,
-			});
+		vi.mocked(calibrateWeights).mockResolvedValueOnce({
+			optimizeStats: roundOneStats,
+			stdevStats: roundOneStdev,
+		});
+		vi.mocked(calibratePerMetricWeights).mockResolvedValueOnce(
+			mockRoundTwoPlusWeights(roundTwoStats, roundTwoStdev),
+		);
 		// Round 2 repeats round 1's already-accepted gear (see the fingerprint-based convergence
 		// gate's doc comment above).
 		vi.mocked(solveConfig)
@@ -340,22 +423,20 @@ describe("solveConfigForSimMetric", () => {
 			{ name: "Stamina" as const, value: 1000, type: "flat" as const },
 		];
 
-		vi.mocked(calibrateWeights)
-			.mockResolvedValueOnce({
-				optimizeStats: roundOneStats,
-				stdevStats: roundOneStdev,
-			})
+		vi.mocked(calibrateWeights).mockResolvedValueOnce({
+			optimizeStats: roundOneStats,
+			stdevStats: roundOneStdev,
+		});
+		vi.mocked(calibratePerMetricWeights)
 			// Round 2: rejected, same as the tests above - streak becomes 1.
-			.mockResolvedValueOnce({
-				optimizeStats: roundTwoStats,
-				stdevStats: roundTwoStdev,
-			})
+			.mockResolvedValueOnce(
+				mockRoundTwoPlusWeights(roundTwoStats, roundTwoStdev),
+			)
 			// Round 3: proposes a genuinely different gear set - should be accepted as novel,
 			// resetting the streak rather than requiring a 3rd repeat to have mattered.
-			.mockResolvedValueOnce({
-				optimizeStats: roundOneStats,
-				stdevStats: roundOneStdev,
-			});
+			.mockResolvedValueOnce(
+				mockRoundTwoPlusWeights(roundOneStats, roundOneStdev),
+			);
 		vi.mocked(solveConfig)
 			.mockResolvedValueOnce(roundOneProposal)
 			// Round 2 repeats round 1's already-accepted gear (streak becomes 1).
@@ -398,6 +479,9 @@ describe("solveConfigForSimMetric", () => {
 			optimizeStats: stats,
 			stdevStats: stdev,
 		});
+		vi.mocked(calibratePerMetricWeights).mockResolvedValue(
+			mockRoundTwoPlusWeights(stats, stdev),
+		);
 		vi.mocked(solveConfig)
 			.mockResolvedValueOnce(roundOneProposal)
 			.mockResolvedValueOnce(roundTwoProposal)

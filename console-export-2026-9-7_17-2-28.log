@@ -1,0 +1,1183 @@
+16:50:01.544 [vite] connecting... client:733:9
+16:50:01.632 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools react-dom_client.js:20103:54
+16:50:03.097 downloadable font: glyf: empty gid 1 used as component in glyph 225 (font-family: "Roboto Mono" style:normal weight:400 width:100 src index:0) source: http://localhost:3000/node_modules/@fontsource/roboto-mono/files/roboto-mono-latin-400-normal.woff2
+16:50:03.098 downloadable font: glyf: empty gid 1 used as component in glyph 225 (font-family: "Roboto Mono" style:normal weight:500 width:100 src index:0) source: http://localhost:3000/node_modules/@fontsource/roboto-mono/files/roboto-mono-latin-500-normal.woff2
+16:50:03.183 GET
+https://wow.zamimg.com/images/wow/icons/large/undefined.jpg
+NS_ERROR_DOM_NETWORK_ERR
+16:50:03.405 A resource is blocked by OpaqueResponseBlocking, please check browser console for details. undefined.jpg
+16:50:03.691 [vite] connected. __root.tsx:54:18
+16:50:07.155 XHR POST
+http://localhost:3000/api/track
+[HTTP/1.1 404 Not Found 1ms]
+16:50:07.466 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:50:07.466 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:50:07.509 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:50:07.509 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:50:07.509 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:50:07.533       0: obj =   9.723371634e+02 inf =   4.463e+00 (3) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:07.534       3: obj =   9.603199567e+02 inf =   0.000e+00 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:07.534 *    37: obj =   1.130778840e+03 inf =   0.000e+00 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:07.534 +    37: mip =     not found yet <=              +inf        (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:07.534 Solution found by heuristic: 1129.70902 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:07.535 +    40: >>>>>   1.130261130e+03 <=   1.130261130e+03   0.0% (1; 1) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:07.535 +    40: mip =   1.130261130e+03 <=     tree is empty   0.0% (0; 3) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:07.551 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:50:22.594 LOG /src/sim/calibrateWeights.ts:686:2
+ →  [sim] Balance blend diagnostics (ratios: tps=0.5, tmi=0.5, statRanges: on) calibrateWeights.ts:326:11
+16:50:22.594 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tps: scale=417.1174 calibrateWeights.ts:335:13
+16:50:22.594 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tmi: scale=8609.2107 calibrateWeights.ts:335:13
+16:50:22.595 console.table() calibrateWeights.ts:352:11
+(index)	stat	total	tps	tmi
+0	Expertise	0.0020	0.0011	0.0009
+1	Dodge	0.0018	0.0006	0.0012
+2	Agility	0.0014	0.0004	0.0010
+3	SpellPower	0.0012	0.0012	0.0000
+4	Stamina	0.0011	0.0000	0.0011
+5	Parry	0.0011	0.0005	0.0006
+6	Defense	0.0011	0.0004	0.0006
+7	SpellHit	0.0010	0.0010	0.0000
+8	Strength	0.0003	0.0003	0.0000
+9	BlockValue	0.0002	0.0000	0.0002
+10	Health	0.0001	0.0000	0.0001
+11	SpellCrit	0.0001	0.0001	0.0000
+12	Armor	0.0001	0.0000	0.0001
+13	MeleeHit	0.0000	0.0000	0.0000
+14	Block	0.0000	0.0000	0.0000
+15	Resilience	0.0000	0.0000	0.0000
+16:50:22.595 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:50:22.595 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:50:22.631 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:50:22.631 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:50:22.631 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:50:22.648       0: obj =   4.488204394e+00 inf =   4.463e+00 (3) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:22.648       3: obj =   4.449527673e+00 inf =   0.000e+00 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:22.649 *    40: obj =   5.286158404e+00 inf =   8.882e-16 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:22.649 +    40: mip =     not found yet <=              +inf        (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:22.649 +    40: >>>>>   5.286158404e+00 <=   5.286158404e+00   0.0% (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:22.649 +    40: mip =   5.286158404e+00 <=     tree is empty   0.0% (0; 1) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:22.674 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:50:37.554 LOG /src/sim/calibrateWeights.ts:686:2
+ →  [sim] Balance blend diagnostics (ratios: tps=0.5, tmi=0.5, statRanges: on) calibrateWeights.ts:326:11
+16:50:37.554 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tps: scale=393.6853 calibrateWeights.ts:335:13
+16:50:37.554 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tmi: scale=6557.2185 calibrateWeights.ts:335:13
+16:50:37.554 console.table() calibrateWeights.ts:352:11
+(index)	stat	total	tps	tmi
+0	Stamina	0.0015	0.0000	0.0015
+1	SpellPower	0.0013	0.0013	0.0000
+2	Expertise	0.0012	0.0006	0.0007
+3	Dodge	0.0012	0.0004	0.0007
+4	SpellHit	0.0011	0.0011	0.0000
+5	Parry	0.0009	0.0003	0.0006
+6	Agility	0.0009	0.0002	0.0007
+7	Defense	0.0008	0.0002	0.0006
+8	Strength	0.0003	0.0003	0.0000
+9	BlockValue	0.0003	0.0000	0.0003
+10	Health	0.0001	0.0000	0.0001
+11	SpellCrit	0.0001	0.0001	0.0000
+12	Armor	0.0001	0.0000	0.0001
+13	MeleeHit	0.0000	0.0000	0.0000
+14	Block	0.0000	0.0000	0.0000
+15	Resilience	0.0000	0.0000	0.0000
+16:50:37.554 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:50:37.554 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:50:37.595 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:50:37.595 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:50:37.595 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:50:37.611       0: obj =   5.257508046e+00 inf =   4.463e+00 (3) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:37.611       3: obj =   5.148540247e+00 inf =   0.000e+00 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:37.612 *    35: obj =   5.967365785e+00 inf =   3.069e-15 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:37.612 +    35: mip =     not found yet <=              +inf        (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:37.612 Solution found by heuristic: 5.95953626098 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:37.613 +    39: >>>>>   5.966059222e+00 <=   5.966385659e+00 < 0.1% (2; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:37.613 +    40: mip =   5.966059222e+00 <=     tree is empty   0.0% (0; 3) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:37.638 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:50:52.731 LOG /src/sim/calibrateWeights.ts:686:2
+ →  [sim] Balance blend diagnostics (ratios: tps=0.5, tmi=0.5, statRanges: on) calibrateWeights.ts:326:11
+16:50:52.731 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tps: scale=405.9467 calibrateWeights.ts:335:13
+16:50:52.731 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tmi: scale=6437.3846 calibrateWeights.ts:335:13
+16:50:52.731 console.table() calibrateWeights.ts:352:11
+(index)	stat	total	tps	tmi
+0	Stamina	0.0015	0.0000	0.0015
+1	Expertise	0.0013	0.0010	0.0003
+2	Dodge	0.0013	0.0006	0.0007
+3	SpellPower	0.0012	0.0012	0.0000
+4	Parry	0.0012	0.0004	0.0009
+5	Agility	0.0012	0.0003	0.0008
+6	Defense	0.0008	0.0003	0.0005
+7	SpellHit	0.0008	0.0008	0.0000
+8	Strength	0.0003	0.0003	0.0000
+9	BlockValue	0.0003	0.0000	0.0003
+10	Health	0.0001	0.0000	0.0001
+11	SpellCrit	0.0001	0.0001	0.0000
+12	Armor	0.0001	0.0000	0.0001
+13	MeleeHit	0.0000	0.0000	0.0000
+14	Block	0.0000	0.0000	0.0000
+15	Resilience	0.0000	0.0000	0.0000
+16:50:52.731 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:50:52.731 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:50:52.774 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:50:52.774 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:50:52.774 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:50:52.791       0: obj =   5.392335480e+00 inf =   4.463e+00 (3) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:52.791       3: obj =   5.287434269e+00 inf =   0.000e+00 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:52.792 *    37: obj =   6.160277391e+00 inf =   4.441e-16 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:52.792 +    37: mip =     not found yet <=              +inf        (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:52.792 +    37: >>>>>   6.160277391e+00 <=   6.160277391e+00   0.0% (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:52.792 +    37: mip =   6.160277391e+00 <=     tree is empty   0.0% (0; 1) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:50:52.846 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:51:07.955 LOG /src/sim/calibrateWeights.ts:686:2
+ →  [sim] Balance blend diagnostics (ratios: tps=0.5, tmi=0.5, statRanges: on) calibrateWeights.ts:326:11
+16:51:07.955 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tps: scale=398.6766 calibrateWeights.ts:335:13
+16:51:07.955 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tmi: scale=6375.7481 calibrateWeights.ts:335:13
+16:51:07.955 console.table() calibrateWeights.ts:352:11
+(index)	stat	total	tps	tmi
+0	Expertise	0.0027	0.0012	0.0015
+1	Stamina	0.0015	0.0000	0.0015
+2	SpellHit	0.0013	0.0013	0.0000
+3	SpellPower	0.0013	0.0013	0.0000
+4	Dodge	0.0012	0.0004	0.0009
+5	Agility	0.0011	0.0002	0.0009
+6	Parry	0.0008	0.0004	0.0004
+7	Defense	0.0007	0.0004	0.0003
+8	Strength	0.0003	0.0003	0.0000
+9	BlockValue	0.0003	0.0000	0.0003
+10	Health	0.0001	0.0000	0.0001
+11	SpellCrit	0.0001	0.0001	0.0000
+12	Armor	0.0001	0.0000	0.0001
+13	MeleeHit	0.0000	0.0000	0.0000
+14	Block	0.0000	0.0000	0.0000
+15	Resilience	0.0000	0.0000	0.0000
+16:51:07.955 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:51:07.955 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:51:07.992 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:51:07.992 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:51:07.992 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:51:08.008       0: obj =   5.322057127e+00 inf =   4.463e+00 (3) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:08.008       3: obj =   5.203265973e+00 inf =   0.000e+00 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:08.009 *    38: obj =   6.052694885e+00 inf =   0.000e+00 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:08.009 +    38: mip =     not found yet <=              +inf        (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:08.010 +    40: >>>>>   6.044544853e+00 <=   6.052532810e+00   0.1% (2; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:08.010 +    42: >>>>>   6.051485093e+00 <=   6.051485093e+00   0.0% (1; 1) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:08.010 +    42: mip =   6.051485093e+00 <=     tree is empty   0.0% (0; 3) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:08.036 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:51:23.171 LOG /src/sim/calibrateWeights.ts:686:2
+ →  [sim] Balance blend diagnostics (ratios: tps=0.5, tmi=0.5, statRanges: on) calibrateWeights.ts:326:11
+16:51:23.171 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tps: scale=420.2136 calibrateWeights.ts:335:13
+16:51:23.171 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tmi: scale=9272.8378 calibrateWeights.ts:335:13
+16:51:23.171 console.table() calibrateWeights.ts:352:11
+(index)	stat	total	tps	tmi
+0	Expertise	0.0019	0.0010	0.0009
+1	Dodge	0.0016	0.0006	0.0010
+2	Parry	0.0014	0.0005	0.0009
+3	Defense	0.0014	0.0005	0.0010
+4	Agility	0.0013	0.0004	0.0009
+5	SpellPower	0.0012	0.0012	0.0000
+6	SpellHit	0.0011	0.0011	0.0000
+7	Stamina	0.0010	0.0000	0.0010
+8	Strength	0.0003	0.0003	0.0000
+9	BlockValue	0.0002	0.0000	0.0002
+10	Health	0.0001	0.0000	0.0001
+11	Armor	0.0001	0.0000	0.0001
+12	SpellCrit	0.0001	0.0001	0.0000
+13	MeleeHit	0.0000	0.0000	0.0000
+14	Block	0.0000	0.0000	0.0000
+15	Resilience	0.0000	0.0000	0.0000
+16:51:23.171 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:51:23.171 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:51:23.207 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:51:23.207 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:51:23.207 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:51:23.223       0: obj =   4.389094368e+00 inf =   4.463e+00 (3) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:23.223       3: obj =   4.370252618e+00 inf =   0.000e+00 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:23.224 *    39: obj =   5.173381540e+00 inf =   1.110e-16 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:23.224 +    39: mip =     not found yet <=              +inf        (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:23.224 +    39: >>>>>   5.173381540e+00 <=   5.173381540e+00   0.0% (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:23.224 +    39: mip =   5.173381540e+00 <=     tree is empty   0.0% (0; 1) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:23.248 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:51:38.080 LOG /src/sim/calibrateWeights.ts:686:2
+ →  [sim] Balance blend diagnostics (ratios: tps=0.5, tmi=0.5, statRanges: on) calibrateWeights.ts:326:11
+16:51:38.080 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tps: scale=393.0823 calibrateWeights.ts:335:13
+16:51:38.080 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tmi: scale=5636.2663 calibrateWeights.ts:335:13
+16:51:38.081 console.table() calibrateWeights.ts:352:11
+(index)	stat	total	tps	tmi
+0	Expertise	0.0038	0.0014	0.0024
+1	Stamina	0.0017	0.0000	0.0017
+2	SpellPower	0.0013	0.0013	0.0000
+3	SpellHit	0.0011	0.0011	0.0000
+4	Dodge	0.0006	0.0004	0.0002
+5	Agility	0.0004	0.0001	0.0003
+6	Defense	0.0003	0.0002	0.0001
+7	Strength	0.0003	0.0003	0.0000
+8	BlockValue	0.0003	0.0000	0.0003
+9	Parry	0.0002	0.0002	0.0000
+10	Health	0.0001	0.0000	0.0001
+11	Armor	0.0001	0.0000	0.0001
+12	SpellCrit	0.0001	0.0001	0.0000
+13	MeleeHit	0.0000	0.0000	0.0000
+14	Block	0.0000	0.0000	0.0000
+15	Resilience	0.0000	0.0000	0.0000
+16:51:38.081 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:51:38.081 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:51:38.121 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:51:38.121 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:51:38.121 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:51:38.138       0: obj =   5.607192044e+00 inf =   4.463e+00 (3) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:38.139       3: obj =   5.427216904e+00 inf =   0.000e+00 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:38.139 *    37: obj =   6.288043953e+00 inf =   1.776e-15 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:38.139 +    37: mip =     not found yet <=              +inf        (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:38.139 Solution found by heuristic: 6.28720689434 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:38.140 +    38: mip =   6.287206894e+00 <=     tree is empty   0.0% (0; 1) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:38.168 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:51:53.242 LOG /src/sim/calibrateWeights.ts:686:2
+ →  [sim] Balance blend diagnostics (ratios: tps=0.5, tmi=0.5, statRanges: on) calibrateWeights.ts:326:11
+16:51:53.242 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tps: scale=394.5975 calibrateWeights.ts:335:13
+16:51:53.243 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tmi: scale=6804.2791 calibrateWeights.ts:335:13
+16:51:53.243 console.table() calibrateWeights.ts:352:11
+(index)	stat	total	tps	tmi
+0	Expertise	0.0015	0.0009	0.0005
+1	Parry	0.0014	0.0004	0.0010
+2	Stamina	0.0014	0.0000	0.0014
+3	SpellPower	0.0013	0.0013	0.0000
+4	Agility	0.0011	0.0002	0.0009
+5	Defense	0.0011	0.0004	0.0007
+6	Dodge	0.0010	0.0003	0.0007
+7	SpellHit	0.0007	0.0007	0.0000
+8	Strength	0.0003	0.0003	0.0000
+9	BlockValue	0.0003	0.0000	0.0003
+10	Health	0.0001	0.0000	0.0001
+11	SpellCrit	0.0001	0.0001	0.0000
+12	Armor	0.0001	0.0000	0.0001
+13	MeleeHit	0.0000	0.0000	0.0000
+14	Block	0.0000	0.0000	0.0000
+15	Resilience	0.0000	0.0000	0.0000
+16:51:53.243 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:51:53.243 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:51:53.279 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:51:53.279 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:51:53.279 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:51:53.295       0: obj =   5.253423099e+00 inf =   4.463e+00 (3) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:53.295       3: obj =   5.161324645e+00 inf =   0.000e+00 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:53.295 *    36: obj =   5.978817586e+00 inf =   6.661e-16 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:53.296 +    36: mip =     not found yet <=              +inf        (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:53.296 +    36: >>>>>   5.978817586e+00 <=   5.978817586e+00   0.0% (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:53.296 +    36: mip =   5.978817586e+00 <=     tree is empty   0.0% (0; 1) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:51:53.318 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:52:08.109 LOG /src/sim/calibrateWeights.ts:686:2
+ →  [sim] Balance blend diagnostics (ratios: tps=0.5, tmi=0.5, statRanges: on) calibrateWeights.ts:326:11
+16:52:08.109 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tps: scale=420.3960 calibrateWeights.ts:335:13
+16:52:08.109 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tmi: scale=6196.7537 calibrateWeights.ts:335:13
+16:52:08.109 console.table() calibrateWeights.ts:352:11
+(index)	stat	total	tps	tmi
+0	Stamina	0.0016	0.0000	0.0016
+1	Dodge	0.0014	0.0007	0.0007
+2	Agility	0.0014	0.0004	0.0011
+3	SpellPower	0.0012	0.0012	0.0000
+4	Expertise	0.0011	0.0009	0.0002
+5	SpellHit	0.0010	0.0010	0.0000
+6	Parry	0.0009	0.0004	0.0006
+7	Defense	0.0007	0.0004	0.0003
+8	Strength	0.0003	0.0003	0.0000
+9	BlockValue	0.0003	0.0000	0.0003
+10	Health	0.0001	0.0000	0.0001
+11	Armor	0.0001	0.0000	0.0001
+12	SpellCrit	0.0001	0.0001	0.0000
+13	MeleeHit	0.0000	0.0000	0.0000
+14	Block	0.0000	0.0000	0.0000
+15	Resilience	0.0000	0.0000	0.0000
+16:52:08.109 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:52:08.109 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:52:08.152 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:52:08.152 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:52:08.152 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:52:08.168       0: obj =   5.463794302e+00 inf =   4.463e+00 (3) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:52:08.169       3: obj =   5.348767134e+00 inf =   0.000e+00 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:52:08.169 *    37: obj =   6.261559432e+00 inf =   8.882e-16 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:52:08.169 +    37: mip =     not found yet <=              +inf        (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:52:08.170 +    37: >>>>>   6.261559432e+00 <=   6.261559432e+00   0.0% (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:52:08.170 +    37: mip =   6.261559432e+00 <=     tree is empty   0.0% (0; 1) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:52:08.193 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:52:22.927 LOG /src/sim/calibrateWeights.ts:686:2
+ →  [sim] Balance blend diagnostics (ratios: tps=0.5, tmi=0.5, statRanges: on) calibrateWeights.ts:326:11
+16:52:22.927 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tps: scale=452.8200 calibrateWeights.ts:335:13
+16:52:22.927 LOG /src/sim/calibrateWeights.ts:696:3
+ →    tmi: scale=6872.1857 calibrateWeights.ts:335:13
+16:52:22.927 console.table() calibrateWeights.ts:352:11
+(index)	stat	total	tps	tmi
+0	Dodge	0.0017	0.0008	0.0009
+1	Parry	0.0015	0.0006	0.0009
+2	Agility	0.0015	0.0006	0.0009
+3	Stamina	0.0014	0.0000	0.0014
+4	Expertise	0.0013	0.0010	0.0003
+5	SpellHit	0.0012	0.0012	0.0000
+6	SpellPower	0.0011	0.0011	0.0000
+7	Defense	0.0011	0.0005	0.0005
+8	Strength	0.0003	0.0003	0.0000
+9	BlockValue	0.0003	0.0000	0.0002
+10	Health	0.0001	0.0000	0.0001
+11	Armor	0.0001	0.0000	0.0001
+12	SpellCrit	0.0000	0.0000	0.0000
+13	MeleeHit	0.0000	0.0000	0.0000
+14	Block	0.0000	0.0000	0.0000
+15	Resilience	0.0000	0.0000	0.0000
+16:52:22.927 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:52:22.927 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:52:22.965 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:52:22.965 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:52:22.965 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:52:22.980       0: obj =   5.244231531e+00 inf =   4.463e+00 (3) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:52:22.981       3: obj =   5.173003005e+00 inf =   0.000e+00 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:52:22.981 *    38: obj =   6.121096938e+00 inf =   8.882e-16 (0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:52:22.981 +    38: mip =     not found yet <=              +inf        (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:52:22.981 +    38: >>>>>   6.121096938e+00 <=   6.121096938e+00   0.0% (1; 0) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:52:22.981 +    38: mip =   6.121096938e+00 <=     tree is empty   0.0% (0; 1) 5c8a5f1e-4e89-468b-8937-63f8fd78a24e:1:5786
+16:52:26.143 LOG /src/helpers/perfTrace.ts:127:14
+ →  [perf] sim-backed solve perfTrace.ts:86:24
+16:52:26.144 console.table() perfTrace.ts:87:13
+(index)	name	count	totalMs	avgMs	minMs	maxMs	pctOfTotal
+0	simWorkerRoundTrip	270	488814	1810.4222222222222	1556	2725	40.85546622625156
+1	solveConfigForSimMetric	1	138683	138683	138683	138683	11.591236385732088
+2	calibrateWeights	9	134686	14965.111111111111	14733	15134	11.257163919505
+3	runCalibrationBatches	9	134674	14963.777777777777	14732	15130	11.2561609498791
+4	simJobQueueDispatch	9	128878	14319.777777777777	14075	14505	10.771726620569067
+5	simWorkerWasmInstantiate	36	16770	465.8333333333333	258	616	1.401650052196211
+6	round:5	1	15212	15212	15212	15212	1.2714311624334385
+7	round:3	1	15209	15209	15209	15209	1.2711804200269632
+8	round:4	1	15190	15190	15190	15190	1.2695923847859538
+9	round:7	1	15150	15150	15150	15150	1.266249152699618
+10	round:1	1	15123	15123	15123	15123	1.2639924710413415
+11	round:2	1	14963	14963	14963	14963	1.2506195426959992
+12	round:6	1	14920	14920	14920	14920	1.247025568203188
+13	round:8	1	14875	14875	14875	14875	1.2432644321060606
+14	round:9	1	14810	14810	14810	14810	1.2378316799657654
+15	buildReplicateJobBundles	9	3904	433.77777777777777	325	475	0.32629945162635704
+16	buildReplicateJobBundles:unaccounted	9	3223	358.1111111111111	257	398	0.269380925356493
+17	measureFinalSimMetrics	1	3140	3140	3140	3140	0.26244371877734657
+18	coordinatorWasmInstantiate	9	2880	320	224	364	0.24071271021616505
+19	computeStatWeights	9	1888	209.77777777777777	202	218	0.15780055447504154
+20	solveConfig	20	1220	61	56	73	0.10196857863323658
+21	statWeightRequestsWasmCall	9	619	68.77777777777777	63	74	0.0517365165360438
+22	prepareItemCandidates	10	383	38.3	35	42	0.03201144722666362
+23	runLPModelWithAvoidanceConvergence	10	216	21.6	19	30	0.018053453266212376
+24	runLPModel	10	208	20.8	18	29	0.017384806848945254
+25	decodeSimResult	270	174	0.6444444444444445	0	5	0.014543059575559972
+26	isSignificantImprovement	9	113	12.555555555555555	11	17	0.009444630643898142
+27	glpkModuleAcquire	10	109	10.9	9	18	0.00911030743526458
+28	round:0	1	85	85	85	85	0.007104368183463204
+29	glpkSolve	10	74	7.4	6	9	0.006184979359720908
+30	statWeightsRequestEncode	9	52	5.777777777777778	4	8	0.004346201712236313
+31	round:3:unaccounted	1	37	37	37	37	0.003092489679860454
+32	transformChosenItems	10	13	1.3	0	3	0.0010865504280590783
+33	buildLpModel	10	11	1.1	1	2	0.000919388823742297
+34	round:0:unaccounted	1	11	11	11	11	0.000919388823742297
+35	avoidanceConvergenceIterations	10	10	1	1	1	0.0008358080215839063
+36	buildStatWeightsRequest	9	10	1.1111111111111112	0	2	0.0008358080215839063
+37	round:1:unaccounted	1	10	10	10	10	0.0008358080215839063
+38	round:2:unaccounted	1	9	9	9	9	0.0007522272194255157
+39	round:4:unaccounted	1	9	9	9	9	0.0007522272194255157
+40	round:6:unaccounted	1	9	9	9	9	0.0007522272194255157
+41	round:8:unaccounted	1	9	9	9	9	0.0007522272194255157
+42	runLPModelWithAvoidanceConvergence:unaccounted	10	8	0.8	0	1	0.0006686464172671251
+43	resetSimEnvironment	9	8	0.8888888888888888	0	2	0.0006686464172671251
+44	round:5:unaccounted	1	8	8	8	8	0.0006686464172671251
+45	round:7:unaccounted	1	8	8	8	8	0.0006686464172671251
+46	round:9:unaccounted	1	8	8	8	8	0.0006686464172671251
+47	solveConfig:unaccounted	10	7	0.7	0	2	0.0005850656151087345
+48	getConsumableLPItems	10	4	0.4	0	1	0.00033432320863356255
+49	runCalibrationBatches:unaccounted	9	4	0.4444444444444444	0	1	0.00033432320863356255
+50	solveConfigForSimMetric:unaccounted	1	4	4	4	4	0.00033432320863356255
+51	filterItemsForClass	1	2	2	2	2	0.00016716160431678128
+52	splitGearAndConsumables	10	2	0.2	0	1	0.00016716160431678128
+53	runLPModel:unaccounted	10	1	0.1	0	1	0.00008358080215839064
+16:52:26.146 console.table() index.ts:41:17
+(index)	name	count	totalMs	avgMs	minMs	maxMs	pctOfTotal
+0	simWorkerRoundTrip	270	488814	1810.4222222222222	1556	2725	40.85546622625156
+1	solveConfigForSimMetric	1	138683	138683	138683	138683	11.591236385732088
+2	calibrateWeights	9	134686	14965.111111111111	14733	15134	11.257163919505
+3	runCalibrationBatches	9	134674	14963.777777777777	14732	15130	11.2561609498791
+4	simJobQueueDispatch	9	128878	14319.777777777777	14075	14505	10.771726620569067
+5	simWorkerWasmInstantiate	36	16770	465.8333333333333	258	616	1.401650052196211
+6	round:5	1	15212	15212	15212	15212	1.2714311624334385
+7	round:3	1	15209	15209	15209	15209	1.2711804200269632
+8	round:4	1	15190	15190	15190	15190	1.2695923847859538
+9	round:7	1	15150	15150	15150	15150	1.266249152699618
+10	round:1	1	15123	15123	15123	15123	1.2639924710413415
+11	round:2	1	14963	14963	14963	14963	1.2506195426959992
+12	round:6	1	14920	14920	14920	14920	1.247025568203188
+13	round:8	1	14875	14875	14875	14875	1.2432644321060606
+14	round:9	1	14810	14810	14810	14810	1.2378316799657654
+15	buildReplicateJobBundles	9	3904	433.77777777777777	325	475	0.32629945162635704
+16	buildReplicateJobBundles:unaccounted	9	3223	358.1111111111111	257	398	0.269380925356493
+17	measureFinalSimMetrics	1	3140	3140	3140	3140	0.26244371877734657
+18	coordinatorWasmInstantiate	9	2880	320	224	364	0.24071271021616505
+19	computeStatWeights	9	1888	209.77777777777777	202	218	0.15780055447504154
+20	solveConfig	20	1220	61	56	73	0.10196857863323658
+21	statWeightRequestsWasmCall	9	619	68.77777777777777	63	74	0.0517365165360438
+22	prepareItemCandidates	10	383	38.3	35	42	0.03201144722666362
+23	runLPModelWithAvoidanceConvergence	10	216	21.6	19	30	0.018053453266212376
+24	runLPModel	10	208	20.8	18	29	0.017384806848945254
+25	decodeSimResult	270	174	0.6444444444444445	0	5	0.014543059575559972
+26	isSignificantImprovement	9	113	12.555555555555555	11	17	0.009444630643898142
+27	glpkModuleAcquire	10	109	10.9	9	18	0.00911030743526458
+28	round:0	1	85	85	85	85	0.007104368183463204
+29	glpkSolve	10	74	7.4	6	9	0.006184979359720908
+30	statWeightsRequestEncode	9	52	5.777777777777778	4	8	0.004346201712236313
+31	round:3:unaccounted	1	37	37	37	37	0.003092489679860454
+32	transformChosenItems	10	13	1.3	0	3	0.0010865504280590783
+33	buildLpModel	10	11	1.1	1	2	0.000919388823742297
+34	round:0:unaccounted	1	11	11	11	11	0.000919388823742297
+35	avoidanceConvergenceIterations	10	10	1	1	1	0.0008358080215839063
+36	buildStatWeightsRequest	9	10	1.1111111111111112	0	2	0.0008358080215839063
+37	round:1:unaccounted	1	10	10	10	10	0.0008358080215839063
+38	round:2:unaccounted	1	9	9	9	9	0.0007522272194255157
+39	round:4:unaccounted	1	9	9	9	9	0.0007522272194255157
+40	round:6:unaccounted	1	9	9	9	9	0.0007522272194255157
+41	round:8:unaccounted	1	9	9	9	9	0.0007522272194255157
+42	runLPModelWithAvoidanceConvergence:unaccounted	10	8	0.8	0	1	0.0006686464172671251
+43	resetSimEnvironment	9	8	0.8888888888888888	0	2	0.0006686464172671251
+44	round:5:unaccounted	1	8	8	8	8	0.0006686464172671251
+45	round:7:unaccounted	1	8	8	8	8	0.0006686464172671251
+46	round:9:unaccounted	1	8	8	8	8	0.0006686464172671251
+47	solveConfig:unaccounted	10	7	0.7	0	2	0.0005850656151087345
+48	getConsumableLPItems	10	4	0.4	0	1	0.00033432320863356255
+49	runCalibrationBatches:unaccounted	9	4	0.4444444444444444	0	1	0.00033432320863356255
+50	solveConfigForSimMetric:unaccounted	1	4	4	4	4	0.00033432320863356255
+51	filterItemsForClass	1	2	2	2	2	0.00016716160431678128
+52	splitGearAndConsumables	10	2	0.2	0	1	0.00016716160431678128
+53	runLPModel:unaccounted	10	1	0.1	0	1	0.00008358080215839064
+16:52:26.152 LOG Go to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fsolver%2Findex.ts%3A164%3A4 
+ →  worker result __root.tsx:54:18
+16:52:26.153 LOG Go to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fsolver%2Findex.ts%3A169%3A4 
+ →  [perf] main-thread solve() wall clock: 138998.0ms __root.tsx:54:18
+16:52:26.525 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:52:26.525 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:52:26.566 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:52:26.566 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:52:26.566 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:52:26.589       0: obj =   2.446739030e+03 inf =   4.463e+00 (3) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:26.590       3: obj =   2.354647398e+03 inf =   0.000e+00 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:26.590 *    34: obj =   2.801456911e+03 inf =   4.441e-16 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:26.590 +    34: mip =     not found yet <=              +inf        (1; 0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:26.590 +    34: >>>>>   2.801456911e+03 <=   2.801456911e+03   0.0% (1; 0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:26.590 +    34: mip =   2.801456911e+03 <=     tree is empty   0.0% (0; 1) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:26.594 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.43790213827379, avoidance target: 45.47 solveConfig.ts:331:15
+16:52:26.594 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 6.483901874789147, uncrit target: 4.8 solveConfig.ts:335:15
+16:52:26.611       0: obj =   2.446739030e+03 inf =   4.503e+00 (3) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:26.612       3: obj =   2.354416804e+03 inf =   0.000e+00 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:26.612 *    33: obj =   2.801449230e+03 inf =   4.441e-16 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:26.612 +    33: mip =     not found yet <=              +inf        (1; 0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:26.613 +    37: >>>>>   2.797435121e+03 <=   2.801426905e+03   0.1% (3; 0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:26.613 +    38: mip =   2.797435121e+03 <=     tree is empty   0.0% (0; 5) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:26.624 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:52:41.530 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:52:41.530 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:52:41.564 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:52:41.564 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:52:41.564 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:52:41.578       0: obj =   8.982660545e+00 inf =   4.463e+00 (3) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:41.579       3: obj =   8.720712562e+00 inf =   0.000e+00 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:41.579 *    32: obj =   1.035564646e+01 inf =   4.441e-16 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:41.579 +    32: mip =     not found yet <=              +inf        (1; 0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:41.579 +    32: >>>>>   1.035564646e+01 <=   1.035564646e+01   0.0% (1; 0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:41.579 +    32: mip =   1.035564646e+01 <=     tree is empty   0.0% (0; 1) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:41.602 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:52:56.767 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:52:56.767 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:52:56.800 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:52:56.800 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:52:56.800 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:52:56.814       0: obj =   8.438279002e+00 inf =   4.463e+00 (3) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:56.814       3: obj =   8.201423330e+00 inf =   0.000e+00 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:56.815 *    33: obj =   9.948760635e+00 inf =   4.441e-16 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:56.815 +    33: mip =     not found yet <=              +inf        (1; 0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:56.815 +    33: >>>>>   9.948760635e+00 <=   9.948760635e+00   0.0% (1; 0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:56.815 +    33: mip =   9.948760635e+00 <=     tree is empty   0.0% (0; 1) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:52:56.838 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:53:11.762 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:53:11.762 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:53:11.798 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:53:11.798 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:53:11.798 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:53:11.813       0: obj =   9.353388490e+00 inf =   4.463e+00 (3) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:11.813       3: obj =   9.002593982e+00 inf =   0.000e+00 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:11.814 *    32: obj =   1.070879943e+01 inf =   4.441e-16 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:11.814 +    32: mip =     not found yet <=              +inf        (1; 0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:11.814 Solution found by heuristic: 10.693102832 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:11.815 Solution found by heuristic: 10.6936856095 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:11.815 +    38: mip =   1.069368561e+01 <=     tree is empty   0.0% (0; 5) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:11.817 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.43790213827379, avoidance target: 45.47 solveConfig.ts:331:15
+16:53:11.818 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 6.483901874789147, uncrit target: 4.8 solveConfig.ts:335:15
+16:53:11.833       0: obj =   9.353388490e+00 inf =   4.503e+00 (3) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:11.834       3: obj =   9.001635449e+00 inf =   0.000e+00 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:11.834 *    32: obj =   1.070842431e+01 inf =   4.441e-16 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:11.834 +    32: mip =     not found yet <=              +inf        (1; 0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:11.834 Solution found by heuristic: 10.693102832 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:11.835 +    38: mip =   1.069310283e+01 <=     tree is empty   0.0% (0; 5) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:11.860 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:53:26.851 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:53:26.851 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:53:26.889 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:53:26.889 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:53:26.889 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:53:26.904       0: obj =   9.643214996e+00 inf =   4.463e+00 (3) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:26.904       3: obj =   9.280628377e+00 inf =   0.000e+00 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:26.905 *    34: obj =   1.110500318e+01 inf =   4.441e-16 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:26.905 +    34: mip =     not found yet <=              +inf        (1; 0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:26.905 +    34: >>>>>   1.110500318e+01 <=   1.110500318e+01   0.0% (1; 0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:26.905 +    34: mip =   1.110500318e+01 <=     tree is empty   0.0% (0; 1) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:26.907 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.43790213827379, avoidance target: 45.47 solveConfig.ts:331:15
+16:53:26.907 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 6.483901874789147, uncrit target: 4.8 solveConfig.ts:335:15
+16:53:26.922       0: obj =   9.643214996e+00 inf =   4.503e+00 (3) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:26.923       3: obj =   9.280096399e+00 inf =   0.000e+00 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:26.923 *    33: obj =   1.110497750e+01 inf =   4.441e-16 (0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:26.923 +    33: mip =     not found yet <=              +inf        (1; 0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:26.924 +    42: >>>>>   1.107041954e+01 <=   1.110462327e+01   0.3% (6; 0) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:26.927 +    67: >>>>>   1.109871040e+01 <=   1.109871040e+01   0.0% (3; 6) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:26.927 +    67: mip =   1.109871040e+01 <=     tree is empty   0.0% (0; 13) 0d5ab996-3e50-4f89-8f86-bf08187f0858:1:5786
+16:53:30.049 LOG /src/helpers/perfTrace.ts:127:14
+ →  [perf] sim-backed solve perfTrace.ts:86:24
+16:53:30.049 console.table() perfTrace.ts:87:13
+(index)	name	count	totalMs	avgMs	minMs	maxMs	pctOfTotal
+0	simWorkerRoundTrip	120	217394	1811.6166666666666	1565	2562	40.55381550302856
+1	solveConfigForSimMetric	1	63529	63529	63529	63529	11.851032434620558
+2	runCalibrationBatches	4	59981	14995.25	14906	15163	11.18916992965379
+3	calibrateWeights	4	59981	14995.25	14906	15163	11.18916992965379
+4	simJobQueueDispatch	4	57436	14359	14279	14511	10.71441229855446
+5	round:2	1	15236	15236	15236	15236	2.842203248498777
+6	round:4	1	15092	15092	15092	15092	2.815340734204748
+7	round:3	1	15022	15022	15022	15022	2.80228256753404
+8	round:1	1	14978	14978	14978	14978	2.794074577055309
+9	simWorkerWasmInstantiate	16	7184	449	268	619	1.340140990890996
+10	measureFinalSimMetrics	1	3096	3096	3096	3096	0.5775440573216207
+11	buildReplicateJobBundles	4	1685	421.25	346	486	0.3143287262877684
+12	buildReplicateJobBundles:unaccounted	4	1386	346.5	276	410	0.2585517000800279
+13	coordinatorWasmInstantiate	4	1247	311.75	240	370	0.23262191197676393
+14	computeStatWeights	4	859	214.75	210	225	0.16024235957340835
+15	solveConfig	10	696	69.6	51	90	0.12983548575447287
+16	statWeightRequestsWasmCall	4	275	68.75	65	73	0.05129994049206903
+17	prepareItemCandidates	5	180	36	32	41	0.0335781428675361
+18	runLPModelWithAvoidanceConvergence	5	163	32.6	17	49	0.03040687381893546
+19	runLPModel	8	158	19.75	16	26	0.02947414762817057
+20	round:0	1	100	100	100	100	0.01865452381529783
+21	glpkModuleAcquire	8	91	11.375	9	18	0.016975616671921025
+22	decodeSimResult	120	80	0.6666666666666666	0	3	0.014923619052238263
+23	isSignificantImprovement	4	53	13.25	13	14	0.00988689762210785
+24	glpkSolve	8	48	6	4	10	0.008954171431342958
+25	statWeightsRequestEncode	4	20	5	4	6	0.003730904763059566
+26	buildLpModel	8	10	1.25	0	2	0.001865452381529783
+27	round:0:unaccounted	1	10	10	10	10	0.001865452381529783
+28	transformChosenItems	8	9	1.125	0	2	0.0016789071433768045
+29	round:3:unaccounted	1	9	9	9	9	0.0016789071433768045
+30	round:4:unaccounted	1	9	9	9	9	0.0016789071433768045
+31	avoidanceConvergenceIterations	5	8	1.6	1	2	0.0014923619052238262
+32	round:1:unaccounted	1	8	8	8	8	0.0014923619052238262
+33	round:2:unaccounted	1	7	7	7	7	0.001305816667070848
+34	runLPModelWithAvoidanceConvergence:unaccounted	5	5	1	0	2	0.0009327261907648914
+35	solveConfig:unaccounted	5	4	0.8	0	1	0.0007461809526119131
+36	buildStatWeightsRequest	4	4	1	0	2	0.0007461809526119131
+37	solveConfigForSimMetric:unaccounted	1	4	4	4	4	0.0007461809526119131
+38	resetSimEnvironment	4	2	0.5	0	1	0.00037309047630595656
+39	filterItemsForClass	1	1	1	1	1	0.00018654523815297828
+40	getConsumableLPItems	5	1	0.2	0	1	0.00018654523815297828
+41	splitGearAndConsumables	5	1	0.2	0	1	0.00018654523815297828
+42	runCalibrationBatches:unaccounted	4	1	0.25	0	1	0.00018654523815297828
+43	runLPModel:unaccounted	8	0	0	0	0	0
+16:53:30.055 console.table() index.ts:41:17
+(index)	name	count	totalMs	avgMs	minMs	maxMs	pctOfTotal
+0	simWorkerRoundTrip	120	217394	1811.6166666666666	1565	2562	40.55381550302856
+1	solveConfigForSimMetric	1	63529	63529	63529	63529	11.851032434620558
+2	runCalibrationBatches	4	59981	14995.25	14906	15163	11.18916992965379
+3	calibrateWeights	4	59981	14995.25	14906	15163	11.18916992965379
+4	simJobQueueDispatch	4	57436	14359	14279	14511	10.71441229855446
+5	round:2	1	15236	15236	15236	15236	2.842203248498777
+6	round:4	1	15092	15092	15092	15092	2.815340734204748
+7	round:3	1	15022	15022	15022	15022	2.80228256753404
+8	round:1	1	14978	14978	14978	14978	2.794074577055309
+9	simWorkerWasmInstantiate	16	7184	449	268	619	1.340140990890996
+10	measureFinalSimMetrics	1	3096	3096	3096	3096	0.5775440573216207
+11	buildReplicateJobBundles	4	1685	421.25	346	486	0.3143287262877684
+12	buildReplicateJobBundles:unaccounted	4	1386	346.5	276	410	0.2585517000800279
+13	coordinatorWasmInstantiate	4	1247	311.75	240	370	0.23262191197676393
+14	computeStatWeights	4	859	214.75	210	225	0.16024235957340835
+15	solveConfig	10	696	69.6	51	90	0.12983548575447287
+16	statWeightRequestsWasmCall	4	275	68.75	65	73	0.05129994049206903
+17	prepareItemCandidates	5	180	36	32	41	0.0335781428675361
+18	runLPModelWithAvoidanceConvergence	5	163	32.6	17	49	0.03040687381893546
+19	runLPModel	8	158	19.75	16	26	0.02947414762817057
+20	round:0	1	100	100	100	100	0.01865452381529783
+21	glpkModuleAcquire	8	91	11.375	9	18	0.016975616671921025
+22	decodeSimResult	120	80	0.6666666666666666	0	3	0.014923619052238263
+23	isSignificantImprovement	4	53	13.25	13	14	0.00988689762210785
+24	glpkSolve	8	48	6	4	10	0.008954171431342958
+25	statWeightsRequestEncode	4	20	5	4	6	0.003730904763059566
+26	buildLpModel	8	10	1.25	0	2	0.001865452381529783
+27	round:0:unaccounted	1	10	10	10	10	0.001865452381529783
+28	transformChosenItems	8	9	1.125	0	2	0.0016789071433768045
+29	round:3:unaccounted	1	9	9	9	9	0.0016789071433768045
+30	round:4:unaccounted	1	9	9	9	9	0.0016789071433768045
+31	avoidanceConvergenceIterations	5	8	1.6	1	2	0.0014923619052238262
+32	round:1:unaccounted	1	8	8	8	8	0.0014923619052238262
+33	round:2:unaccounted	1	7	7	7	7	0.001305816667070848
+34	runLPModelWithAvoidanceConvergence:unaccounted	5	5	1	0	2	0.0009327261907648914
+35	solveConfig:unaccounted	5	4	0.8	0	1	0.0007461809526119131
+36	buildStatWeightsRequest	4	4	1	0	2	0.0007461809526119131
+37	solveConfigForSimMetric:unaccounted	1	4	4	4	4	0.0007461809526119131
+38	resetSimEnvironment	4	2	0.5	0	1	0.00037309047630595656
+39	filterItemsForClass	1	1	1	1	1	0.00018654523815297828
+40	getConsumableLPItems	5	1	0.2	0	1	0.00018654523815297828
+41	splitGearAndConsumables	5	1	0.2	0	1	0.00018654523815297828
+42	runCalibrationBatches:unaccounted	4	1	0.25	0	1	0.00018654523815297828
+43	runLPModel:unaccounted	8	0	0	0	0	0
+16:53:30.058 LOG Go to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fsolver%2Findex.ts%3A164%3A4 
+ →  worker result __root.tsx:54:18
+16:53:30.058 LOG Go to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fsolver%2Findex.ts%3A169%3A4 
+ →  [perf] main-thread solve() wall clock: 63904.0ms __root.tsx:54:18
+16:53:30.386 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:53:30.386 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:53:30.428 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:53:30.428 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:53:30.428 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:53:30.452       0: obj =   3.936235560e+02 inf =   4.463e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.452       3: obj =   4.073046736e+02 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.452 *    42: obj =   6.013739139e+02 inf =   6.446e-16 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.453 +    42: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.453 Solution found by heuristic: 597.812451328 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.454 Solution found by heuristic: 599.603309299 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.455 Solution found by heuristic: 599.949602212 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.456 +    58: mip =   5.999496022e+02 <=     tree is empty   0.0% (0; 7) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.459 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.43905558723958, avoidance target: 45.47 solveConfig.ts:331:15
+16:53:30.459 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 5.421462746460832, uncrit target: 4.8 solveConfig.ts:335:15
+16:53:30.478       0: obj =   3.936235560e+02 inf =   4.503e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.478       3: obj =   4.077052158e+02 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.479 *    42: obj =   6.012059365e+02 inf =   8.933e-16 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.479 +    42: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.479 Solution found by heuristic: 597.812451328 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.481 Solution found by heuristic: 599.603309299 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.482 +    59: mip =   5.996033093e+02 <=     tree is empty   0.0% (0; 7) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.486 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.475478330846165, avoidance target: 45.55 solveConfig.ts:331:15
+16:53:30.486 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 5.261462746460832, uncrit target: 4.8 solveConfig.ts:335:15
+16:53:30.501       0: obj =   3.936235560e+02 inf =   4.543e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.501       3: obj =   4.081057579e+02 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.502 *    42: obj =   6.010379590e+02 inf =   1.332e-15 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.502 +    42: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.502 Solution found by heuristic: 597.812451328 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.504 Solution found by heuristic: 598.932721705 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.506 Solution found by heuristic: 599.603309299 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.506 +    61: mip =   5.996033093e+02 <=     tree is empty   0.0% (0; 11) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.508 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.475478330846165, avoidance target: 45.629999999999995 solveConfig.ts:331:15
+16:53:30.508 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 5.261462746460832, uncrit target: 4.8 solveConfig.ts:335:15
+16:53:30.524       0: obj =   3.936235560e+02 inf =   4.583e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.525       3: obj =   4.085063001e+02 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.525 *    41: obj =   6.008699815e+02 inf =   6.497e-16 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.525 +    41: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.526 Solution found by heuristic: 597.812451328 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.528 Solution found by heuristic: 598.932721705 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.529 +    64: mip =   5.989327217e+02 <=     tree is empty   0.0% (0; 11) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.532 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.62458298818953, avoidance target: 45.709999999999994 solveConfig.ts:331:15
+16:53:30.532 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 5.581462746460832, uncrit target: 4.8 solveConfig.ts:335:15
+16:53:30.547       0: obj =   3.936235560e+02 inf =   4.623e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.547       3: obj =   4.089068423e+02 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.548 *    41: obj =   6.007020041e+02 inf =   7.533e-16 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.548 +    41: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.548 Solution found by heuristic: 597.812451328 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.555 +    83: mip =   5.978124513e+02 <=     tree is empty   0.0% (0; 13) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:30.566 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:53:45.883 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:53:45.883 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:53:45.927 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:53:45.927 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:53:45.927 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:53:45.944       0: obj =   1.848548209e+00 inf =   4.463e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.944       3: obj =   1.907993979e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.945 *    38: obj =   2.760940047e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.945 +    38: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.945 Solution found by heuristic: 2.74320983162 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.947 Solution found by heuristic: 2.75228318765 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.949 +    61: mip =   2.752283188e+00 <=     tree is empty   0.0% (0; 7) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.951 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.43905558723958, avoidance target: 45.47 solveConfig.ts:331:15
+16:53:45.951 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 5.421462746460832, uncrit target: 4.8 solveConfig.ts:335:15
+16:53:45.968       0: obj =   1.848548209e+00 inf =   4.503e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.968       3: obj =   1.909773576e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.969 *    38: obj =   2.760029963e+00 inf =   1.877e-15 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.969 +    38: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.969 Solution found by heuristic: 2.74320983162 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.973 Solution found by heuristic: 2.74554270757 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.974 Solution found by heuristic: 2.74560665919 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.975 +    75: >>>>>   2.750817108e+00 <=   2.750817108e+00   0.0% (3; 6) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.975 +    75: mip =   2.750817108e+00 <=     tree is empty   0.0% (0; 17) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.978 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.475478330846165, avoidance target: 45.55 solveConfig.ts:331:15
+16:53:45.978 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 5.261462746460832, uncrit target: 4.8 solveConfig.ts:335:15
+16:53:45.993       0: obj =   1.848548209e+00 inf =   4.543e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.993       3: obj =   1.911553172e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.994 *    38: obj =   2.759119880e+00 inf =   8.625e-16 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.994 +    38: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.994 Solution found by heuristic: 2.74320983162 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.998 Solution found by heuristic: 2.74554270757 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.999 +    70: >>>>>   2.750817108e+00 <=   2.750817108e+00   0.0% (4; 6) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:45.999 +    70: mip =   2.750817108e+00 <=     tree is empty   0.0% (0; 17) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:46.001 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.475478330846165, avoidance target: 45.629999999999995 solveConfig.ts:331:15
+16:53:46.001 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 5.261462746460832, uncrit target: 4.8 solveConfig.ts:335:15
+16:53:46.017       0: obj =   1.848548209e+00 inf =   4.583e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:46.017       3: obj =   1.913332769e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:46.017 *    38: obj =   2.758209796e+00 inf =   1.776e-15 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:46.017 +    38: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:46.018 Solution found by heuristic: 2.74320983162 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:46.021 Solution found by heuristic: 2.74554270757 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:46.023 +    73: >>>>>   2.745606659e+00 <=   2.747677817e+00 < 0.1% (2; 11) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:46.024 +    76: mip =   2.745606659e+00 <=     tree is empty   0.0% (0; 17) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:53:46.048 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:54:01.586 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:54:01.586 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:54:01.626 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:54:01.626 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:54:01.626 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:54:01.642       0: obj =   1.856836977e+00 inf =   4.463e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:01.643       3: obj =   1.913300614e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:01.643 *    37: obj =   2.762188147e+00 inf =   5.250e-16 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:01.643 +    37: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:01.644 Solution found by heuristic: 2.750105248 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:01.646 +    52: mip =   2.750105248e+00 <=     tree is empty   0.0% (0; 5) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:01.669 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:54:16.811 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:54:16.811 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:54:16.848 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:54:16.848 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:54:16.848 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:54:16.863       0: obj =   1.874757861e+00 inf =   4.463e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.863       3: obj =   1.937547178e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.863 *    38: obj =   2.757597059e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.864 +    38: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.864 Solution found by heuristic: 2.73977127813 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.865 Solution found by heuristic: 2.74444097445 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.867 Solution found by heuristic: 2.74984409054 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.870 +    75: mip =   2.749844091e+00 <=     tree is empty   0.0% (0; 13) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.872 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.43905558723958, avoidance target: 45.47 solveConfig.ts:331:15
+16:54:16.872 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 5.421462746460832, uncrit target: 4.8 solveConfig.ts:335:15
+16:54:16.891       0: obj =   1.874757861e+00 inf =   4.503e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.891       3: obj =   1.939364396e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.891 *    38: obj =   2.756687346e+00 inf =   9.607e-17 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.891 +    38: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.892 Solution found by heuristic: 2.73977127813 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.898 +    72: >>>>>   2.746996612e+00 <=   2.751949755e+00   0.2% (11; 2) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.898 Solution found by heuristic: 2.7479773338 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.901 +    87: mip =   2.747977334e+00 <=     tree is empty   0.0% (0; 29) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:16.922 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:54:31.866 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:54:31.866 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:54:31.903 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:54:31.903 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:54:31.903 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:54:31.919       0: obj =   1.914958375e+00 inf =   4.463e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.919       3: obj =   1.983122619e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.919 *    39: obj =   2.800943275e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.920 +    39: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.920 Solution found by heuristic: 2.77355407588 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.933 Solution found by heuristic: 2.78736515612 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.936 Solution found by heuristic: 2.78744033239 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.937 +   132: mip =   2.787440332e+00 <=     tree is empty   0.0% (0; 79) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.940 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.4657175313129, avoidance target: 45.47 solveConfig.ts:331:15
+16:54:31.940 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 5.176585098584332, uncrit target: 4.8 solveConfig.ts:335:15
+16:54:31.958       0: obj =   1.914958375e+00 inf =   4.503e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.958       3: obj =   1.985104786e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.959 *    39: obj =   2.800065753e+00 inf =   1.003e-16 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.959 +    39: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.960 Solution found by heuristic: 2.77355407588 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.963 Solution found by heuristic: 2.78109372907 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.967 Solution found by heuristic: 2.78253574196 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.968 Solution found by heuristic: 2.78565530308 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.972 +   112: mip =   2.785655303e+00 <=     tree is empty   0.0% (0; 41) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.976 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.540840147610346, avoidance target: 45.55 solveConfig.ts:331:15
+16:54:31.976 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 5.376585098584332, uncrit target: 4.8 solveConfig.ts:335:15
+16:54:31.990       0: obj =   1.914958375e+00 inf =   4.543e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.990       3: obj =   1.987086954e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.991 *    39: obj =   2.799188231e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.991 +    39: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.992 Solution found by heuristic: 2.77355407588 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.995 Solution found by heuristic: 2.78109372907 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:31.999 Solution found by heuristic: 2.78253574196 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:32.007 +   139: mip =   2.782535742e+00 <=     tree is empty   0.0% (0; 47) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:32.009 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.475478330846165, avoidance target: 45.629999999999995 solveConfig.ts:331:15
+16:54:32.009 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 5.261462746460832, uncrit target: 4.8 solveConfig.ts:335:15
+16:54:32.025       0: obj =   1.914958375e+00 inf =   4.583e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:32.026       3: obj =   1.989069121e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:32.026 *    39: obj =   2.798310709e+00 inf =   9.607e-17 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:32.026 +    39: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:32.027 Solution found by heuristic: 2.77355407588 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:32.030 Solution found by heuristic: 2.78109372907 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:32.042 +   138: mip =   2.781093729e+00 <=     tree is empty   0.0% (0; 47) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:32.063 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:54:47.055 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:54:47.055 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:54:47.094 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:54:47.094 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:54:47.094 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:54:47.130       0: obj =   1.890749707e+00 inf =   4.463e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:47.130       3: obj =   1.956989493e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:47.131 *    38: obj =   2.768734316e+00 inf =   2.070e-16 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:47.131 +    38: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:47.132 Solution found by heuristic: 2.74037714928 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:47.134 Solution found by heuristic: 2.75272831626 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:47.135 Solution found by heuristic: 2.75644646099 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:47.139 +    75: mip =   2.756446461e+00 <=     tree is empty   0.0% (0; 21) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:54:47.160 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+16:55:01.969 LOG /src/solver/solveConfig.ts:513:2
+ →  worker started solveConfig.ts:362:11
+16:55:01.969 LOG /src/solver/solveConfig.ts:514:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:363:11
+16:55:02.012 LOG /src/solver/solveConfig.ts:532:2
+ →  avoidance target: 45.47 solveConfig.ts:378:11
+16:55:02.012 LOG /src/solver/solveConfig.ts:533:2
+ →  uncritability target: 4.8 solveConfig.ts:379:11
+16:55:02.012 LOG /src/solver/solveConfig.ts:534:2
+ →  items: 62 solveConfig.ts:380:11
+16:55:02.029       0: obj =   1.889796509e+00 inf =   4.463e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.029       3: obj =   1.953951549e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.030 *    39: obj =   2.798004970e+00 inf =   9.607e-17 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.030 +    39: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.030 Solution found by heuristic: 2.78058850914 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.032 Solution found by heuristic: 2.78463988994 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.033 Solution found by heuristic: 2.7908430636 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.033 +    58: mip =   2.790843064e+00 <=     tree is empty   0.0% (0; 11) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.036 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.43905558723958, avoidance target: 45.47 solveConfig.ts:331:15
+16:55:02.036 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 5.421462746460832, uncrit target: 4.8 solveConfig.ts:335:15
+16:55:02.053       0: obj =   1.889796509e+00 inf =   4.503e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.053       3: obj =   1.955802900e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.054 *    39: obj =   2.797111220e+00 inf =   9.607e-17 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.054 +    39: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.054 Solution found by heuristic: 2.78058850914 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.056 Solution found by heuristic: 2.78463988994 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.059 +    72: >>>>>   2.788424676e+00 <=   2.788475222e+00 < 0.1% (6; 5) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.059 +    73: mip =   2.788424676e+00 <=     tree is empty   0.0% (0; 21) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.062 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.475478330846165, avoidance target: 45.55 solveConfig.ts:331:15
+16:55:02.062 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 5.261462746460832, uncrit target: 4.8 solveConfig.ts:335:15
+16:55:02.077       0: obj =   1.889796509e+00 inf =   4.543e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.078       3: obj =   1.957654252e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.078 *    39: obj =   2.796217470e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.078 +    39: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.078 Solution found by heuristic: 2.78058850914 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.080 Solution found by heuristic: 2.78463988994 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.084 +    72: >>>>>   2.788424676e+00 <=   2.788424676e+00   0.0% (2; 6) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.084 +    72: mip =   2.788424676e+00 <=     tree is empty   0.0% (0; 13) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.086 LOG /src/solver/solveConfig.ts:481:4
+ →  item avoidance: 45.475478330846165, avoidance target: 45.629999999999995 solveConfig.ts:331:15
+16:55:02.086 LOG /src/solver/solveConfig.ts:484:4
+ →  item uncrit: 5.261462746460832, uncrit target: 4.8 solveConfig.ts:335:15
+16:55:02.101       0: obj =   1.889796509e+00 inf =   4.583e+00 (3) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.101       3: obj =   1.959505604e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.102 *    39: obj =   2.795323720e+00 inf =   0.000e+00 (0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.102 +    39: mip =     not found yet <=              +inf        (1; 0) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.102 Solution found by heuristic: 2.78058850914 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.104 Solution found by heuristic: 2.78463988994 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.107 Solution found by heuristic: 2.78531352367 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:02.107 +    73: mip =   2.785313524e+00 <=     tree is empty   0.0% (0; 11) 365b1c24-81bb-4b41-824e-edd751242fa4:1:5786
+16:55:05.219 LOG /src/helpers/perfTrace.ts:127:14
+ →  [perf] sim-backed solve perfTrace.ts:86:24
+16:55:05.220 console.table() perfTrace.ts:87:13
+(index)	name	count	totalMs	avgMs	minMs	maxMs	pctOfTotal
+0	simWorkerRoundTrip	180	329864	1832.5777777777778	1572	2650	40.66155270369051
+1	solveConfigForSimMetric	1	94842	94842	94842	94842	11.690948334839254
+2	calibrateWeights	6	90735	15122.5	14808	15537	11.184688188372657
+3	runCalibrationBatches	6	90733	15122.166666666666	14807	15536	11.1844416531175
+4	simJobQueueDispatch	6	86957	14492.833333333334	14179	14926	10.718983091379524
+5	round:2	1	15621	15621	15621	15621	1.9255636104101976
+6	round:1	1	15480	15480	15480	15480	1.9081828749215708
+7	round:3	1	15255	15255	15255	15255	1.8804476587163155
+8	round:4	1	15140	15140	15140	15140	1.8662718815447406
+9	round:5	1	15097	15097	15097	15097	1.8609713735588471
+10	round:6	1	14968	14968	14968	14968	1.8450698496011675
+11	simWorkerWasmInstantiate	24	11067	461.125	311	601	1.3642028344158286
+12	measureFinalSimMetrics	1	3092	3092	3092	3092	0.38114350447399853
+13	buildReplicateJobBundles	6	2530	421.6666666666667	352	488	0.31186709777464955
+14	buildReplicateJobBundles:unaccounted	6	2057	342.8333333333333	279	405	0.25356150992982374
+15	coordinatorWasmInstantiate	6	1839	306.5	247	363	0.22668916711762074
+16	solveConfig	14	1749	124.92857142857143	62	178	0.2155950806355186
+17	computeStatWeights	6	1244	207.33333333333334	189	223	0.15334492870816757
+18	runLPModelWithAvoidanceConvergence	7	589	84.14285714285714	22	141	0.07260463264397966
+19	runLPModel	21	578	27.523809523809526	22	47	0.07124868874061163
+20	statWeightRequestsWasmCall	6	436	72.66666666666667	68	78	0.053744685624406006
+21	glpkSolve	21	291	13.857142857142858	9	24	0.03587087962546364
+22	prepareItemCandidates	7	273	39	34	43	0.03365206232904321
+23	glpkModuleAcquire	21	253	12.047619047619047	9	30	0.03118670977746495
+24	round:0	1	182	182	182	182	0.022434708219362137
+25	decodeSimResult	180	114	0.6333333333333333	0	3	0.014052509543996066
+26	isSignificantImprovement	6	67	11.166666666666666	10	12	0.00825893104778716
+27	statWeightsRequestEncode	6	32	5.333333333333333	4	8	0.003944564082525212
+28	transformChosenItems	21	21	1	0	2	0.00258862017915717
+29	avoidanceConvergenceIterations	7	21	3	1	5	0.00258862017915717
+30	buildLpModel	21	13	0.6190476190476191	0	2	0.001602479158525867
+31	runLPModelWithAvoidanceConvergence:unaccounted	7	11	1.5714285714285714	0	4	0.0013559439033680415
+32	round:2:unaccounted	1	11	11	11	11	0.0013559439033680415
+33	round:0:unaccounted	1	10	10	10	10	0.0012326762757891286
+34	round:1:unaccounted	1	9	9	9	9	0.0011094086482102156
+35	round:4:unaccounted	1	8	8	8	8	0.000986141020631303
+36	round:5:unaccounted	1	8	8	8	8	0.000986141020631303
+37	round:6:unaccounted	1	8	8	8	8	0.000986141020631303
+38	solveConfig:unaccounted	7	7	1	0	2	0.00086287339305239
+39	round:3:unaccounted	1	7	7	7	7	0.00086287339305239
+40	solveConfigForSimMetric:unaccounted	1	6	6	6	6	0.0007396057654734772
+41	getConsumableLPItems	7	5	0.7142857142857143	0	1	0.0006163381378945643
+42	resetSimEnvironment	6	5	0.8333333333333334	0	2	0.0006163381378945643
+43	buildStatWeightsRequest	6	5	0.8333333333333334	0	2	0.0006163381378945643
+44	runCalibrationBatches:unaccounted	6	2	0.3333333333333333	0	1	0.00024653525515782573
+45	filterItemsForClass	1	1	1	1	1	0.00012326762757891287
+46	runLPModel:unaccounted	21	0	0	0	0	0
+47	splitGearAndConsumables	7	0	0	0	0	0
+16:55:05.226 console.table() index.ts:41:17
+(index)	name	count	totalMs	avgMs	minMs	maxMs	pctOfTotal
+0	simWorkerRoundTrip	180	329864	1832.5777777777778	1572	2650	40.66155270369051
+1	solveConfigForSimMetric	1	94842	94842	94842	94842	11.690948334839254
+2	calibrateWeights	6	90735	15122.5	14808	15537	11.184688188372657
+3	runCalibrationBatches	6	90733	15122.166666666666	14807	15536	11.1844416531175
+4	simJobQueueDispatch	6	86957	14492.833333333334	14179	14926	10.718983091379524
+5	round:2	1	15621	15621	15621	15621	1.9255636104101976
+6	round:1	1	15480	15480	15480	15480	1.9081828749215708
+7	round:3	1	15255	15255	15255	15255	1.8804476587163155
+8	round:4	1	15140	15140	15140	15140	1.8662718815447406
+9	round:5	1	15097	15097	15097	15097	1.8609713735588471
+10	round:6	1	14968	14968	14968	14968	1.8450698496011675
+11	simWorkerWasmInstantiate	24	11067	461.125	311	601	1.3642028344158286
+12	measureFinalSimMetrics	1	3092	3092	3092	3092	0.38114350447399853
+13	buildReplicateJobBundles	6	2530	421.6666666666667	352	488	0.31186709777464955
+14	buildReplicateJobBundles:unaccounted	6	2057	342.8333333333333	279	405	0.25356150992982374
+15	coordinatorWasmInstantiate	6	1839	306.5	247	363	0.22668916711762074
+16	solveConfig	14	1749	124.92857142857143	62	178	0.2155950806355186
+17	computeStatWeights	6	1244	207.33333333333334	189	223	0.15334492870816757
+18	runLPModelWithAvoidanceConvergence	7	589	84.14285714285714	22	141	0.07260463264397966
+19	runLPModel	21	578	27.523809523809526	22	47	0.07124868874061163
+20	statWeightRequestsWasmCall	6	436	72.66666666666667	68	78	0.053744685624406006
+21	glpkSolve	21	291	13.857142857142858	9	24	0.03587087962546364
+22	prepareItemCandidates	7	273	39	34	43	0.03365206232904321
+23	glpkModuleAcquire	21	253	12.047619047619047	9	30	0.03118670977746495
+24	round:0	1	182	182	182	182	0.022434708219362137
+25	decodeSimResult	180	114	0.6333333333333333	0	3	0.014052509543996066
+26	isSignificantImprovement	6	67	11.166666666666666	10	12	0.00825893104778716
+27	statWeightsRequestEncode	6	32	5.333333333333333	4	8	0.003944564082525212
+28	transformChosenItems	21	21	1	0	2	0.00258862017915717
+29	avoidanceConvergenceIterations	7	21	3	1	5	0.00258862017915717
+30	buildLpModel	21	13	0.6190476190476191	0	2	0.001602479158525867
+31	runLPModelWithAvoidanceConvergence:unaccounted	7	11	1.5714285714285714	0	4	0.0013559439033680415
+32	round:2:unaccounted	1	11	11	11	11	0.0013559439033680415
+33	round:0:unaccounted	1	10	10	10	10	0.0012326762757891286
+34	round:1:unaccounted	1	9	9	9	9	0.0011094086482102156
+35	round:4:unaccounted	1	8	8	8	8	0.000986141020631303
+36	round:5:unaccounted	1	8	8	8	8	0.000986141020631303
+37	round:6:unaccounted	1	8	8	8	8	0.000986141020631303
+38	solveConfig:unaccounted	7	7	1	0	2	0.00086287339305239
+39	round:3:unaccounted	1	7	7	7	7	0.00086287339305239
+40	solveConfigForSimMetric:unaccounted	1	6	6	6	6	0.0007396057654734772
+41	getConsumableLPItems	7	5	0.7142857142857143	0	1	0.0006163381378945643
+42	resetSimEnvironment	6	5	0.8333333333333334	0	2	0.0006163381378945643
+43	buildStatWeightsRequest	6	5	0.8333333333333334	0	2	0.0006163381378945643
+44	runCalibrationBatches:unaccounted	6	2	0.3333333333333333	0	1	0.00024653525515782573
+45	filterItemsForClass	1	1	1	1	1	0.00012326762757891287
+46	runLPModel:unaccounted	21	0	0	0	0	0
+47	splitGearAndConsumables	7	0	0	0	0	0
+16:55:05.230 LOG Go to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fsolver%2Findex.ts%3A164%3A4 
+ →  worker result __root.tsx:54:18
+16:55:05.230 LOG Go to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fsolver%2Findex.ts%3A169%3A4 
+ →  [perf] main-thread solve() wall clock: 95172.0ms __root.tsx:54:18
+16:55:05.234 XHR POST
+http://localhost:3000/api/track
+[HTTP/1.1 404 Not Found 1ms]
+16:55:05.359 GET
+https://wow.zamimg.com/images/wow/icons/large/undefined.jpg
+NS_ERROR_DOM_NETWORK_ERR
+16:55:05.583 A resource is blocked by OpaqueResponseBlocking, please check browser console for details. undefined.jpg
