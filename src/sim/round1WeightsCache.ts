@@ -30,7 +30,13 @@ const STORAGE_KEY = "round1WeightsCache";
 // "balanced"-mode entry from before that change holds `optimizeStats`/`stdevStats` computed
 // under the old, biased blend - stale in a way the profile/balance/survivabilityMetric key
 // alone wouldn't detect, so it must be invalidated here instead.
-const CACHE_VERSION = 2;
+//
+// Bumped 2 -> 3: added Round1CacheKey.deadStats (statTranslation.ts's deadCalibrationStats) -
+// an old entry's key has no such field even for a config where a stat (e.g. Resilience, under a
+// crit-immunity floor) is now forced to 0 rather than really simmed, so without a version bump a
+// stale entry computed before this field existed could be reused for a config where it matters,
+// silently reporting a real calibrated Resilience weight where 0 is now correct (or vice versa).
+const CACHE_VERSION = 3;
 // Bounds growth as a user experiments with different profiles/ratios over a long session,
 // without needing a TTL - oldest-savedAt entries are evicted first on write.
 const MAX_ENTRIES = 20;
@@ -38,14 +44,21 @@ const MAX_ENTRIES = 20;
 /** Everything besides the profile that determines round 1's calibrated weights - see
  * calibrateWeights.ts's metricRatiosForBalance (for `balance`/`survivabilityMetric`, only
  * meaningful/included for `objectiveMode === "balanced"`) and solveSimMetric.ts's
- * calibrationStats resolution (which stats actually get calibrated). `calibrationStats` should
- * be passed in a stable (e.g. sorted) order - array element order affects the hash, unlike the
- * profile object's key order. */
+ * calibrationStats resolution (which stats actually get calibrated). `calibrationStats` and
+ * `deadStats` should both be passed in a stable (e.g. sorted) order - array element order
+ * affects the hash, unlike the profile object's key order.
+ *
+ * `deadStats` (statTranslation.ts's `deadCalibrationStats`) names stats forced to an explicit 0
+ * instead of really simmed (e.g. Resilience under a crit-immunity floor) - a genuinely different
+ * result from the same stat calibrated normally, so it must be part of the key even though those
+ * stats still appear in `calibrationStats` too (see calibratePerMetricWeights' own doc comment
+ * on why they're still reported, not omitted). */
 export interface Round1CacheKey {
 	objectiveMode: "tps" | "dtps" | "tmi" | "balanced";
 	balance?: number;
 	survivabilityMetric?: "tmi" | "dtps";
 	calibrationStats?: StatName[];
+	deadStats?: StatName[];
 }
 
 interface CacheEntry extends CalibratedWeights {

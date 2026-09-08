@@ -35,6 +35,8 @@ const baseOptions = (
 	resistanceFloors: [],
 	areEnchantsGemsLocked: false,
 	excludeUniqueGems: false,
+	excludeJewelcraftingItems: false,
+	excludeEnchantingItems: false,
 	phase: 3,
 	raceId: TEST_RACE_ID,
 	classId: TEST_CLASS_ID,
@@ -171,6 +173,8 @@ describe("solveConfigForEHP", () => {
 		const baseConfig = {
 			areEnchantsGemsLocked: true,
 			excludeUniqueGems: false,
+			excludeJewelcraftingItems: false,
+			excludeEnchantingItems: false,
 			independentConfigs: false,
 			phase: 3,
 			raceId: TEST_RACE_ID,

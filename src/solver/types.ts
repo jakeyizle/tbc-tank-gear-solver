@@ -245,6 +245,18 @@ export interface Enchant {
 	stats: Stat[];
 	// when "true", `id` is a spell id (wowhead.com/spell=<id>) rather than an item id (wowhead.com/item=<id>)
 	isSpellID?: string;
+	// Set only for the handful of enchants a character can obtain solely by personally knowing
+	// the named profession (e.g. the TBC ring enchants, whose formula tooltip states "Only the
+	// Enchanter's rings can be enchanted" - they can't be commissioned from another player's
+	// enchanter the way every other enchant can). Verified via tbc.wowhead.com tooltip data, not
+	// present in the vendored sim's own item data.
+	profession?: "Jewelcrafting" | "Enchanting";
+	// Numeric class ids (same scheme as #/data/classes.ts's CLASS_LABELS, e.g. "1" = Warrior) a
+	// character must belong to in order to use this enchant. Set only for the rare directly-used
+	// (non-scroll) enchant item whose own tooltip carries a "Classes:" restriction - e.g. Presence
+	// of Might (Warrior-only head enchant, id 19782). Verified via tbc.wowhead.com tooltip data;
+	// absent for every other enchant, which any class can use.
+	classes?: string[];
 }
 
 export interface Gem {
@@ -254,6 +266,9 @@ export interface Gem {
 	phase: string;
 	stats: Stat[];
 	isUnique?: string;
+	// Set only for gems whose tooltip carries a "Requires Jewelcrafting" skill gate - a
+	// non-Jewelcrafter simply cannot socket these. Verified via tbc.wowhead.com tooltip data.
+	profession?: "Jewelcrafting" | "Enchanting";
 }
 
 export interface InputItem {

@@ -20,6 +20,7 @@ interface ConfigurationPanelProps {
 	updateOptimizeStats: (stats: Stat[]) => void;
 	updateResistanceFloors: (floors: ResistanceFloor[]) => void;
 	updateConfig: (id: string, updates: Partial<SolverConfiguration>) => void;
+	independentConfigs: boolean;
 }
 
 // Memoized so a parent re-render that doesn't change these props (e.g. routes/index.tsx's
@@ -38,6 +39,7 @@ function ConfigurationPanel({
 	updateOptimizeStats,
 	updateResistanceFloors,
 	updateConfig,
+	independentConfigs,
 }: ConfigurationPanelProps) {
 	return (
 		<Paper elevation={1} sx={{ p: 2 }}>
@@ -54,6 +56,7 @@ function ConfigurationPanel({
 				updateOptimizeStats={updateOptimizeStats}
 				updateResistanceFloors={updateResistanceFloors}
 				updateConfig={updateConfig}
+				independentConfigs={independentConfigs}
 			/>
 		</Paper>
 	);

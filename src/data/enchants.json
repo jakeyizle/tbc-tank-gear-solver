@@ -55,6 +55,7 @@
 		"id": "19782",
 		"effectID": "2583",
 		"type": "Head",
+		"classes": ["1"],
 		"stats": [
 			{ "name": "Stamina", "value": 10 },
 			{ "name": "Defense", "value": 10 },
@@ -662,7 +663,8 @@
 		"effectID": "2929",
 		"type": "Finger",
 		"stats": [],
-		"isSpellID": "true"
+		"isSpellID": "true",
+		"profession": "Enchanting"
 	},
 	{
 		"name": "Ring - Spellpower",
@@ -670,7 +672,8 @@
 		"effectID": "2928",
 		"type": "Finger",
 		"stats": [{ "name": "SpellPower", "value": 12 }],
-		"isSpellID": "true"
+		"isSpellID": "true",
+		"profession": "Enchanting"
 	},
 	{
 		"name": "Ring - Stats",
@@ -684,7 +687,8 @@
 			{ "name": "Strength", "value": 4 },
 			{ "name": "Agility", "value": 4 }
 		],
-		"isSpellID": "true"
+		"isSpellID": "true",
+		"profession": "Enchanting"
 	},
 	{
 		"name": "Biznicks 247x128 Accurascope",
@@ -846,7 +850,8 @@
 			{ "name": "HealingPower", "value": 20 },
 			{ "name": "SpellPower", "value": 7 }
 		],
-		"isSpellID": "true"
+		"isSpellID": "true",
+		"profession": "Enchanting"
 	},
 	{
 		"name": "Greater Inscription of Faith",

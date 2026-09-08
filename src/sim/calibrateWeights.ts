@@ -796,6 +796,13 @@ export interface PerMetricCalibration {
  * each metric's real achievable score swing via an actual solve, rather than guessing at a
  * normalization scale - can call this directly instead. See solveSimMetric.ts's
  * `measureMetricAchievableScale` and its round loop for that caller.
+ *
+ * `deadStats` (see statTranslation.ts's `deadCalibrationStats`) names stats provably worth
+ * exactly 0 for this config, which get excluded from the actual sim request (skipping their +/-
+ * perturbation entirely) while still passing through `statsToWeigh` unchanged for the report -
+ * `computePerMetricStatWeights` below still emits an explicit entry for each of them (naturally
+ * 0, since their raw weight was never measured - see epValueForStat's own missing-weight skip
+ * path), rather than silently omitting them from the breakdown.
  */
 export async function calibratePerMetricWeights(
 	gear: GearPiece[],
@@ -803,11 +810,15 @@ export async function calibratePerMetricWeights(
 	statsToWeigh: StatName[],
 	profile: SimCalibrationProfile,
 	onProgress?: (progress: CalibrationProgress) => void,
+	deadStats?: ReadonlySet<StatName>,
 ): Promise<PerMetricCalibration> {
+	const simStatsToWeigh = deadStats?.size
+		? statsToWeigh.filter((s) => !deadStats.has(s))
+		: statsToWeigh;
 	const batches = await runCalibrationBatches(
 		gear,
 		db,
-		statsToWeigh,
+		simStatsToWeigh,
 		profile,
 		onProgress,
 	);
@@ -839,6 +850,8 @@ export async function calibratePerMetricWeights(
  * round1WeightsCache.ts's sake) - a caller that also wants LP-measured per-metric scales should
  * call `calibratePerMetricWeights` and `blendNormalizedPerMetricWeights` directly instead, the
  * way solveSimMetric.ts's round loop does for rounds 2+.
+ *
+ * `deadStats` - see calibratePerMetricWeights' own doc comment - passes straight through.
  */
 export async function calibrateWeights(
 	gear: GearPiece[],
@@ -847,6 +860,7 @@ export async function calibrateWeights(
 	metricRatios: Partial<Record<SimMetric, number>>,
 	profile: SimCalibrationProfile,
 	onProgress?: (progress: CalibrationProgress) => void,
+	deadStats?: ReadonlySet<StatName>,
 ): Promise<CalibratedWeights> {
 	const { perMetricStatWeights, perMetricStatWeightStdevs, baselineMetrics } =
 		await calibratePerMetricWeights(
@@ -855,6 +869,7 @@ export async function calibrateWeights(
 			statsToWeigh,
 			profile,
 			onProgress,
+			deadStats,
 		);
 
 	const { weights: optimizeStats, stdevs: stdevStats } =

@@ -43,6 +43,12 @@ function App() {
 	const [excludeUniqueGems, setExcludeUniqueGems] = useState(
 		() => _saved?.excludeUniqueGems ?? false,
 	);
+	const [excludeJewelcraftingItems, setExcludeJewelcraftingItems] = useState(
+		() => _saved?.excludeJewelcraftingItems ?? false,
+	);
+	const [excludeEnchantingItems, setExcludeEnchantingItems] = useState(
+		() => _saved?.excludeEnchantingItems ?? false,
+	);
 	const [independentConfigs, setIndependentConfigs] = useState(
 		() => _saved?.independentConfigs ?? false,
 	);
@@ -94,6 +100,8 @@ function App() {
 			talents,
 			areEnchantsGemsLocked,
 			excludeUniqueGems,
+			excludeJewelcraftingItems,
+			excludeEnchantingItems,
 			independentConfigs,
 			phase,
 			simCalibrationProfile,
@@ -172,6 +180,8 @@ function App() {
 				classId: classValue,
 				areEnchantsGemsLocked,
 				excludeUniqueGems,
+				excludeJewelcraftingItems,
+				excludeEnchantingItems,
 				independentConfigs,
 				phase,
 				talentSources: talents,
@@ -216,6 +226,8 @@ function App() {
 				talents,
 				areEnchantsGemsLocked,
 				excludeUniqueGems,
+				excludeJewelcraftingItems,
+				excludeEnchantingItems,
 				independentConfigs,
 				phase,
 				configs,
@@ -262,6 +274,10 @@ function App() {
 						setAreEnchantsGemsLocked={setAreEnchantsGemsLocked}
 						excludeUniqueGems={excludeUniqueGems}
 						setExcludeUniqueGems={setExcludeUniqueGems}
+						excludeJewelcraftingItems={excludeJewelcraftingItems}
+						setExcludeJewelcraftingItems={setExcludeJewelcraftingItems}
+						excludeEnchantingItems={excludeEnchantingItems}
+						setExcludeEnchantingItems={setExcludeEnchantingItems}
 						independentConfigs={independentConfigs}
 						setIndependentConfigs={setIndependentConfigs}
 						phase={phase}
@@ -282,6 +298,7 @@ function App() {
 						updateOptimizeStats={updateOptimizeStats}
 						updateResistanceFloors={updateResistanceFloors}
 						updateConfig={updateConfig}
+						independentConfigs={independentConfigs}
 					/>
 
 					{configs.some(

@@ -5,7 +5,10 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { getBuffs } from "#/data/buffs";
 import { CONSUMABLES } from "#/data/consumables";
-import { SIM_CALIBRATION_STAT_NAMES } from "#/sim/statTranslation";
+import {
+	ALWAYS_INCLUDED_CALIBRATION_STATS,
+	SIM_CALIBRATION_STAT_NAMES,
+} from "#/sim/statTranslation";
 import {
 	type ResistanceFloor,
 	STAT_LABELS,
@@ -33,6 +36,7 @@ interface ConfigManagerProps {
 	updateOptimizeStats: (stats: Stat[]) => void;
 	updateResistanceFloors: (floors: ResistanceFloor[]) => void;
 	updateConfig: (id: string, updates: Partial<SolverConfiguration>) => void;
+	independentConfigs: boolean;
 }
 
 export default function ConfigManager({
@@ -48,6 +52,7 @@ export default function ConfigManager({
 	updateOptimizeStats,
 	updateResistanceFloors,
 	updateConfig,
+	independentConfigs,
 }: ConfigManagerProps) {
 	const EXCLUSIVE_BUFF_GROUPS = [
 		["mark-of-the-wild", "improved-mark-of-the-wild"],
@@ -83,6 +88,10 @@ export default function ConfigManager({
 		config: SolverConfiguration,
 		statName: StatName,
 	) => {
+		// Spell Power and Armor are always calibrated regardless of this setting - see
+		// ALWAYS_INCLUDED_CALIBRATION_STATS's own comment - so toggling them is a no-op rather
+		// than a real exclusion the UI shouldn't pretend is possible.
+		if (ALWAYS_INCLUDED_CALIBRATION_STATS.has(statName)) return;
 		const isEnabled = config.enabledCalibrationStats.includes(statName);
 		// Unlike consumables, an empty calibration-stat list isn't a meaningful state (the sim
 		// would have nothing to calibrate a weight vector from) - refuse to uncheck the last
@@ -103,8 +112,9 @@ export default function ConfigManager({
 					</Typography>
 					{configs.length > 1 && (
 						<Typography variant="caption" color="text.secondary">
-							Solved top down — set 1 picks each item&apos;s enchants and gems,
-							lower sets reuse them.
+							{independentConfigs
+								? "Solved independently — each set picks its own enchants and gems."
+								: "Solved top down — set 1 picks each item's enchants and gems, lower sets reuse them."}
 						</Typography>
 					)}
 				</Box>
@@ -129,11 +139,18 @@ export default function ConfigManager({
 						checked: config.enabledConsumableIds.includes(consumable.id),
 					}));
 					const displayCalibrationStats = SIM_CALIBRATION_STAT_NAMES.map(
-						(name) => ({
-							name,
-							label: STAT_LABELS[name],
-							checked: config.enabledCalibrationStats.includes(name),
-						}),
+						(name) => {
+							const alwaysIncluded =
+								ALWAYS_INCLUDED_CALIBRATION_STATS.has(name);
+							return {
+								name,
+								label: STAT_LABELS[name],
+								checked:
+									alwaysIncluded ||
+									config.enabledCalibrationStats.includes(name),
+								alwaysIncluded,
+							};
+						},
 					);
 
 					return (

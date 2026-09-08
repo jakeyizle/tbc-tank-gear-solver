@@ -37,36 +37,6 @@ export const STAT_NAME_TO_TBC_STAT: Partial<Record<StatName, string>> = {
 	SpellCrit: "StatSpellCritRating",
 };
 
-// Canonical "which stats can be sim-calibrated" list - the keys of STAT_NAME_TO_TBC_STAT above,
-// as a plain array. Lives here (a pure, dependency-free data module) rather than in
-// solveSimMetric.ts/calibrateWeights.ts, so src/types/SolverConfig.ts and UI components can pull
-// in "the full default stat list" (for a per-config on/off toggle - see
-// SolverConfiguration.enabledCalibrationStats) without any wasm/proto sim code coming along for
-// the ride.
-export const SIM_CALIBRATION_STAT_NAMES = Object.keys(
-	STAT_NAME_TO_TBC_STAT,
-) as StatName[];
-
-/**
- * Resolves a per-config `enabledCalibrationStats` selection (see SolverConfiguration) down to
- * the actual list of stats a calibration round should perturb - falling back to the full
- * default (`SIM_CALIBRATION_STAT_NAMES`) when `enabled` is undefined/empty, or when every entry
- * in it turns out to be stale/invalid after filtering (e.g. a stat this build no longer
- * translates). Shared by solveSimMetric.ts (the actual calibration call) and
- * solver/index.ts (round1WeightsCache.ts's cache key, which must resolve identically so a
- * config left at its default and a config that explicitly re-selects every stat hit the same
- * cache entry) so the two can never drift out of sync.
- */
-export function resolveCalibrationStats(
-	enabled: StatName[] | undefined,
-): StatName[] {
-	if (!enabled?.length) return SIM_CALIBRATION_STAT_NAMES;
-	const filtered = enabled.filter((s) =>
-		SIM_CALIBRATION_STAT_NAMES.includes(s),
-	);
-	return filtered.length > 0 ? filtered : SIM_CALIBRATION_STAT_NAMES;
-}
-
 export const TBC_STAT_TO_STAT_NAME: Partial<Record<string, StatName>> =
 	Object.fromEntries(
 		Object.entries(STAT_NAME_TO_TBC_STAT).map(([statName, tbcStat]) => [
@@ -110,6 +80,96 @@ export const SIM_METRIC_REFERENCE_STAT: Record<
 	dtps: "Armor",
 	tmi: "Armor",
 };
+
+// Spell Power and Armor (see SIM_METRIC_REFERENCE_STAT) are always probed by statweight.go
+// regardless of a config's `enabledCalibrationStats` selection - buildStatWeightRequests
+// unconditionally seeds both EpReferenceStat and DTPSReferenceStat with a +/- perturbation
+// (statweight.go:165-176), since every other stat's EP value is computed by dividing its own
+// weight by one of these two, and a reference stat with no measured weight of its own makes that
+// division impossible (calcEpResults bails out entirely - see TBC_EP_REFERENCE_STAT's own
+// comment). So a config that "turns off" Spell Power or Armor doesn't actually skip calibrating
+// them - it just hides a sim run the app pays for either way. UI stat-selection controls (see
+// CalibrationStatsSection) should treat these two as always-on and non-interactive rather than
+// implying they can be excluded.
+export const ALWAYS_INCLUDED_CALIBRATION_STATS: ReadonlySet<StatName> = new Set(
+	[SIM_METRIC_REFERENCE_STAT.tps, SIM_METRIC_REFERENCE_STAT.dtps],
+);
+
+// Canonical "which stats can be sim-calibrated" list - the keys of STAT_NAME_TO_TBC_STAT above,
+// as a plain array, with the always-included stats (Spell Power, Armor) sorted first so UI
+// listings (see CalibrationStatsSection) surface them up front rather than buried alphabetically/
+// by declaration order. Lives here (a pure, dependency-free data module) rather than in
+// solveSimMetric.ts/calibrateWeights.ts, so src/types/SolverConfig.ts and UI components can pull
+// in "the full default stat list" (for a per-config on/off toggle - see
+// SolverConfiguration.enabledCalibrationStats) without any wasm/proto sim code coming along for
+// the ride.
+export const SIM_CALIBRATION_STAT_NAMES = (
+	Object.keys(STAT_NAME_TO_TBC_STAT) as StatName[]
+).sort((a, b) => {
+	const aFirst = ALWAYS_INCLUDED_CALIBRATION_STATS.has(a);
+	const bFirst = ALWAYS_INCLUDED_CALIBRATION_STATS.has(b);
+	if (aFirst === bFirst) return 0;
+	return aFirst ? -1 : 1;
+});
+
+/**
+ * Resolves a per-config `enabledCalibrationStats` selection (see SolverConfiguration) down to
+ * the actual list of stats a calibration round should perturb - falling back to the full
+ * default (`SIM_CALIBRATION_STAT_NAMES`) when `enabled` is undefined/empty, or when every entry
+ * in it turns out to be stale/invalid after filtering (e.g. a stat this build no longer
+ * translates). Shared by solveSimMetric.ts (the actual calibration call) and
+ * solver/index.ts (round1WeightsCache.ts's cache key, which must resolve identically so a
+ * config left at its default and a config that explicitly re-selects every stat hit the same
+ * cache entry) so the two can never drift out of sync.
+ */
+export function resolveCalibrationStats(
+	enabled: StatName[] | undefined,
+): StatName[] {
+	if (!enabled?.length) return SIM_CALIBRATION_STAT_NAMES;
+	const filtered = enabled.filter((s) =>
+		SIM_CALIBRATION_STAT_NAMES.includes(s),
+	);
+	return filtered.length > 0 ? filtered : SIM_CALIBRATION_STAT_NAMES;
+}
+
+/**
+ * Stats whose sim-calibrated weight is provably always exactly 0 for a given config, and so
+ * should skip real sim perturbation entirely - the opposite case from
+ * ALWAYS_INCLUDED_CALIBRATION_STATS (that's "always worth measuring"; this is "never worth
+ * measuring"). Callers should still report these stats at an explicit 0 for every metric (not
+ * omit them) rather than silently dropping them from a per-stat breakdown - see
+ * calibrateWeights.ts's calibratePerMetricWeights, which keeps a dead stat in the *reported*
+ * `statsToWeigh` list while excluding it from the actual sim request.
+ *
+ * Currently just Resilience, and only for `uncritabilitySetting === 2` (the "Lvl 73 · 5.6%"
+ * setting - see ConstraintsSection's UNCRITABILITY_OPTIONS and avoidance.ts's
+ * calculateUncritabilityTarget). This app's sims always run against a level-73 reference boss
+ * (protPaladinEncounter.ts), which requires the full 5.6% to be truly crit-immune - the
+ * `uncritabilitySetting === 1` ("Lvl 72 · 5.4%") floor is genuinely insufficient against that
+ * boss, so a config left at that setting can still take real crits and Resilience keeps real
+ * value there. Only the 5.6% floor actually guarantees zero crits taken against the boss this
+ * app simulates.
+ *
+ * Resilience contributes to survivability only via calculateUncritability's `resilienceSkill`
+ * term (helpers/stats.ts) - crit-chance reduction against a boss that, once the 5.6% floor is
+ * met, can already never critically hit the tank at all. The LP's own `uncritable` constraint
+ * (solveConfig.ts's makeUncritableConstraint - a `>=` floor, never an equality) guarantees every
+ * candidate gear set the solver ever considers already sits at or above that threshold once this
+ * setting is active. That means the boss's real crit-taken rate is always exactly 0% for every
+ * feasible solution regardless of how much Resilience is in the gear, and Resilience has no
+ * other modeled effect - unlike Defense, which also contributes avoidance (dodge/parry/block/
+ * miss - see helpers/stats.ts's calculateDodge/calculateParry/calculateBlock/calculateMiss) on
+ * top of uncritability, so Defense keeps real marginal value even once the crit floor is met.
+ * Simming a perturbation for Resilience under these conditions can only ever measure sampling
+ * noise around a true value of exactly zero, for TPS, DTPS, and TMI alike.
+ */
+export function deadCalibrationStats(
+	uncritabilitySetting: number,
+): ReadonlySet<StatName> {
+	return uncritabilitySetting === 2
+		? new Set<StatName>(["Resilience"])
+		: new Set();
+}
 
 // Stats whose calibration perturbation is one-sided (no negative/"low" probe branch) - see
 // buildStatWeightRequests in vendor/tbc-sim/sim/core/statweight.go, which zeroes statModsLow for

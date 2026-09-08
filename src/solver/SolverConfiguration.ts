@@ -22,6 +22,9 @@ export class SolverConfiguration {
 	readonly multiplierModifierSources: ModifierSource[];
 	readonly avoidanceStatName: "Avoidance" | "ShearAvoidance";
 	readonly excludeUniqueGems: boolean;
+	readonly excludeJewelcraftingItems: boolean;
+	readonly excludeEnchantingItems: boolean;
+	readonly classId: string;
 	readonly phase: number;
 
 	// Derived values
@@ -46,11 +49,16 @@ export class SolverConfiguration {
 		raceId: string;
 		classId: string;
 		excludeUniqueGems: boolean;
+		excludeJewelcraftingItems: boolean;
+		excludeEnchantingItems: boolean;
 		phase: number;
 	}) {
 		this.uncrushabilitySetting = options.uncrushabilitySetting;
 		this.uncritabilitySetting = options.uncritabilitySetting;
 		this.excludeUniqueGems = options.excludeUniqueGems;
+		this.excludeJewelcraftingItems = options.excludeJewelcraftingItems;
+		this.excludeEnchantingItems = options.excludeEnchantingItems;
+		this.classId = options.classId;
 		this.phase = options.phase;
 		this.resistanceFloors = options.resistanceFloors ?? [];
 		this.avoidanceStatName =

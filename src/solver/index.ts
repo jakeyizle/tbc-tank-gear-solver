@@ -7,7 +7,10 @@ import {
 	setCachedRound1Weights,
 } from "#/sim/round1WeightsCache";
 import type { SimMetricSolvePhase } from "#/sim/solveSimMetric";
-import { resolveCalibrationStats } from "#/sim/statTranslation";
+import {
+	deadCalibrationStats,
+	resolveCalibrationStats,
+} from "#/sim/statTranslation";
 import {
 	DEFAULT_SIM_CALIBRATION_PROFILE,
 	type SimCalibrationProfile,
@@ -39,6 +42,8 @@ interface SolveOptions {
 	resistanceFloors: ResistanceFloor[];
 	areEnchantsGemsLocked: boolean;
 	excludeUniqueGems: boolean;
+	excludeJewelcraftingItems: boolean;
+	excludeEnchantingItems: boolean;
 	phase: number;
 	raceId: string;
 	classId: string;
@@ -107,6 +112,11 @@ function round1CacheKeyFor(options: SolveOptions): Round1CacheKey | undefined {
 		calibrationStats: [
 			...resolveCalibrationStats(options.enabledCalibrationStats),
 		].sort(),
+		// A dead stat (see deadCalibrationStats) is forced to an explicit 0 rather than really
+		// simmed, which is a genuinely different result from the same stat calibrated normally -
+		// two configs whose only difference is uncritabilitySetting (and therefore whether
+		// Resilience is dead) must not collide on the same cache entry.
+		deadStats: [...deadCalibrationStats(options.uncritabilitySetting)].sort(),
 	};
 }
 

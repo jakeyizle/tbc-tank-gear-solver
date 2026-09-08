@@ -21,6 +21,17 @@ import type {
 
 const isEmptyGemSlot = (id: string | undefined) => !id || id === "0";
 
+// Jewelcrafting and Enchanting are excluded independently (a character can have one profession
+// without the other), so a gem/enchant's profession requirement only rules it out when that
+// specific profession's toggle is off - not any profession-restricted toggle in general.
+const isProfessionExcluded = (
+	profession: "Jewelcrafting" | "Enchanting",
+	config: SolverConfiguration,
+): boolean => {
+	if (profession === "Jewelcrafting") return config.excludeJewelcraftingItems;
+	return config.excludeEnchantingItems;
+};
+
 const createEmptyEnchant = (): Enchant => {
 	return {
 		name: "",
@@ -135,6 +146,12 @@ export const prepareItemCandidates = (
 
 const getEnchants = (config: SolverConfiguration) => {
 	let enchants = Enchants as Enchant[];
+	enchants = enchants.filter(
+		(enchant) => !enchant.profession || !isProfessionExcluded(enchant.profession, config),
+	);
+	enchants = enchants.filter(
+		(enchant) => !enchant.classes || enchant.classes.includes(config.classId),
+	);
 	enchants = enchants.filter((enchant) => enchant.stats.length > 0);
 	enchants = enchants.filter((enchant) =>
 		config.hasRelevantStats(enchant.stats),
@@ -249,6 +266,9 @@ const getGems = (config: SolverConfiguration) => {
 	if (config.excludeUniqueGems) {
 		gems = gems.filter((gem) => gem.isUnique !== "true");
 	}
+	gems = gems.filter(
+		(gem) => !gem.profession || !isProfessionExcluded(gem.profession, config),
+	);
 	gems = gems.filter((gem) => gem.stats.length > 0);
 	gems = gems.filter((gem) => config.hasRelevantStats(gem.stats));
 	return pruneDominatedGems(gems, config);

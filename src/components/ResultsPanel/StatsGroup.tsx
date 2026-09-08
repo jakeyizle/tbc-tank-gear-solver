@@ -32,10 +32,18 @@ interface StatsGroupProps {
 
 function formatValue(stat: StatDisplay): string {
 	const decimals = stat.value % 1 === 0 ? 0 : 2;
-	const formatted = stat.value.toLocaleString(undefined, {
-		minimumFractionDigits: decimals,
-		maximumFractionDigits: decimals,
-	});
+	// Round first, rather than trusting toLocaleString's own rounding, so a value that rounds to
+	// zero (e.g. a near-zero stat weight) can be detected and displayed as plain "0" - showing
+	// "0.00" would misleadingly imply two digits of precision were actually measured, and (before
+	// this check) a small negative like -0.0004 rendered as the confusing "-0.00".
+	const rounded = Number(stat.value.toFixed(decimals));
+	const formatted =
+		rounded === 0
+			? "0"
+			: rounded.toLocaleString(undefined, {
+					minimumFractionDigits: decimals,
+					maximumFractionDigits: decimals,
+				});
 	return `${formatted}${stat.unit ?? ""}`;
 }
 

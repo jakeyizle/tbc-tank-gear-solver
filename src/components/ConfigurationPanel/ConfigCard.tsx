@@ -67,6 +67,7 @@ interface ConfigCardProps {
 		name: StatName;
 		label: string;
 		checked: boolean;
+		alwaysIncluded: boolean;
 	}[];
 	onSelect: () => void;
 	onCollapse: () => void;

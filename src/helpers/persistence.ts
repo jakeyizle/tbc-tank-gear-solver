@@ -13,6 +13,12 @@ export interface PersistedState {
 	talents: ModifierSource[];
 	areEnchantsGemsLocked: boolean;
 	excludeUniqueGems: boolean;
+	// Optional - absent for saves from before these settings existed; loadAppState's caller
+	// falls back to false, same undefined-tolerant pattern as independentConfigs. Split into two
+	// independent toggles (rather than one "profession items" toggle) since a character can know
+	// one crafting profession without the other.
+	excludeJewelcraftingItems?: boolean;
+	excludeEnchantingItems?: boolean;
 	// Optional - absent for saves from before this setting existed; loadAppState's caller
 	// falls back to false/serial mode, same undefined-tolerant pattern as simCalibrationProfile.
 	independentConfigs?: boolean;

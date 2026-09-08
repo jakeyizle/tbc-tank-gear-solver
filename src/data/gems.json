@@ -93,6 +93,7 @@
 		"id": "33140",
 		"color": "Yellow",
 		"isUnique": "true",
+		"profession": "Jewelcrafting",
 		"phase": "0",
 		"stats": [{ "name": "SpellCrit", "value": 12 }]
 	},
@@ -241,6 +242,7 @@
 		"id": "33131",
 		"color": "Red",
 		"isUnique": "true",
+		"profession": "Jewelcrafting",
 		"phase": "1",
 		"stats": [
 			{ "name": "AttackPower", "value": 32 },
@@ -349,6 +351,7 @@
 		"id": "33133",
 		"color": "Red",
 		"isUnique": "true",
+		"profession": "Jewelcrafting",
 		"phase": "1",
 		"stats": [
 			{ "name": "SpellPower", "value": 14 },
@@ -495,6 +498,7 @@
 		"id": "33144",
 		"color": "Yellow",
 		"isUnique": "true",
+		"profession": "Jewelcrafting",
 		"phase": "0",
 		"stats": [{ "name": "Defense", "value": 12 }]
 	},
@@ -503,6 +507,7 @@
 		"id": "33135",
 		"color": "Blue",
 		"isUnique": "true",
+		"profession": "Jewelcrafting",
 		"phase": "0",
 		"stats": [{ "name": "Stamina", "value": 18 }]
 	},
@@ -890,6 +895,7 @@
 		"id": "33134",
 		"color": "Red",
 		"isUnique": "true",
+		"profession": "Jewelcrafting",
 		"phase": "2",
 		"stats": [
 			{ "name": "SpellPower", "value": 9 },
@@ -1722,6 +1728,7 @@
 		"id": "33143",
 		"color": "Yellow",
 		"isUnique": "true",
+		"profession": "Jewelcrafting",
 		"phase": "0",
 		"stats": [{ "name": "MeleeCrit", "value": 12 }]
 	},

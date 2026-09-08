@@ -33,7 +33,7 @@ export default function StatWeightTabs({
 	const stdevs = perMetricStatWeightStdevs[activeMetric] ?? [];
 	const stdevByStat = new Map(stdevs.map((s) => [s.name, s.value]));
 	const rows = [...weights]
-		.sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+		.sort((a, b) => b.value - a.value)
 		.map((s) => {
 			const stdev = stdevByStat.get(s.name);
 			return {

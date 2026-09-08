@@ -27,6 +27,10 @@ interface ItemInputSectionProps {
 	setAreEnchantsGemsLocked: (value: boolean) => void;
 	excludeUniqueGems: boolean;
 	setExcludeUniqueGems: (value: boolean) => void;
+	excludeJewelcraftingItems: boolean;
+	setExcludeJewelcraftingItems: (value: boolean) => void;
+	excludeEnchantingItems: boolean;
+	setExcludeEnchantingItems: (value: boolean) => void;
 	independentConfigs: boolean;
 	setIndependentConfigs: (value: boolean) => void;
 	phase: number;
@@ -113,6 +117,10 @@ function ItemInputSection({
 	setAreEnchantsGemsLocked,
 	excludeUniqueGems,
 	setExcludeUniqueGems,
+	excludeJewelcraftingItems,
+	setExcludeJewelcraftingItems,
+	excludeEnchantingItems,
+	setExcludeEnchantingItems,
 	independentConfigs,
 	setIndependentConfigs,
 	phase,
@@ -252,6 +260,38 @@ function ItemInputSection({
 						label={
 							<Typography variant="body2" color="text.secondary">
 								Unique gems
+							</Typography>
+						}
+					/>
+					<FormControlLabel
+						sx={{ mr: 0 }}
+						control={
+							<Switch
+								size="small"
+								checked={!excludeJewelcraftingItems}
+								onChange={(e) =>
+									setExcludeJewelcraftingItems(!e.target.checked)
+								}
+							/>
+						}
+						label={
+							<Typography variant="body2" color="text.secondary">
+								Jewelcrafting-only items
+							</Typography>
+						}
+					/>
+					<FormControlLabel
+						sx={{ mr: 0 }}
+						control={
+							<Switch
+								size="small"
+								checked={!excludeEnchantingItems}
+								onChange={(e) => setExcludeEnchantingItems(!e.target.checked)}
+							/>
+						}
+						label={
+							<Typography variant="body2" color="text.secondary">
+								Enchanting-only items
 							</Typography>
 						}
 					/>
@@ -439,6 +479,36 @@ function ItemInputSection({
 								/>
 							}
 							label={<Typography variant="body2">Unique gems</Typography>}
+						/>
+						<FormControlLabel
+							control={
+								<Switch
+									size="small"
+									checked={!excludeJewelcraftingItems}
+									onChange={(e) =>
+										setExcludeJewelcraftingItems(!e.target.checked)
+									}
+								/>
+							}
+							label={
+								<Typography variant="body2">
+									Jewelcrafting-only items
+								</Typography>
+							}
+						/>
+						<FormControlLabel
+							control={
+								<Switch
+									size="small"
+									checked={!excludeEnchantingItems}
+									onChange={(e) =>
+										setExcludeEnchantingItems(!e.target.checked)
+									}
+								/>
+							}
+							label={
+								<Typography variant="body2">Enchanting-only items</Typography>
+							}
 						/>
 						<FormControlLabel
 							control={

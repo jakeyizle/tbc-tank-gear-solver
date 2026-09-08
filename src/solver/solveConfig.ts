@@ -52,6 +52,8 @@ export interface SolveOptions {
 	resistanceFloors: ResistanceFloor[];
 	areEnchantsGemsLocked: boolean;
 	excludeUniqueGems: boolean;
+	excludeJewelcraftingItems: boolean;
+	excludeEnchantingItems: boolean;
 	phase: number;
 	raceId: string;
 	classId: string;

@@ -32,7 +32,10 @@ import {
 	type ConsumablesOverride,
 	splitGearAndConsumables,
 } from "./resolveGearAndConsumables";
-import { resolveCalibrationStats } from "./statTranslation";
+import {
+	deadCalibrationStats,
+	resolveCalibrationStats,
+} from "./statTranslation";
 import type { GearPiece } from "./toTbcItemSpec";
 
 export { SIM_CALIBRATION_STAT_NAMES as SIM_CALIBRATION_STATS } from "./statTranslation";
@@ -431,6 +434,11 @@ export async function solveConfigForSimMetric(
 	const calibrationStats = resolveCalibrationStats(
 		options.enabledCalibrationStats,
 	);
+	// Stats whose sim-calibrated weight is provably always 0 for this config (currently just
+	// Resilience, when a crit-immunity floor is active - see deadCalibrationStats' own comment)
+	// skip the real sim perturbation entirely, purely for speed - they still come back as an
+	// explicit 0 in every metric's breakdown below, not omitted.
+	const deadStats = deadCalibrationStats(options.uncritabilitySetting);
 	// `currentGear` is always a clean, slot-ordered, consumable-free gear array (round 0's
 	// hand-picked baseline is already both) - it's the calibration loop's baseline input, kept
 	// separate from `result` (the last accepted round's full LP output, gear + any chosen
@@ -517,6 +525,7 @@ export async function solveConfigForSimMetric(
 					metricRatios,
 					withConsumablesOverride(profile, currentConsumablesOverride),
 					onCalibrationProgress,
+					deadStats,
 				));
 				calibrateMs = stopCalibrate();
 			} else {
@@ -538,6 +547,7 @@ export async function solveConfigForSimMetric(
 					calibrationStats,
 					withConsumablesOverride(profile, currentConsumablesOverride),
 					onCalibrationProgress,
+					deadStats,
 				);
 				perMetricStatWeights = perMetricCalibration.perMetricStatWeights;
 				perMetricStatWeightStdevs =

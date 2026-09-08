@@ -13,6 +13,7 @@ import {
 	validateSolution,
 } from "./__test-helpers__/validateSolution";
 import { type solve, solveAll } from "./index";
+import { prepareItemCandidates } from "./items";
 import { SolverConfiguration } from "./SolverConfiguration";
 import { type SolveOptions, solveConfig } from "./solveConfig";
 import {
@@ -53,6 +54,8 @@ const baseOptions = (overrides: Partial<SolveOptions> = {}): SolveOptions => ({
 	resistanceFloors: [],
 	areEnchantsGemsLocked: false,
 	excludeUniqueGems: false,
+	excludeJewelcraftingItems: false,
+	excludeEnchantingItems: false,
 	phase: 3,
 	raceId: TEST_RACE_ID,
 	classId: TEST_CLASS_ID,
@@ -179,6 +182,8 @@ describe("solveConfig", () => {
 		const baseConfig = {
 			areEnchantsGemsLocked: true,
 			excludeUniqueGems: false,
+			excludeJewelcraftingItems: false,
+			excludeEnchantingItems: false,
 			independentConfigs: false,
 			phase: 3,
 			raceId: TEST_RACE_ID,
@@ -244,6 +249,8 @@ describe("solveConfig", () => {
 		const baseConfig = {
 			areEnchantsGemsLocked: true,
 			excludeUniqueGems: false,
+			excludeJewelcraftingItems: false,
+			excludeEnchantingItems: false,
 			independentConfigs: true,
 			phase: 3,
 			raceId: TEST_RACE_ID,
@@ -320,6 +327,95 @@ describe("solveConfig", () => {
 		expect(hasUniqueGem(excluded)).toBe(false);
 	}, 60000);
 
+	it("scenario 8b: excludeJewelcraftingItems keeps Jewelcrafting-only gems out of the candidate pool, independently of excludeEnchantingItems", async () => {
+		// Stone of Blades (33143, Yellow, Jewelcrafting-only, 12 MeleeCrit) out-scores every
+		// non-profession-restricted MeleeCrit gem in the phase<=3 pool, so the solver reaches for
+		// it whenever Jewelcrafting-only items are allowed, and must fall back to a lesser item
+		// (Smooth Lionseye, 32205, 10 MeleeCrit) once they're excluded - same fixture as scenario
+		// 8, but gated on the profession flag instead of isUnique.
+		const optimizeStats: Stat[] = [
+			{ name: "MeleeCrit", value: 1, type: "flat" },
+		];
+		const hasJewelcraftingGem = (items: LPItem[]) =>
+			items.some((item) => item.gems.some((gem) => gem.id === "33143"));
+
+		const included = await solveConfig(
+			testItemPool,
+			baseOptions({ optimizeStats }),
+		);
+		expect(hasJewelcraftingGem(included)).toBe(true);
+
+		const excluded = await solveConfig(
+			testItemPool,
+			baseOptions({ optimizeStats, excludeJewelcraftingItems: true }),
+		);
+		expect(hasJewelcraftingGem(excluded)).toBe(false);
+
+		// a character who knows Jewelcrafting but not Enchanting (or vice versa) is common - the
+		// two toggles must not affect each other's item pool
+		const enchantingExcludedOnly = await solveConfig(
+			testItemPool,
+			baseOptions({ optimizeStats, excludeEnchantingItems: true }),
+		);
+		expect(hasJewelcraftingGem(enchantingExcludedOnly)).toBe(true);
+	}, 60000);
+
+	it("scenario 8d: excludeEnchantingItems keeps Enchanting-only ring enchants out of the Finger candidate pool, independently of excludeJewelcraftingItems", async () => {
+		// Ring - Stats (27927, Finger, Enchanting-only per its formula's "Only the Enchanter's
+		// rings can be enchanted" restriction) grants Stamina among its stats, which is in
+		// OBJECTIVE_STATS, so it clears the relevant-stats filter regardless of eligibility - it
+		// must disappear from every Finger item's enchant candidates when excludeEnchantingItems
+		// is set, but stay present when only excludeJewelcraftingItems is set. Checked against
+		// the raw candidate pool (not a solve outcome), since which enchant wins the slot depends
+		// on relative stat weighting, not just eligibility.
+		const fingerCandidateIds = (config: SolverConfiguration) => {
+			const { decomposableItems } = prepareItemCandidates(testItemPool, config);
+			const finger = decomposableItems.find((item) =>
+				(TEST_ITEM_IDS.fingers as readonly string[]).includes(item.base.id),
+			);
+			return (
+				finger?.enchantCandidates.map((candidate) => candidate.enchant.id) ?? []
+			);
+		};
+
+		const defaultConfig = new SolverConfiguration(baseOptions());
+		expect(fingerCandidateIds(defaultConfig)).toContain("27927");
+
+		const enchantingExcludedConfig = new SolverConfiguration(
+			baseOptions({ excludeEnchantingItems: true }),
+		);
+		expect(fingerCandidateIds(enchantingExcludedConfig)).not.toContain("27927");
+
+		const jewelcraftingExcludedConfig = new SolverConfiguration(
+			baseOptions({ excludeJewelcraftingItems: true }),
+		);
+		expect(fingerCandidateIds(jewelcraftingExcludedConfig)).toContain("27927");
+	});
+
+	it("scenario 8c: class-restricted enchants are excluded from the Head candidate pool for the wrong class", async () => {
+		// Presence of Might (19782, Head, Warrior-only) must never even be offered as a candidate
+		// for a Paladin (TEST_CLASS_ID = "2"), but is eligible for a Warrior (classId "1") - tested
+		// against the raw candidate pool (not the final solve) since which enchant actually wins
+		// the slot depends on relative stat weighting, not just eligibility.
+		const headCandidateIds = (config: SolverConfiguration) => {
+			const { decomposableItems } = prepareItemCandidates(testItemPool, config);
+			const head = decomposableItems.find(
+				(item) => item.base.id === TEST_ITEM_IDS.head,
+			);
+			return (
+				head?.enchantCandidates.map((candidate) => candidate.enchant.id) ?? []
+			);
+		};
+
+		const paladinConfig = new SolverConfiguration(baseOptions());
+		expect(headCandidateIds(paladinConfig)).not.toContain("19782");
+
+		const warriorConfig = new SolverConfiguration(
+			baseOptions({ classId: "1" }),
+		);
+		expect(headCandidateIds(warriorConfig)).toContain("19782");
+	});
+
 	it("scenario 9: phase filter is cumulative - gems with phase <= the selected phase are eligible", async () => {
 		// Bright Crimson Spinel (35487, Red, phase 5) is the only Red-compatible gem in the data
 		// that grants AttackPower - at phase <5 no eligible gem exists, so relevant Red sockets go
@@ -385,6 +481,8 @@ describe("solveConfig", () => {
 		const baseConfig = {
 			areEnchantsGemsLocked: false,
 			excludeUniqueGems: false,
+			excludeJewelcraftingItems: false,
+			excludeEnchantingItems: false,
 			independentConfigs: false,
 			phase: 3,
 			raceId: TEST_RACE_ID,

@@ -131,6 +131,8 @@ const baseOptions: Omit<SolveOptions, "optimizeStats" | "objectiveMode"> = {
 	resistanceFloors: [],
 	areEnchantsGemsLocked: false,
 	excludeUniqueGems: false,
+	excludeJewelcraftingItems: false,
+	excludeEnchantingItems: false,
 	phase: 3,
 	raceId: "1",
 	classId: "2",

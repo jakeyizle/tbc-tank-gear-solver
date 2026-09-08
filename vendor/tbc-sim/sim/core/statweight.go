@@ -166,6 +166,17 @@ func buildStatWeightRequests(swr *proto.StatWeightsRequest) *proto.StatWeightReq
 	statModsLow[swr.EpReferenceStat] = -defaultStatMod
 	statModsHigh[swr.EpReferenceStat] = defaultStatMod
 
+	// Also make sure DTPSReferenceStat (Armor) is included, mirroring the block above: calcEpResults
+	// below normalizes every DTPS/TMI/PDeath EP value against this stat's own weight unconditionally,
+	// so without a measured weight for it those three metrics silently produce no usable EP value at
+	// all - for every stat, not just Armor itself - regardless of what the caller explicitly asked to
+	// weigh (see calcEpResults' own `if weightResults.Weights.Stats[refStat] == 0` bailout). Uses the
+	// same x10 probe size Armor gets in the loop below when explicitly requested, since it's the same
+	// stat and that scaling exists for the same reason (armor's real per-point effect is much smaller
+	// than a rating-style secondary's).
+	statModsLow[DTPSReferenceStat] = -defaultStatMod * 10
+	statModsHigh[DTPSReferenceStat] = defaultStatMod * 10
+
 	statsToWeigh := stats.ProtoArrayToStatsList(swr.StatsToWeigh)
 	for _, s := range statsToWeigh {
 		stat := stats.UnitStatFromStat(s)
