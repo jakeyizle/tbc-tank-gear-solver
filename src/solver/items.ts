@@ -163,6 +163,86 @@ const getEnchant = (idOrEffectID: string | undefined): Enchant | undefined => {
 	return enchantToReturn as Enchant;
 };
 
+/**
+ * True if `a` weakly beats `b` on every axis the LP objective/hard-constraints can ever see
+ * (objective score, avoidance score, uncritability score, every configured resistance floor),
+ * with a strict improvement on at least one - the standard multi-objective (Pareto) dominance
+ * test. A dominated candidate can never be uniquely necessary for an optimal solution: swapping
+ * it for its dominator in any solution can only weakly improve every constraint and the
+ * objective.
+ */
+function scoreDominates(
+	a: ReturnType<SolverConfiguration["calculateScoresForStats"]>,
+	b: ReturnType<SolverConfiguration["calculateScoresForStats"]>,
+): boolean {
+	if (a.objectiveScore < b.objectiveScore) return false;
+	if (a.avoidanceScore < b.avoidanceScore) return false;
+	if (a.uncritabilityScore < b.uncritabilityScore) return false;
+	let strictlyBetter =
+		a.objectiveScore > b.objectiveScore ||
+		a.avoidanceScore > b.avoidanceScore ||
+		a.uncritabilityScore > b.uncritabilityScore;
+	const resistanceStats = new Set([
+		...Object.keys(a.resistanceScores),
+		...Object.keys(b.resistanceScores),
+	]);
+	for (const stat of resistanceStats) {
+		const av = a.resistanceScores[stat as keyof typeof a.resistanceScores] ?? 0;
+		const bv = b.resistanceScores[stat as keyof typeof b.resistanceScores] ?? 0;
+		if (av < bv) return false;
+		strictlyBetter ||= av > bv;
+	}
+	return strictlyBetter;
+}
+
+/**
+ * Drops any gem that a *non-unique* gem of the same color weakly dominates (see
+ * scoreDominates) - grouped by color (not merged across colors) because a gem's color, not just
+ * its raw stats, determines whether it can help complete a real item's socket bonus (see
+ * socketBonus.ts's gemColorMatches / decomposedModel.ts's per-socket bonus-linking constraint);
+ * discarding a color's last representative in favor of a raw-score winner of a different color
+ * would silently make some item's bonus unreachable.
+ *
+ * Only a NON-UNIQUE dominator can justify removing a candidate. A Unique-Equipped gem can only
+ * ever be socketed once across the whole gear set (see decomposedModel.ts's
+ * makeUniqueGemConstraint), so it's never a safe substitute for "however many sockets might want
+ * this color" - keeping it as sole justification could make a solution that legitimately needs a
+ * second copy of that color unreachable. A non-unique dominator has no such cap, so removing
+ * anything it dominates is always safe regardless of how many sockets end up wanting that color.
+ * A Unique-Equipped gem is still eligible to be pruned *away* when a non-unique gem dominates it
+ * (an unlimited-supply substitute at least as good makes the unique one strictly useless), it
+ * just never dominates anything itself.
+ *
+ * This is a pure size reduction of the *candidate pool* fed into the LP - it never changes which
+ * gear the solver can end up choosing, only how many variables it has to consider to get there.
+ */
+function pruneDominatedGems(gems: Gem[], config: SolverConfiguration): Gem[] {
+	const byColor = new Map<string, Gem[]>();
+	for (const gem of gems) {
+		const list = byColor.get(gem.color) ?? [];
+		list.push(gem);
+		byColor.set(gem.color, list);
+	}
+
+	const kept: Gem[] = [];
+	for (const colorGems of byColor.values()) {
+		const scored = colorGems.map((gem) => ({
+			gem,
+			score: config.calculateScoresForStats(gem.stats),
+		}));
+		const nonUniqueDominators = scored.filter((c) => c.gem.isUnique !== "true");
+		for (const candidate of scored) {
+			const isDominated = nonUniqueDominators.some(
+				(dominator) =>
+					dominator !== candidate &&
+					scoreDominates(dominator.score, candidate.score),
+			);
+			if (!isDominated) kept.push(candidate.gem);
+		}
+	}
+	return kept;
+}
+
 const getGems = (config: SolverConfiguration) => {
 	let gems = Gems as Gem[];
 	gems = gems.filter((gem) => Number(gem.phase) <= config.phase);
@@ -171,7 +251,7 @@ const getGems = (config: SolverConfiguration) => {
 	}
 	gems = gems.filter((gem) => gem.stats.length > 0);
 	gems = gems.filter((gem) => config.hasRelevantStats(gem.stats));
-	return gems;
+	return pruneDominatedGems(gems, config);
 };
 
 export const getItem = (inputItem: InputItem) => {

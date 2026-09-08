@@ -59,6 +59,11 @@ export interface SolveOptions {
 	buffs: ModifierSource[];
 	abilitySources: ModifierSource[];
 	enabledConsumableIds: string[];
+	// Lets a caller that doesn't need this solve's final gear-picking precision (e.g.
+	// measureMetricAchievableScale - see its own doc comment) trade some of it for speed.
+	// Omitted entirely for every ordinary solve, which gets the global defaults - see
+	// LPQualityOverride's own doc comment in this file.
+	lpQualityOverride?: LPQualityOverride;
 }
 
 export interface SolveProgress {
@@ -249,9 +254,42 @@ const makeUniqueGemConstraint = (
 	}));
 };
 
-const solveOptions = (glpk: GLPKType) => ({
+// mipgap=0 demands an exhaustive proof of exact optimality - fine for the typical few-hundred-
+// variable model, but for a larger item pool (thousands of gem/enchant decomposable binaries),
+// branch-and-bound routinely finds a solution within a fraction of a percent of optimal almost
+// immediately, then spends many extra minutes grinding just to shave that last sliver to exactly
+// 0% (confirmed live: a 1654-var solve sat at "< 0.1%" for 3+ minutes with zero further
+// improvement, indistinguishable from a hang from the outside even though glpk was still actively
+// searching). 0.0001 (0.01%) trades that long tail for a solution that's numerically
+// indistinguishable in gear stat totals, while still stopping well short of settling for a
+// meaningfully worse pick.
+const MIP_GAP_TOLERANCE = 0.0001;
+
+// A gap tolerance alone can't bound worst-case time - two independent live incidents (see
+// solveConfig.ts's git history / session notes) showed the achievable solution plateau within
+// ~5 seconds and then sit completely unchanged (same incumbent, same bound, to the digit) for
+// 100+ more seconds and 150,000+ additional branch-and-bound nodes, unable to close the last
+// sliver down to MIP_GAP_TOLERANCE. tmlim forces a hard stop regardless, returning the best
+// feasible solution found (glpk reports GLP_FEAS rather than GLP_OPT in that case - see the
+// status check below). 15s gives real solves (almost all of which finish in well under a second)
+// a wide margin, while capping the rare pathological instance to a short, predictable wait - a
+// multi-round sim solve can call solveConfig dozens of times, so an unbounded per-call tail
+// multiplies badly.
+const SOLVE_TIME_LIMIT_SECONDS = 15;
+
+// Lets a caller that doesn't need the final gear-picking solve's precision (e.g.
+// measureMetricAchievableScale, which only uses its result to normalize a blend ratio, not to
+// choose gear) trade some of that precision for speed. Omitted fields fall back to the global
+// defaults above, which is what every ordinary solveConfig call gets.
+export interface LPQualityOverride {
+	mipGap?: number;
+	timeLimitSeconds?: number;
+}
+
+const solveOptions = (glpk: GLPKType, override?: LPQualityOverride) => ({
 	msglev: glpk.GLP_MSG_ON,
-	mipgap: 0.0,
+	mipgap: override?.mipGap ?? MIP_GAP_TOLERANCE,
+	tmlim: override?.timeLimitSeconds ?? SOLVE_TIME_LIMIT_SECONDS,
 });
 
 const describeConstraints = (config: SolverConfiguration): string => {
@@ -280,6 +318,41 @@ const EMPTY_ENCHANT: Enchant = {
 	stats: [],
 };
 
+// glpk.js's web build spins up a brand-new dedicated Worker + WASM instance on every GLPK() call
+// (see node_modules/glpk.js/src/glpk-web.js's createWorker/default export) - that's expensive
+// (a fresh WASM compile each time) and, worse, was found to be genuinely unreliable under
+// concurrency: a live console-log trace across several sim-backed rounds showed rounds 1-4 each
+// cleanly create+terminate their handful of concurrent glpk workers (measureMetricAchievableScale
+// runs several `runLPModel` calls in parallel via Promise.all), but round 5 hit a race where 3 of
+// 5 concurrent `await GLPK()` calls simply never resolved - no error, no onerror, nothing - and
+// everything downstream hung forever. This wasn't a monotonic leak (round 4 was clean, round 5
+// wasn't), so terminating each call's worker after use (tried first) didn't fix it either -
+// spinning up one-shot workers under concurrency is just an inherently flaky pattern.
+//
+// The actual fix: don't create one per call at all. glpk.js's own wrapper already queues
+// concurrent `.solve()` calls onto a single worker via a FIFO `work[]` array (see glpk-web.js's
+// `post`/`onmessage`), matching each response back to its request in send order - it's designed
+// for exactly this, one instance safely serving many concurrent solves, the same pattern
+// simWorkerPool.ts already uses on the sim side for the same reason. So this module creates
+// exactly one GLPK() instance, lazily, and reuses it for the lifetime of this Worker - never
+// terminated (nothing else needs that worker once this process's solveConfig work is done, and
+// the browser reclaims it when this whole Worker itself is torn down - see solver/index.ts).
+let sharedGlpkPromise: ReturnType<typeof GLPK> | undefined;
+function getSharedGlpk(): ReturnType<typeof GLPK> {
+	if (!sharedGlpkPromise) {
+		console.log(
+			`[lp] creating shared glpk worker (t=${performance.now().toFixed(0)}ms)`,
+		);
+		sharedGlpkPromise = GLPK();
+		sharedGlpkPromise.then(() =>
+			console.log(
+				`[lp] shared glpk worker ready (t=${performance.now().toFixed(0)}ms)`,
+			),
+		);
+	}
+	return sharedGlpkPromise;
+}
+
 const runLPModel = async (
 	fixedItems: LPItem[],
 	decomposableItems: DecomposableItem[],
@@ -287,35 +360,17 @@ const runLPModel = async (
 	uncritabilityTarget: number,
 	resistanceTargets: { stat: ResistanceFloor["stat"]; target: number }[],
 	config: SolverConfiguration,
+	lpQualityOverride?: LPQualityOverride,
 ) => {
 	const stopRunLPModel = perfTrace.mark("runLPModel");
 	let glpkAcquireMs = 0;
 	let buildLpModelMs = 0;
 	let glpkSolveMs = 0;
 	let transformMs = 0;
-	// glpk.js's web build spins up a brand-new dedicated Worker + WASM instance on every GLPK()
-	// call (see node_modules/glpk.js/src/glpk-web.js's createWorker/default export) - nothing
-	// terminates it afterward, so every runLPModel call (the round's main solve, every
-	// avoidance-convergence retry iteration below, and every one of measureMetricAchievableScale's
-	// concurrent solveConfig calls) permanently leaked one more worker. Confirmed as the real
-	// cause of the long-standing "stuck at N/N sims" reports: a live console-log trace showed 3 of
-	// 4 concurrent measureMetricAchievableScale solves hang forever inside `await GLPK()` itself
-	// (never reaching "starting glpk.solve") once enough prior rounds had accumulated leaked
-	// workers - since solveConfig already runs inside its own Worker, spawning yet more nested
-	// workers eventually hits a browser resource ceiling and new Worker() creation just never
-	// fires its onmessage/onerror. Declared here (not inside the try) so the finally below can
-	// terminate it regardless of which stage below throws.
-	let glpk: Awaited<ReturnType<typeof GLPK>> | undefined;
 	try {
 		const stopGlpkAcquire = perfTrace.mark("glpkModuleAcquire");
-		console.log(
-			`[lp] acquiring glpk worker (t=${performance.now().toFixed(0)}ms)`,
-		);
-		glpk = await GLPK();
+		const glpk = await getSharedGlpk();
 		glpkAcquireMs = stopGlpkAcquire();
-		console.log(
-			`[lp] acquired glpk worker in ${glpkAcquireMs.toFixed(0)}ms (t=${performance.now().toFixed(0)}ms)`,
-		);
 
 		const stopBuildModel = perfTrace.mark("buildLpModel");
 		const headers = allItemHeaders(fixedItems, decomposableItems);
@@ -394,12 +449,22 @@ const runLPModel = async (
 		console.log(
 			`[lp] starting glpk.solve (t=${performance.now().toFixed(0)}ms, ${model.objective.vars.length} vars, ${constraints.length} constraints)`,
 		);
-		const result = await glpk.solve(model, solveOptions(glpk));
+		const result = await glpk.solve(
+			model,
+			solveOptions(glpk, lpQualityOverride),
+		);
 		glpkSolveMs = stopGlpkSolve();
 		console.log(
 			`[lp] glpk.solve done in ${glpkSolveMs.toFixed(0)}ms (t=${performance.now().toFixed(0)}ms, status=${result.result.status})`,
 		);
-		if (result.result.status !== glpk.GLP_OPT) {
+		// With MIP_GAP_TOLERANCE > 0, glpk legitimately reports GLP_FEAS (not GLP_OPT) when it
+		// stops early because the best-found solution is already within that tolerance of the
+		// proven bound - that's success, not a failure to find a feasible solution, so it must be
+		// accepted here alongside GLP_OPT.
+		if (
+			result.result.status !== glpk.GLP_OPT &&
+			result.result.status !== glpk.GLP_FEAS
+		) {
 			throw new Error(
 				`No gear combination satisfies: ${describeConstraints(config)}.`,
 			);
@@ -431,22 +496,8 @@ const runLPModel = async (
 
 		return [...chosenFixedItems, ...chosenDecomposable];
 	} finally {
-		// See this function's glpk-declaration comment above - without this, every call leaks a
-		// dedicated Worker + WASM instance for the rest of the process's lifetime. Guarded with
-		// typeof (not just glpk?.) because vite.config.ts's test-only alias swaps in glpk.js's
-		// Node-native synchronous build, which has no worker and no terminate method at all.
-		//
-		// MUST pass `false` here: glpk.js's terminate(cleanup=true default) also revokes a
-		// MODULE-LEVEL (shared across every GLPK() instance in this process) Blob URL and clears a
-		// module-level cached WASM binary (see glpk-web.js's workerURL/wasmBinary/cleanupResources).
-		// Calling the default form the instant any one concurrent solve finished revoked that
-		// shared Blob URL out from under a *sibling* solve's own `new Worker(getWorkerURL())` that
-		// was still loading its script from it - confirmed live: this is what caused a solve stuck
-		// mid-way through a concurrent measureMetricAchievableScale batch with zero further output,
-		// no error, no rejection, just a permanently silent worker. `false` still terminates this
-		// call's own dedicated worker (the actual leak this fixes) without touching state other
-		// concurrent instances may still be using.
-		if (typeof glpk?.terminate === "function") glpk.terminate(false);
+		// No glpk.terminate() here - see getSharedGlpk's doc comment above. This instance is
+		// shared and reused for the whole process's lifetime, not owned by this one call.
 		const runLPModelMs = stopRunLPModel();
 		perfTrace.recordGap("runLPModel", runLPModelMs, [
 			glpkAcquireMs,
@@ -466,6 +517,7 @@ export const runLPModelWithAvoidanceConvergence = async (
 	decomposableItems: DecomposableItem[],
 	config: SolverConfiguration,
 	onProgress?: (progress: SolveProgress) => void,
+	lpQualityOverride?: LPQualityOverride,
 ): Promise<LPItem[]> => {
 	// defense skill is rounded down in game, but the LP solver cannot account for this so it does not round values
 	// so the total avoidance/uncritability can be off by up to 1 defense skill, which is 0.16 avoidance or 0.04 uncrit
@@ -519,6 +571,7 @@ export const runLPModelWithAvoidanceConvergence = async (
 				config.uncritabilityTarget,
 				config.resistanceTargets,
 				config,
+				lpQualityOverride,
 			);
 			runLPModelTotalMs += performance.now() - runLPModelStart;
 
@@ -625,6 +678,7 @@ export const solveConfig = async (
 			decomposableItems,
 			config,
 			onProgress,
+			options.lpQualityOverride,
 		);
 	} finally {
 		const convergenceMs = performance.now() - convergenceStart;

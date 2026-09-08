@@ -74,6 +74,10 @@ describe("filterItemsForClass", () => {
 });
 
 describe("measureMetricAchievableScale", () => {
+	beforeEach(() => {
+		vi.mocked(solveConfig).mockReset();
+	});
+
 	// Real fixture items (same ones isSignificantImprovement below uses): 30007 (The Darkener's
 	// Grasp) carries 40 Stamina, 34400 (Crown of Dath'Remar) carries 91.
 	const rawVector = [
@@ -131,6 +135,33 @@ describe("measureMetricAchievableScale", () => {
 			baseOptions,
 		);
 		expect(scale).toBeUndefined();
+	});
+
+	it("passes a given lpQualityOverride through to both the best and worst solveConfig calls", async () => {
+		vi.mocked(solveConfig)
+			.mockResolvedValueOnce([fakeProposalItem("34400")])
+			.mockResolvedValueOnce([fakeProposalItem("30007")]);
+
+		await measureMetricAchievableScale(rawVector, eligibleItems, baseOptions, {
+			mipGap: 0.01,
+		});
+
+		expect(solveConfig).toHaveBeenCalledTimes(2);
+		for (const call of vi.mocked(solveConfig).mock.calls) {
+			expect(call[1]).toMatchObject({ lpQualityOverride: { mipGap: 0.01 } });
+		}
+	});
+
+	it("defaults to no override (the real solve's own gap/time-limit constants) when none is given", async () => {
+		vi.mocked(solveConfig)
+			.mockResolvedValueOnce([fakeProposalItem("34400")])
+			.mockResolvedValueOnce([fakeProposalItem("30007")]);
+
+		await measureMetricAchievableScale(rawVector, eligibleItems, baseOptions);
+
+		for (const call of vi.mocked(solveConfig).mock.calls) {
+			expect(call[1].lpQualityOverride).toBeUndefined();
+		}
 	});
 });
 

@@ -2,6 +2,7 @@ import LockIcon from "@mui/icons-material/Lock";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import { CONSUMABLES } from "#/data/consumables";
 import ItemTooltips from "#/data/item-tooltips.json";
 import type { LPItem } from "#/solver/types";
 
@@ -20,7 +21,10 @@ function ConsumablesCell({ items }: ConsumablesCellProps) {
 	return (
 		<Stack spacing={0.5} sx={{ minWidth: 0 }}>
 			{items.map((item) => {
-				const tooltip = ItemTooltips.find((t) => t.id === item.id)?.icon;
+				const consumable = CONSUMABLES.find((c) => c.id === item.id);
+				const tooltip = ItemTooltips.find(
+					(t) => t.id === String(consumable?.wowheadId),
+				)?.icon;
 				return (
 					<Box
 						key={item.uniqueId}

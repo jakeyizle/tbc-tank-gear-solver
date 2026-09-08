@@ -1,0 +1,2082 @@
+22:21:20.660 [vite] connecting... client:733:9
+22:21:20.793 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools react-dom_client.js:20103:54
+22:21:21.873 downloadable font: glyf: empty gid 1 used as component in glyph 225 (font-family: "Roboto Mono" style:normal weight:400 width:100 src index:0) source: http://localhost:3000/node_modules/@fontsource/roboto-mono/files/roboto-mono-latin-400-normal.woff2
+22:21:21.874 downloadable font: glyf: empty gid 1 used as component in glyph 225 (font-family: "Roboto Mono" style:normal weight:500 width:100 src index:0) source: http://localhost:3000/node_modules/@fontsource/roboto-mono/files/roboto-mono-latin-500-normal.woff2
+22:21:22.726 [vite] connected. __root.tsx:54:18
+22:21:26.904 XHR POST
+http://localhost:3000/api/track
+[HTTP/1.1 404 Not Found 1ms]
+22:21:27.227 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 0: starting round's LP solve (t=326ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:21:27.227 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:21:27.227 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:21:27.263 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:21:27.263 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:21:27.263 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:21:27.263 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=363ms) solveConfig.ts:329:15
+22:21:27.263 LOG /src/solver/solveConfig.ts:305:3
+ →  [lp] creating shared glpk worker (t=363ms) solveConfig.ts:174:13
+22:21:27.279 LOG /src/solver/solveConfig.ts:310:4
+ →  [lp] shared glpk worker ready (t=379ms) solveConfig.ts:180:21
+22:21:27.280 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=380ms, 524 vars, 159 constraints) solveConfig.ts:259:13
+22:21:27.285       0: obj =   9.723371634e+02 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:27.285       3: obj =   9.603199567e+02 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:27.285 *    37: obj =   1.130778840e+03 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:27.286 +    37: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:27.286 Solution found by heuristic: 1129.70902 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:27.287 +    40: >>>>>   1.130261130e+03 <=   1.130261130e+03   0.0% (1; 1) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:27.287 +    40: mip =   1.130261130e+03 <=     tree is empty   0.0% (0; 3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:27.288 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 7ms (t=387ms, status=5) solveConfig.ts:265:13
+22:21:27.289 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 0: LP solve done in 63ms (t=389ms) solveSimMetric.ts:281:15
+22:21:27.297 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 1: resetting sim environment (t=397ms) solveSimMetric.ts:202:17
+22:21:27.297 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:21:40.746 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 1: calibration done in 13448ms (t=13845ms) solveSimMetric.ts:219:17
+22:21:40.746 LOG /src/sim/solveSimMetric.ts:564:6
+ →  [sim] round 1: measuring achievable scale for [tps, tmi] (4 silent LP solves, t=13845ms) solveSimMetric.ts:226:19
+22:21:40.746 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:21:40.746 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:21:40.779 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:21:40.779 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:21:40.780 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:21:40.780 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=13879ms) solveConfig.ts:329:15
+22:21:40.780 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:21:40.780 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:21:40.804 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:21:40.804 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:21:40.804 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:21:40.804 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=13903ms) solveConfig.ts:329:15
+22:21:40.804 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:21:40.804 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:21:40.841 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:21:40.841 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:21:40.841 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:21:40.841 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=13940ms) solveConfig.ts:329:15
+22:21:40.841 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:21:40.841 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:21:40.863 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:21:40.863 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:21:40.863 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:21:40.863 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=13963ms) solveConfig.ts:329:15
+22:21:40.864 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=13964ms, 469 vars, 153 constraints) solveConfig.ts:259:13
+22:21:40.865 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=13965ms, 203 vars, 115 constraints) solveConfig.ts:259:13
+22:21:40.865 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=13965ms, 343 vars, 135 constraints) solveConfig.ts:259:13
+22:21:40.866 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=13966ms, 203 vars, 115 constraints) solveConfig.ts:259:13
+22:21:40.868       0: obj =   7.554434994e+02 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.868       3: obj =   7.795776315e+02 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.869 *    40: obj =   1.141822968e+03 inf =   1.116e-15 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.869 +    40: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.869 Solution found by heuristic: 1134.18678654 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.871 Solution found by heuristic: 1136.15124989 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.872 Solution found by heuristic: 1138.41724579 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.872 +    57: mip =   1.138417246e+03 <=     tree is empty   0.0% (0; 11) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.873 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 8ms (t=13972ms, status=5) solveConfig.ts:265:13
+22:21:40.874       0: obj =  -7.554434994e+02 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.874       3: obj =  -7.795776315e+02 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.874 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.43905558723958, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:21:40.874 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 5.421462746460832, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:21:40.874 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=13973ms) solveConfig.ts:329:15
+22:21:40.874 *    29: obj =  -5.601441413e+02 inf =   8.882e-16 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.874 +    29: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.875 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=13974ms, 469 vars, 153 constraints) solveConfig.ts:259:13
+22:21:40.875 Solution found by heuristic: -561.269233171 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.909 +   658: mip =  -5.612692332e+02 <=     tree is empty   0.0% (0; 289) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.910 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 45ms (t=14010ms, status=5) solveConfig.ts:265:13
+22:21:40.912       0: obj =   5.607699074e+04 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.912       3: obj =   5.419150022e+04 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.912 *    33: obj =   6.518954562e+04 inf =   4.441e-16 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.912 +    33: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.912 +    33: >>>>>   6.518954562e+04 <=   6.518954562e+04   0.0% (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.912 +    33: mip =   6.518954562e+04 <=     tree is empty   0.0% (0; 1) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.913 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 47ms (t=14012ms, status=5) solveConfig.ts:265:13
+22:21:40.914       0: obj =  -5.607699074e+04 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.914       3: obj =  -5.419150022e+04 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.914 *    29: obj =  -4.154841459e+04 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.914 +    29: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.914 Solution found by heuristic: -41633.3636178 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.915 Solution found by heuristic: -41631.5124934 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.916 Solution found by heuristic: -41585.1941194 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.917 Solution found by heuristic: -41565.92632 2 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.936 +   412: mip =  -4.156592632e+04 <=     tree is empty   0.0% (0; 199) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.937 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 70ms (t=14036ms, status=5) solveConfig.ts:265:13
+22:21:40.938 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.37987650415729, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:21:40.938 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 6.679998782439737, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:21:40.938 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=14037ms) solveConfig.ts:329:15
+22:21:40.938       0: obj =   7.554434994e+02 inf =   4.503e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.938 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=14038ms, 203 vars, 115 constraints) solveConfig.ts:259:13
+22:21:40.939       3: obj =   7.802203616e+02 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.939 *    40: obj =   1.141416250e+03 inf =   8.086e-16 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.939 +    40: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.939 Solution found by heuristic: 1134.18678654 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.940 Solution found by heuristic: 1136.15124989 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.941 Solution found by heuristic: 1136.76708442 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.942 +    71: mip =   1.136767084e+03 <=     tree is empty   0.0% (0; 11) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.943 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 68ms (t=14042ms, status=5) solveConfig.ts:265:13
+22:21:40.944       0: obj =  -5.607699074e+04 inf =   4.503e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.944       3: obj =  -5.419384603e+04 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.944 *    29: obj =  -4.156155360e+04 inf =   1.253e-16 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.944 +    29: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.944 Solution found by heuristic: -41633.3636178 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.945 Solution found by heuristic: -41631.5124934 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.946 Solution found by heuristic: -41585.1941194 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.950 Solution found by heuristic: -41575.5602197 2 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.965 +   374: mip =  -4.157556022e+04 <=     tree is empty   0.0% (0; 201) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:40.965 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 27ms (t=14065ms, status=5) solveConfig.ts:265:13
+22:21:40.973 LOG /src/sim/solveSimMetric.ts:581:6
+ →  [sim] round 1: measured scales in 228ms: 
+Object { tps: 494.0317765484258, tmi: 22457.806148443502 }
+solveSimMetric.ts:244:19
+22:21:40.974 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 1: starting round's LP solve (t=14073ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:21:40.974 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:21:40.974 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:21:41.001 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:21:41.001 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:21:41.001 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:21:41.001 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=14100ms) solveConfig.ts:329:15
+22:21:41.001 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=14101ms, 524 vars, 159 constraints) solveConfig.ts:259:13
+22:21:41.004       0: obj =   2.013066379e+00 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:41.004       3: obj =   1.995513556e+00 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:41.004 *    38: obj =   2.347872104e+00 inf =   8.134e-16 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:41.004 +    38: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:41.004 +    39: >>>>>   2.347302118e+00 <=   2.347302118e+00 < 0.1% (2; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:41.005 +    39: mip =   2.347302118e+00 <=     tree is empty   0.0% (0; 3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:41.005 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 4ms (t=14105ms, status=5) solveConfig.ts:265:13
+22:21:41.006 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 1: LP solve done in 32ms (t=14105ms) solveSimMetric.ts:281:15
+22:21:41.023 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 2: resetting sim environment (t=14122ms) solveSimMetric.ts:202:17
+22:21:41.023 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:21:53.963 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 2: calibration done in 12940ms (t=27063ms) solveSimMetric.ts:219:17
+22:21:53.963 LOG /src/sim/solveSimMetric.ts:564:6
+ →  [sim] round 2: measuring achievable scale for [tps, tmi] (4 silent LP solves, t=27063ms) solveSimMetric.ts:226:19
+22:21:53.963 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:21:53.963 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:21:53.995 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:21:53.995 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:21:53.995 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:21:53.995 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=27095ms) solveConfig.ts:329:15
+22:21:53.995 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:21:53.995 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:21:54.018 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:21:54.018 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:21:54.018 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:21:54.018 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=27117ms) solveConfig.ts:329:15
+22:21:54.018 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:21:54.018 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:21:54.043 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:21:54.043 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:21:54.043 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:21:54.043 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=27143ms) solveConfig.ts:329:15
+22:21:54.043 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:21:54.043 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:21:54.066 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:21:54.066 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:21:54.066 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:21:54.067 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=27166ms) solveConfig.ts:329:15
+22:21:54.067 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=27167ms, 469 vars, 153 constraints) solveConfig.ts:259:13
+22:21:54.068 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=27168ms, 203 vars, 115 constraints) solveConfig.ts:259:13
+22:21:54.068 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=27168ms, 343 vars, 135 constraints) solveConfig.ts:259:13
+22:21:54.069 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=27169ms, 203 vars, 115 constraints) solveConfig.ts:259:13
+22:21:54.072       0: obj =   7.911203824e+02 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.072       3: obj =   8.216043737e+02 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.073 *    41: obj =   1.173617221e+03 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.073 +    41: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.075 Solution found by heuristic: 1171.00479847 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.081 +    84: mip =   1.171004798e+03 <=     tree is empty   0.0% (0; 27) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.082 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 14ms (t=27181ms, status=5) solveConfig.ts:265:13
+22:21:54.083       0: obj =  -7.911203824e+02 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.083       3: obj =  -8.216043737e+02 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.084 *    28: obj =  -5.956353087e+02 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.084 +    28: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.084 Solution found by heuristic: -601.644616691 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.084 Solution found by heuristic: -598.853183104 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.085 Solution found by heuristic: -597.539550254 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.094 +   208: mip =  -5.975395503e+02 <=     tree is empty   0.0% (0; 73) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.094 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 26ms (t=27194ms, status=5) solveConfig.ts:265:13
+22:21:54.096       0: obj =   6.451936642e+04 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.096       3: obj =   6.338572951e+04 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.096 *    33: obj =   7.740301035e+04 inf =   6.661e-16 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.096 +    33: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.096 +    33: >>>>>   7.740301035e+04 <=   7.740301035e+04   0.0% (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.096 +    33: mip =   7.740301035e+04 <=     tree is empty   0.0% (0; 1) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.098       0: obj =  -6.451936642e+04 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.098       3: obj =  -6.338572951e+04 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.098 *    47: obj =  -4.809142024e+04 inf =   3.724e-15 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.098 +    47: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.098 Solution found by heuristic: -48876.0652095 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.099 Solution found by heuristic: -48135.847616 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.103 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 35ms (t=27203ms, status=5) solveConfig.ts:265:13
+22:21:54.106 Solution found by heuristic: -48135.847616 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.114 +   336: >>>>>  -4.813319364e+04 <=  -4.810088278e+04 < 0.1% (53; 21) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.129 +   677: mip =  -4.813319364e+04 <=     tree is empty   0.0% (0; 287) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.129 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 60ms (t=27229ms, status=5) solveConfig.ts:265:13
+22:21:54.137 LOG /src/sim/solveSimMetric.ts:581:6
+ →  [sim] round 2: measured scales in 174ms: 
+Object { tps: 493.4652482182224, tmi: 27470.567991235643 }
+solveSimMetric.ts:244:19
+22:21:54.138 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 2: starting round's LP solve (t=27238ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:21:54.138 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:21:54.138 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:21:54.169 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:21:54.169 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:21:54.169 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:21:54.169 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=27269ms) solveConfig.ts:329:15
+22:21:54.170 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=27269ms, 524 vars, 159 constraints) solveConfig.ts:259:13
+22:21:54.173       0: obj =   1.975933084e+00 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.173       3: obj =   1.986187098e+00 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.173 *    36: obj =   2.377998186e+00 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.173 +    36: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.174 +    36: >>>>>   2.377998186e+00 <=   2.377998186e+00   0.0% (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.174 +    36: mip =   2.377998186e+00 <=     tree is empty   0.0% (0; 1) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:21:54.174 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 5ms (t=27274ms, status=5) solveConfig.ts:265:13
+22:21:54.175 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 2: LP solve done in 37ms (t=27275ms) solveSimMetric.ts:281:15
+22:21:54.191 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 3: resetting sim environment (t=27291ms) solveSimMetric.ts:202:17
+22:21:54.191 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:22:07.126 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 3: calibration done in 12934ms (t=40226ms) solveSimMetric.ts:219:17
+22:22:07.126 LOG /src/sim/solveSimMetric.ts:564:6
+ →  [sim] round 3: measuring achievable scale for [tps, tmi] (4 silent LP solves, t=40226ms) solveSimMetric.ts:226:19
+22:22:07.126 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:22:07.126 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:22:07.169 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:22:07.169 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:22:07.169 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:22:07.169 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=40269ms) solveConfig.ts:329:15
+22:22:07.170 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:22:07.170 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:22:07.193 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:22:07.193 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:22:07.193 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:22:07.193 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=40293ms) solveConfig.ts:329:15
+22:22:07.193 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:22:07.193 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:22:07.219 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:22:07.219 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:22:07.219 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:22:07.219 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=40319ms) solveConfig.ts:329:15
+22:22:07.219 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:22:07.219 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:22:07.243 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:22:07.243 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:22:07.243 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:22:07.243 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=40343ms) solveConfig.ts:329:15
+22:22:07.244 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=40344ms, 469 vars, 153 constraints) solveConfig.ts:259:13
+22:22:07.245 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=40344ms, 203 vars, 115 constraints) solveConfig.ts:259:13
+22:22:07.245 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=40345ms, 343 vars, 135 constraints) solveConfig.ts:259:13
+22:22:07.246 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=40345ms, 203 vars, 115 constraints) solveConfig.ts:259:13
+22:22:07.248       0: obj =   7.420269117e+02 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.248       3: obj =   7.659063406e+02 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.248 *    39: obj =   1.127931939e+03 inf =   1.286e-16 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.248 +    39: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.248 Solution found by heuristic: 1120.67442825 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.249 +    47: >>>>>   1.123819267e+03 <=   1.125567258e+03   0.2% (5; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.250 Solution found by heuristic: 1124.4490675 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.250 +    54: mip =   1.124449067e+03 <=     tree is empty   0.0% (0; 9) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.251 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 7ms (t=40351ms, status=5) solveConfig.ts:265:13
+22:22:07.252       0: obj =  -7.420269117e+02 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.252       3: obj =  -7.659063406e+02 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.252 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.43905558723958, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:22:07.252 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 5.421462746460832, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:22:07.252 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=40352ms) solveConfig.ts:329:15
+22:22:07.252 *    27: obj =  -5.531082454e+02 inf =   2.205e-15 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.252 +    27: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.252 Solution found by heuristic: -565.364048451 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.253 Solution found by heuristic: -556.627973023 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.253 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=40353ms, 469 vars, 153 constraints) solveConfig.ts:259:13
+22:22:07.253 Solution found by heuristic: -555.572611261 2 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.271 +   337: mip =  -5.555726113e+02 <=     tree is empty   0.0% (0; 201) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.272 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 27ms (t=40371ms, status=5) solveConfig.ts:265:13
+22:22:07.273       0: obj =   6.029546185e+04 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.273       3: obj =   5.843902814e+04 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.273 *    33: obj =   7.011480448e+04 inf =   4.441e-16 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.273 +    33: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.273 +    33: >>>>>   7.011480448e+04 <=   7.011480448e+04   0.0% (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.273 +    33: mip =   7.011480448e+04 <=     tree is empty   0.0% (0; 1) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.274 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 28ms (t=40373ms, status=5) solveConfig.ts:265:13
+22:22:07.275       0: obj =  -6.029546185e+04 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.275       3: obj =  -5.843902814e+04 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.275 *    37: obj =  -4.443394962e+04 inf =   1.332e-15 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.275 +    37: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.276 Solution found by heuristic: -45092.5452541 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.276 Solution found by heuristic: -45055.6379853 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.277 Solution found by heuristic: -44826.3495581 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.277 Solution found by heuristic: -44812.8744606 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.277 Solution found by heuristic: -44781.2643482 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.277 Solution found by heuristic: -44771.0167969 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.278 Solution found by heuristic: -44502.8363271 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.278 +    79: mip =  -4.450283633e+04 <=     tree is empty   0.0% (0; 31) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.278 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 33ms (t=40378ms, status=5) solveConfig.ts:265:13
+22:22:07.279 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.42182269690583, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:22:07.279 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 5.599998782439737, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:22:07.279 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=40379ms) solveConfig.ts:329:15
+22:22:07.280 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=40380ms, 203 vars, 115 constraints) solveConfig.ts:259:13
+22:22:07.280       0: obj =   7.420269117e+02 inf =   4.503e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.280       3: obj =   7.665981019e+02 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.281 *    39: obj =   1.127570719e+03 inf =   5.663e-16 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.281 +    39: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.281 Solution found by heuristic: 1120.67442825 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.282 +    47: >>>>>   1.123819267e+03 <=   1.125229261e+03   0.1% (5; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.283 +    53: mip =   1.123819267e+03 <=     tree is empty   0.0% (0; 9) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.283 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 30ms (t=40383ms, status=5) solveConfig.ts:265:13
+22:22:07.284       0: obj =  -6.029546185e+04 inf =   4.503e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.284       3: obj =  -5.844222271e+04 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.284 *    37: obj =  -4.445153072e+04 inf =   8.882e-16 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.284 +    37: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.285 Solution found by heuristic: -45092.5452541 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.285 Solution found by heuristic: -45055.6379853 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.285 Solution found by heuristic: -44826.3495581 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.285 Solution found by heuristic: -44812.8744606 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.286 Solution found by heuristic: -44716.0618424 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.286 Solution found by heuristic: -44674.5707203 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.287 Solution found by heuristic: -44592.0959635 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.290 +   133: mip =  -4.459209596e+04 <=     tree is empty   0.0% (0; 55) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.291 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 11ms (t=40391ms, status=5) solveConfig.ts:265:13
+22:22:07.299 LOG /src/sim/solveSimMetric.ts:581:6
+ →  [sim] round 3: measured scales in 173ms: 
+Object { tps: 488.2466554502464, tmi: 24462.058125363423 }
+solveSimMetric.ts:244:19
+22:22:07.299 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 3: starting round's LP solve (t=40399ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:22:07.299 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:22:07.299 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:22:07.363 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:22:07.363 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:22:07.363 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:22:07.363 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=40463ms) solveConfig.ts:329:15
+22:22:07.364 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=40464ms, 524 vars, 159 constraints) solveConfig.ts:259:13
+22:22:07.367       0: obj =   1.992317623e+00 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.367       3: obj =   1.978826724e+00 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.367 *    37: obj =   2.333816612e+00 inf =   2.083e-16 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.367 +    37: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.367 +    38: >>>>>   2.333239873e+00 <=   2.333239873e+00   0.0% (2; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.367 +    38: mip =   2.333239873e+00 <=     tree is empty   0.0% (0; 3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:07.368 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 4ms (t=40468ms, status=5) solveConfig.ts:265:13
+22:22:07.369 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 3: LP solve done in 69ms (t=40468ms) solveSimMetric.ts:281:15
+22:22:07.386 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 4: resetting sim environment (t=40486ms) solveSimMetric.ts:202:17
+22:22:07.386 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:22:20.300 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 4: calibration done in 12913ms (t=53400ms) solveSimMetric.ts:219:17
+22:22:20.300 LOG /src/sim/solveSimMetric.ts:564:6
+ →  [sim] round 4: measuring achievable scale for [tps, tmi] (4 silent LP solves, t=53400ms) solveSimMetric.ts:226:19
+22:22:20.300 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:22:20.300 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:22:20.345 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:22:20.345 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:22:20.345 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:22:20.345 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=53445ms) solveConfig.ts:329:15
+22:22:20.345 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:22:20.346 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:22:20.369 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:22:20.369 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:22:20.369 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:22:20.369 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=53469ms) solveConfig.ts:329:15
+22:22:20.369 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:22:20.369 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:22:20.393 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:22:20.393 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:22:20.393 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:22:20.393 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=53493ms) solveConfig.ts:329:15
+22:22:20.393 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:22:20.393 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:22:20.416 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:22:20.416 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:22:20.416 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:22:20.416 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=53516ms) solveConfig.ts:329:15
+22:22:20.417 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=53517ms, 469 vars, 153 constraints) solveConfig.ts:259:13
+22:22:20.417 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=53517ms, 203 vars, 115 constraints) solveConfig.ts:259:13
+22:22:20.418 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=53518ms, 343 vars, 135 constraints) solveConfig.ts:259:13
+22:22:20.418 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=53518ms, 203 vars, 115 constraints) solveConfig.ts:259:13
+22:22:20.420       0: obj =   7.451150257e+02 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.420       3: obj =   7.688350136e+02 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.421 *    39: obj =   1.118536571e+03 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.421 +    39: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.421 Solution found by heuristic: 1110.83363673 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.422 Solution found by heuristic: 1113.09156413 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.423 Solution found by heuristic: 1115.03833832 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.423 +    60: mip =   1.115038338e+03 <=     tree is empty   0.0% (0; 11) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.424 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 7ms (t=53524ms, status=5) solveConfig.ts:265:13
+22:22:20.425       0: obj =  -7.451150257e+02 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.425       3: obj =  -7.688350136e+02 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.425 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.43905558723958, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:22:20.425 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 5.421462746460832, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:22:20.425 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=53525ms) solveConfig.ts:329:15
+22:22:20.425 *    29: obj =  -5.548914365e+02 inf =   8.882e-16 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.425 +    29: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.426 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=53526ms, 469 vars, 153 constraints) solveConfig.ts:259:13
+22:22:20.426 Solution found by heuristic: -555.970625189 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.460 +   727: mip =  -5.559706252e+02 <=     tree is empty   0.0% (0; 293) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.460 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 43ms (t=53560ms, status=5) solveConfig.ts:265:13
+22:22:20.462       0: obj =   5.870179082e+04 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.462       3: obj =   5.662203178e+04 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.463 *    34: obj =   6.745303301e+04 inf =   4.441e-16 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.463 +    34: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.463 +    34: >>>>>   6.745303301e+04 <=   6.745303301e+04   0.0% (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.463 +    34: mip =   6.745303301e+04 <=     tree is empty   0.0% (0; 1) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.463 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 45ms (t=53563ms, status=5) solveConfig.ts:265:13
+22:22:20.464       0: obj =  -5.870179082e+04 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.464       3: obj =  -5.662203178e+04 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.464 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.43790213827379, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:22:20.465 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 6.483901874789147, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:22:20.465 *    35: obj =  -4.273931157e+04 inf =   1.378e-15 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.465 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=53565ms) solveConfig.ts:329:15
+22:22:20.465 +    35: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.465 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=53565ms, 343 vars, 135 constraints) solveConfig.ts:259:13
+22:22:20.465 Solution found by heuristic: -42786.7779005 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.466 +    52: mip =  -4.278677790e+04 <=     tree is empty   0.0% (0; 11) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.466 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 48ms (t=53566ms, status=5) solveConfig.ts:265:13
+22:22:20.467 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.42182269690583, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:22:20.467 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 5.599998782439737, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:22:20.467 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=53567ms) solveConfig.ts:329:15
+22:22:20.467 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=53567ms, 203 vars, 115 constraints) solveConfig.ts:259:13
+22:22:20.468       0: obj =   7.451150257e+02 inf =   4.503e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.468       3: obj =   7.694603398e+02 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.468 *    39: obj =   1.118134776e+03 inf =   1.460e-15 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.468 +    39: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.468 Solution found by heuristic: 1110.83363673 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.469 Solution found by heuristic: 1113.09156413 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.471 Solution found by heuristic: 1113.36391829 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.472 +    75: mip =   1.113363918e+03 <=     tree is empty   0.0% (0; 15) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.473 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 46ms (t=53572ms, status=5) solveConfig.ts:265:13
+22:22:20.474       0: obj =   5.870179082e+04 inf =   4.503e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.474       3: obj =   5.661890894e+04 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.474 *    33: obj =   6.745296783e+04 inf =   4.441e-16 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.474 +    33: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.474 +    38: >>>>>   6.708386796e+04 <=   6.745180396e+04   0.5% (4; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.481 +   105: >>>>>   6.708740545e+04 <=   6.744935025e+04   0.5% (41; 2) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.483 +   131: >>>>>   6.740733656e+04 <=   6.740733656e+04   0.0% (41; 12) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.484 +   131: mip =   6.740733656e+04 <=     tree is empty   0.0% (0; 97) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.484 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 19ms (t=53584ms, status=5) solveConfig.ts:265:13
+22:22:20.485       0: obj =  -5.870179082e+04 inf =   4.503e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.485       3: obj =  -5.661890894e+04 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.485 *    35: obj =  -4.275223618e+04 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.485 +    35: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.486 Solution found by heuristic: -42889.7057415 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.486 Solution found by heuristic: -42884.5483307 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.487 Solution found by heuristic: -42879.39092 a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.488 +    76: >>>>>  -4.286825326e+04 <=  -4.283073188e+04 < 0.1% (12; 5) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.489 +    96: mip =  -4.286825326e+04 <=     tree is empty   0.0% (0; 33) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.489 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 22ms (t=53589ms, status=5) solveConfig.ts:265:13
+22:22:20.497 LOG /src/sim/solveSimMetric.ts:581:6
+ →  [sim] round 4: measured scales in 197ms: 
+Object { tps: 475.9578345246722, tmi: 23587.451499631366 }
+solveSimMetric.ts:244:19
+22:22:20.497 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 4: starting round's LP solve (t=53597ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:22:20.497 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:22:20.497 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:22:20.526 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:22:20.526 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:22:20.526 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:22:20.526 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=53626ms) solveConfig.ts:329:15
+22:22:20.526 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=53626ms, 524 vars, 159 constraints) solveConfig.ts:259:13
+22:22:20.529       0: obj =   2.027096836e+00 inf =   4.463e+00 (3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.529       3: obj =   2.007928864e+00 inf =   0.000e+00 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.530 *    38: obj =   2.353622944e+00 inf =   4.746e-15 (0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.530 +    38: mip =     not found yet <=              +inf        (1; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.530 +    39: >>>>>   2.353031314e+00 <=   2.353031314e+00 < 0.1% (2; 0) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.530 +    39: mip =   2.353031314e+00 <=     tree is empty   0.0% (0; 3) a77da303-b433-4454-aeea-7f9a74ab8d3d:1:5786
+22:22:20.531 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 5ms (t=53631ms, status=5) solveConfig.ts:265:13
+22:22:20.532 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 4: LP solve done in 35ms (t=53632ms) solveSimMetric.ts:281:15
+22:22:23.454 LOG /src/helpers/perfTrace.ts:127:14
+ →  [perf] sim-backed solve perfTrace.ts:86:24
+22:22:23.454 console.table() perfTrace.ts:87:13
+(index)	name	count	totalMs	avgMs	minMs	maxMs	pctOfTotal
+0	simWorkerRoundTrip	120	188635	1571.9583333333333	1418	2411	39.667035365663885
+1	solveConfigForSimMetric	1	56229	56229	56229	56229	11.824092727096854
+2	calibrateWeights	4	52235	13058.75	12913	13448	10.98421603798581
+3	runCalibrationBatches	4	52234	13058.5	12913	13448	10.984005753386633
+4	simJobQueueDispatch	4	50068	12517	12324	12971	10.52852931157028
+5	round:1	1	13725	13725	13725	13725	2.8861561236978126
+6	round:3	1	13195	13195	13195	13195	2.774705286134254
+7	round:2	1	13169	13169	13169	13169	2.7692378865556644
+8	round:4	1	13163	13163	13163	13163	2.767976178960605
+9	simWorkerWasmInstantiate	16	6184	386.5	237	517	1.3003999613076336
+10	measureFinalSimMetrics	1	2905	2905	2905	2905	0.6108767606078066
+11	solveConfig	26	2351	90.42307692307692	32	199	0.4943790926640114
+12	runLPModelWithAvoidanceConvergence	21	1474	70.19047619047619	5	165	0.3099594991861986
+13	runLPModel	28	1466	52.357142857142854	5	108	0.3082772223927864
+14	buildReplicateJobBundles	4	1421	355.25	287	405	0.2988144154298428
+15	buildReplicateJobBundles:unaccounted	4	1147	286.75	223	339	0.24119643525547474
+16	coordinatorWasmInstantiate	4	1026	256.5	194	308	0.21575199875511517
+17	glpkSolve	28	791	28.25	4	70	0.16633511794863168
+18	measureMetricScales	4	772	193	173	228	0.1623397105642777
+19	computeStatWeights	4	744	186	184	189	0.15645174178733498
+20	glpkModuleAcquire	28	637	22.75	0	84	0.13395128967544676
+21	prepareItemCandidates	21	626	29.80952380952381	22	62	0.13163815908450496
+22	statWeightRequestsWasmCall	4	247	61.75	59	66	0.0519402959966018
+23	round:1:unaccounted	1	235	235	235	235	0.04941688080648349
+24	round:4:unaccounted	1	203	203	203	203	0.04268777363283468
+25	round:2:unaccounted	1	182	182	182	182	0.03827179705012764
+26	round:3:unaccounted	1	181	181	181	181	0.038061512450951115
+27	round:0	1	71	71	71	71	0.014930206541533313
+28	decodeSimResult	120	61	0.5083333333333333	0	2	0.012827360549768057
+29	isSignificantImprovement	4	40	10	9	11	0.008411383967061021
+30	avoidanceConvergenceIterations	21	28	1.3333333333333333	1	2	0.005887968776942714
+31	transformChosenItems	28	25	0.8928571428571429	0	2	0.005257114979413138
+32	statWeightsRequestEncode	4	23	5.75	4	8	0.004836545781060087
+33	buildLpModel	28	12	0.42857142857142855	0	1	0.0025234151901183063
+34	getConsumableLPItems	21	9	0.42857142857142855	0	1	0.0018925613925887296
+35	runLPModelWithAvoidanceConvergence:unaccounted	21	8	0.38095238095238093	0	1	0.001682276793412204
+36	round:0:unaccounted	1	8	8	8	8	0.001682276793412204
+37	solveConfig:unaccounted	21	6	0.2857142857142857	0	2	0.0012617075950591531
+38	buildStatWeightsRequest	4	4	1	1	1	0.000841138396706102
+39	resetSimEnvironment	4	3	0.75	0	1	0.0006308537975295766
+40	filterItemsForClass	1	1	1	1	1	0.0002102845991765255
+41	runLPModel:unaccounted	28	1	0.03571428571428571	0	1	0.0002102845991765255
+42	runCalibrationBatches:unaccounted	4	1	0.25	0	1	0.0002102845991765255
+43	splitGearAndConsumables	5	0	0	0	0	0
+44	solveConfigForSimMetric:unaccounted	1	0	0	0	0	0
+22:22:23.459 console.table() index.ts:41:17
+(index)	name	count	totalMs	avgMs	minMs	maxMs	pctOfTotal
+0	simWorkerRoundTrip	120	188635	1571.9583333333333	1418	2411	39.667035365663885
+1	solveConfigForSimMetric	1	56229	56229	56229	56229	11.824092727096854
+2	calibrateWeights	4	52235	13058.75	12913	13448	10.98421603798581
+3	runCalibrationBatches	4	52234	13058.5	12913	13448	10.984005753386633
+4	simJobQueueDispatch	4	50068	12517	12324	12971	10.52852931157028
+5	round:1	1	13725	13725	13725	13725	2.8861561236978126
+6	round:3	1	13195	13195	13195	13195	2.774705286134254
+7	round:2	1	13169	13169	13169	13169	2.7692378865556644
+8	round:4	1	13163	13163	13163	13163	2.767976178960605
+9	simWorkerWasmInstantiate	16	6184	386.5	237	517	1.3003999613076336
+10	measureFinalSimMetrics	1	2905	2905	2905	2905	0.6108767606078066
+11	solveConfig	26	2351	90.42307692307692	32	199	0.4943790926640114
+12	runLPModelWithAvoidanceConvergence	21	1474	70.19047619047619	5	165	0.3099594991861986
+13	runLPModel	28	1466	52.357142857142854	5	108	0.3082772223927864
+14	buildReplicateJobBundles	4	1421	355.25	287	405	0.2988144154298428
+15	buildReplicateJobBundles:unaccounted	4	1147	286.75	223	339	0.24119643525547474
+16	coordinatorWasmInstantiate	4	1026	256.5	194	308	0.21575199875511517
+17	glpkSolve	28	791	28.25	4	70	0.16633511794863168
+18	measureMetricScales	4	772	193	173	228	0.1623397105642777
+19	computeStatWeights	4	744	186	184	189	0.15645174178733498
+20	glpkModuleAcquire	28	637	22.75	0	84	0.13395128967544676
+21	prepareItemCandidates	21	626	29.80952380952381	22	62	0.13163815908450496
+22	statWeightRequestsWasmCall	4	247	61.75	59	66	0.0519402959966018
+23	round:1:unaccounted	1	235	235	235	235	0.04941688080648349
+24	round:4:unaccounted	1	203	203	203	203	0.04268777363283468
+25	round:2:unaccounted	1	182	182	182	182	0.03827179705012764
+26	round:3:unaccounted	1	181	181	181	181	0.038061512450951115
+27	round:0	1	71	71	71	71	0.014930206541533313
+28	decodeSimResult	120	61	0.5083333333333333	0	2	0.012827360549768057
+29	isSignificantImprovement	4	40	10	9	11	0.008411383967061021
+30	avoidanceConvergenceIterations	21	28	1.3333333333333333	1	2	0.005887968776942714
+31	transformChosenItems	28	25	0.8928571428571429	0	2	0.005257114979413138
+32	statWeightsRequestEncode	4	23	5.75	4	8	0.004836545781060087
+33	buildLpModel	28	12	0.42857142857142855	0	1	0.0025234151901183063
+34	getConsumableLPItems	21	9	0.42857142857142855	0	1	0.0018925613925887296
+35	runLPModelWithAvoidanceConvergence:unaccounted	21	8	0.38095238095238093	0	1	0.001682276793412204
+36	round:0:unaccounted	1	8	8	8	8	0.001682276793412204
+37	solveConfig:unaccounted	21	6	0.2857142857142857	0	2	0.0012617075950591531
+38	buildStatWeightsRequest	4	4	1	1	1	0.000841138396706102
+39	resetSimEnvironment	4	3	0.75	0	1	0.0006308537975295766
+40	filterItemsForClass	1	1	1	1	1	0.0002102845991765255
+41	runLPModel:unaccounted	28	1	0.03571428571428571	0	1	0.0002102845991765255
+42	runCalibrationBatches:unaccounted	4	1	0.25	0	1	0.0002102845991765255
+43	splitGearAndConsumables	5	0	0	0	0	0
+44	solveConfigForSimMetric:unaccounted	1	0	0	0	0	0
+22:22:23.462 LOG Go to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fsolver%2Findex.ts%3A164%3A4 
+ →  worker result __root.tsx:54:18
+22:22:23.462 LOG Go to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fsolver%2Findex.ts%3A169%3A4 
+ →  [perf] main-thread solve() wall clock: 56561.0ms __root.tsx:54:18
+22:22:23.793 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 0: starting round's LP solve (t=330ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:22:23.793 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:22:23.793 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:22:23.826 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:22:23.826 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:22:23.826 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:22:23.826 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=364ms) solveConfig.ts:329:15
+22:22:23.826 LOG /src/solver/solveConfig.ts:305:3
+ →  [lp] creating shared glpk worker (t=364ms) solveConfig.ts:174:13
+22:22:23.842 LOG /src/solver/solveConfig.ts:310:4
+ →  [lp] shared glpk worker ready (t=379ms) solveConfig.ts:180:21
+22:22:23.843 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=380ms, 343 vars, 135 constraints) solveConfig.ts:259:13
+22:22:23.846       0: obj =   2.446739030e+03 inf =   4.463e+00 (3) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:23.846       3: obj =   2.354647398e+03 inf =   0.000e+00 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:23.847 *    34: obj =   2.801456911e+03 inf =   4.441e-16 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:23.847 +    34: mip =     not found yet <=              +inf        (1; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:23.847 +    34: >>>>>   2.801456911e+03 <=   2.801456911e+03   0.0% (1; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:23.847 +    34: mip =   2.801456911e+03 <=     tree is empty   0.0% (0; 1) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:23.848 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 5ms (t=385ms, status=5) solveConfig.ts:265:13
+22:22:23.850 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.43790213827379, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:22:23.850 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 6.483901874789147, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:22:23.850 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=387ms) solveConfig.ts:329:15
+22:22:23.850 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=387ms, 343 vars, 135 constraints) solveConfig.ts:259:13
+22:22:23.852       0: obj =   2.446739030e+03 inf =   4.503e+00 (3) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:23.852       3: obj =   2.354416804e+03 inf =   0.000e+00 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:23.853 *    33: obj =   2.801449230e+03 inf =   4.441e-16 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:23.853 +    33: mip =     not found yet <=              +inf        (1; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:23.853 +    37: >>>>>   2.797435121e+03 <=   2.801426905e+03   0.1% (3; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:23.854 +    38: mip =   2.797435121e+03 <=     tree is empty   0.0% (0; 5) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:23.854 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 5ms (t=392ms, status=5) solveConfig.ts:265:13
+22:22:23.856 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 0: LP solve done in 63ms (t=393ms) solveSimMetric.ts:281:15
+22:22:23.864 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 1: resetting sim environment (t=401ms) solveSimMetric.ts:202:17
+22:22:23.864 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:22:37.240 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 1: calibration done in 13376ms (t=13777ms) solveSimMetric.ts:219:17
+22:22:37.240 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 1: starting round's LP solve (t=13777ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:22:37.240 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:22:37.240 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:22:37.277 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:22:37.277 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:22:37.277 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:22:37.277 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=13814ms) solveConfig.ts:329:15
+22:22:37.278 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=13815ms, 343 vars, 135 constraints) solveConfig.ts:259:13
+22:22:37.281       0: obj =   1.450566207e+03 inf =   4.463e+00 (3) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:37.281       3: obj =   1.396195330e+03 inf =   0.000e+00 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:37.281 *    36: obj =   1.685963897e+03 inf =   4.441e-16 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:37.281 +    36: mip =     not found yet <=              +inf        (1; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:37.281 +    36: >>>>>   1.685963897e+03 <=   1.685963897e+03   0.0% (1; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:37.281 +    36: mip =   1.685963897e+03 <=     tree is empty   0.0% (0; 1) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:37.282 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 4ms (t=13819ms, status=5) solveConfig.ts:265:13
+22:22:37.283 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 1: LP solve done in 44ms (t=13821ms) solveSimMetric.ts:281:15
+22:22:37.302 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 2: resetting sim environment (t=13839ms) solveSimMetric.ts:202:17
+22:22:37.302 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:22:50.446 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 2: calibration done in 13144ms (t=26984ms) solveSimMetric.ts:219:17
+22:22:50.446 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 2: starting round's LP solve (t=26984ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:22:50.446 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:22:50.446 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:22:50.479 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:22:50.479 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:22:50.479 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:22:50.479 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=27016ms) solveConfig.ts:329:15
+22:22:50.480 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=27017ms, 343 vars, 135 constraints) solveConfig.ts:259:13
+22:22:50.483       0: obj =   1.171819787e+03 inf =   4.463e+00 (3) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:50.483       3: obj =   1.128517729e+03 inf =   0.000e+00 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:50.483 *    36: obj =   1.362309971e+03 inf =   4.441e-16 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:50.483 +    36: mip =     not found yet <=              +inf        (1; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:50.483 +    36: >>>>>   1.362309971e+03 <=   1.362309971e+03   0.0% (1; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:50.483 +    36: mip =   1.362309971e+03 <=     tree is empty   0.0% (0; 1) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:22:50.484 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 5ms (t=27022ms, status=5) solveConfig.ts:265:13
+22:22:50.486 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 2: LP solve done in 39ms (t=27023ms) solveSimMetric.ts:281:15
+22:22:50.503 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 3: resetting sim environment (t=27041ms) solveSimMetric.ts:202:17
+22:22:50.503 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:23:03.583 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 3: calibration done in 13079ms (t=40121ms) solveSimMetric.ts:219:17
+22:23:03.583 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 3: starting round's LP solve (t=40121ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:23:03.583 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:23:03.583 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:23:03.618 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:23:03.618 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:23:03.618 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:23:03.618 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=40156ms) solveConfig.ts:329:15
+22:23:03.619 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=40157ms, 343 vars, 135 constraints) solveConfig.ts:259:13
+22:23:03.622       0: obj =   1.825713805e+03 inf =   4.463e+00 (3) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:03.622       3: obj =   1.775363147e+03 inf =   0.000e+00 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:03.622 *    33: obj =   2.143490054e+03 inf =   4.441e-16 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:03.622 +    33: mip =     not found yet <=              +inf        (1; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:03.622 +    33: >>>>>   2.143490054e+03 <=   2.143490054e+03   0.0% (1; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:03.622 +    33: mip =   2.143490054e+03 <=     tree is empty   0.0% (0; 1) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:03.623 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 3ms (t=40160ms, status=5) solveConfig.ts:265:13
+22:23:03.624 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 3: LP solve done in 40ms (t=40161ms) solveSimMetric.ts:281:15
+22:23:03.642 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 4: resetting sim environment (t=40179ms) solveSimMetric.ts:202:17
+22:23:03.642 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:23:16.773 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 4: calibration done in 13131ms (t=53311ms) solveSimMetric.ts:219:17
+22:23:16.773 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 4: starting round's LP solve (t=53311ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:23:16.773 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:23:16.773 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:23:16.806 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:23:16.806 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:23:16.806 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:23:16.806 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=53344ms) solveConfig.ts:329:15
+22:23:16.807 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=53345ms, 343 vars, 135 constraints) solveConfig.ts:259:13
+22:23:16.810       0: obj =   1.948813611e+03 inf =   4.463e+00 (3) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:16.810       3: obj =   1.893925863e+03 inf =   0.000e+00 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:16.811 *    33: obj =   2.304568378e+03 inf =   1.332e-15 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:16.811 +    33: mip =     not found yet <=              +inf        (1; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:16.811 +    33: >>>>>   2.304568378e+03 <=   2.304568378e+03   0.0% (1; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:16.811 +    33: mip =   2.304568378e+03 <=     tree is empty   0.0% (0; 1) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:16.811 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 4ms (t=53349ms, status=5) solveConfig.ts:265:13
+22:23:16.813 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 4: LP solve done in 39ms (t=53350ms) solveSimMetric.ts:281:15
+22:23:16.830 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 5: resetting sim environment (t=53368ms) solveSimMetric.ts:202:17
+22:23:16.830 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:23:29.997 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 5: calibration done in 13166ms (t=66535ms) solveSimMetric.ts:219:17
+22:23:29.997 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 5: starting round's LP solve (t=66535ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:23:29.997 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:23:29.997 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:23:30.030 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:23:30.030 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:23:30.030 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:23:30.030 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=66567ms) solveConfig.ts:329:15
+22:23:30.030 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=66568ms, 343 vars, 135 constraints) solveConfig.ts:259:13
+22:23:30.033       0: obj =   2.522065002e+03 inf =   4.463e+00 (3) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:30.033       3: obj =   2.430918214e+03 inf =   0.000e+00 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:30.034 *    33: obj =   2.913473213e+03 inf =   4.441e-16 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:30.034 +    33: mip =     not found yet <=              +inf        (1; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:30.034 +    33: >>>>>   2.913473213e+03 <=   2.913473213e+03   0.0% (1; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:30.034 +    33: mip =   2.913473213e+03 <=     tree is empty   0.0% (0; 1) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:30.035 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 4ms (t=66572ms, status=5) solveConfig.ts:265:13
+22:23:30.036 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.43790213827379, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:23:30.036 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 6.483901874789147, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:23:30.036 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=66574ms) solveConfig.ts:329:15
+22:23:30.036 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=66574ms, 343 vars, 135 constraints) solveConfig.ts:259:13
+22:23:30.039       0: obj =   2.522065002e+03 inf =   4.503e+00 (3) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:30.039       3: obj =   2.430859980e+03 inf =   0.000e+00 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:30.039 *    34: obj =   2.913472943e+03 inf =   4.441e-16 (0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:30.039 +    34: mip =     not found yet <=              +inf        (1; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:30.039 +    35: >>>>>   2.913412473e+03 <=   2.913470950e+03 < 0.1% (2; 0) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:30.040 +    36: mip =   2.913412473e+03 <=     tree is empty   0.0% (0; 3) 77f4ae21-ee0a-49cf-90e6-d46dfa46b93f:1:5786
+22:23:30.040 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 4ms (t=66578ms, status=5) solveConfig.ts:265:13
+22:23:30.042 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 5: LP solve done in 45ms (t=66580ms) solveSimMetric.ts:281:15
+22:23:32.983 LOG /src/helpers/perfTrace.ts:127:14
+ →  [perf] sim-backed solve perfTrace.ts:86:24
+22:23:32.983 console.table() perfTrace.ts:87:13
+(index)	name	count	totalMs	avgMs	minMs	maxMs	pctOfTotal
+0	simWorkerRoundTrip	150	237413	1582.7533333333333	1417	2311	40.52453699752496
+1	solveConfigForSimMetric	1	69193	69193	69193	69193	11.810702398224802
+2	calibrateWeights	5	65896	13179.2	13079	13376	11.247930357600069
+3	runCalibrationBatches	5	65892	13178.4	13078	13376	11.247247588973288
+4	simJobQueueDispatch	5	63007	12601.4	12409	12895	10.754800716907058
+5	round:1	1	13438	13438	13438	13438	2.293761201672783
+6	round:5	1	13229	13229	13229	13229	2.2580865409234447
+7	round:2	1	13202	13202	13202	13202	2.2534778526926686
+8	round:4	1	13189	13189	13189	13189	2.2512588546556285
+9	round:3	1	13138	13138	13138	13138	2.242553554664163
+10	simWorkerWasmInstantiate	20	7918	395.9	218	518	1.351540496714176
+11	measureFinalSimMetrics	1	2924	2924	2924	2924	0.49910386617734914
+12	buildReplicateJobBundles	5	1957	391.4	294	488	0.3340445506528975
+13	buildReplicateJobBundles:unaccounted	5	1625	325	230	426	0.27737475463002476
+14	coordinatorWasmInstantiate	5	1355	271	202	310	0.2312878723222668
+15	computeStatWeights	5	926	185.2	181	188	0.15806093709994026
+16	solveConfig	12	540	45	39	63	0.09217376461551592
+17	statWeightRequestsWasmCall	5	303	60.6	57	66	0.051719723478706146
+18	prepareItemCandidates	6	201	33.5	32	36	0.03430912349577537
+19	decodeSimResult	150	91	0.6066666666666667	0	3	0.015532986259281387
+20	round:0	1	71	71	71	71	0.01211914312537339
+21	runLPModelWithAvoidanceConvergence	6	67	11.166666666666666	5	29	0.01143637449859179
+22	runLPModel	8	64	8	5	23	0.01092429802850559
+23	isSignificantImprovement	5	52	10.4	9	11	0.008875992148160792
+24	glpkSolve	8	34	4.25	3	5	0.005803533327643594
+25	statWeightsRequestEncode	5	24	4.8	4	6	0.004096611760689596
+26	glpkModuleAcquire	8	15	1.875	0	15	0.0025603823504309975
+27	transformChosenItems	8	9	1.125	1	2	0.0015362294102585986
+28	avoidanceConvergenceIterations	6	8	1.3333333333333333	1	2	0.0013655372535631987
+29	round:4:unaccounted	1	8	8	8	8	0.0013655372535631987
+30	round:5:unaccounted	1	8	8	8	8	0.0013655372535631987
+31	round:0:unaccounted	1	7	7	7	7	0.0011948450968677989
+32	round:1:unaccounted	1	7	7	7	7	0.0011948450968677989
+33	round:2:unaccounted	1	7	7	7	7	0.0011948450968677989
+34	buildLpModel	8	6	0.75	0	1	0.001024152940172399
+35	round:3:unaccounted	1	6	6	6	6	0.001024152940172399
+36	buildStatWeightsRequest	5	5	1	1	1	0.0008534607834769992
+37	resetSimEnvironment	5	4	0.8	0	1	0.0006827686267815993
+38	runLPModelWithAvoidanceConvergence:unaccounted	6	3	0.5	0	2	0.0005120764700861995
+39	splitGearAndConsumables	6	2	0.3333333333333333	0	1	0.00034138431339079966
+40	runCalibrationBatches:unaccounted	5	2	0.4	0	1	0.00034138431339079966
+41	filterItemsForClass	1	1	1	1	1	0.00017069215669539983
+42	getConsumableLPItems	6	1	0.16666666666666666	0	1	0.00017069215669539983
+43	solveConfig:unaccounted	6	1	0.16666666666666666	0	1	0.00017069215669539983
+44	solveConfigForSimMetric:unaccounted	1	1	1	1	1	0.00017069215669539983
+45	runLPModel:unaccounted	8	0	0	0	0	0
+22:23:32.989 console.table() index.ts:41:17
+(index)	name	count	totalMs	avgMs	minMs	maxMs	pctOfTotal
+0	simWorkerRoundTrip	150	237413	1582.7533333333333	1417	2311	40.52453699752496
+1	solveConfigForSimMetric	1	69193	69193	69193	69193	11.810702398224802
+2	calibrateWeights	5	65896	13179.2	13079	13376	11.247930357600069
+3	runCalibrationBatches	5	65892	13178.4	13078	13376	11.247247588973288
+4	simJobQueueDispatch	5	63007	12601.4	12409	12895	10.754800716907058
+5	round:1	1	13438	13438	13438	13438	2.293761201672783
+6	round:5	1	13229	13229	13229	13229	2.2580865409234447
+7	round:2	1	13202	13202	13202	13202	2.2534778526926686
+8	round:4	1	13189	13189	13189	13189	2.2512588546556285
+9	round:3	1	13138	13138	13138	13138	2.242553554664163
+10	simWorkerWasmInstantiate	20	7918	395.9	218	518	1.351540496714176
+11	measureFinalSimMetrics	1	2924	2924	2924	2924	0.49910386617734914
+12	buildReplicateJobBundles	5	1957	391.4	294	488	0.3340445506528975
+13	buildReplicateJobBundles:unaccounted	5	1625	325	230	426	0.27737475463002476
+14	coordinatorWasmInstantiate	5	1355	271	202	310	0.2312878723222668
+15	computeStatWeights	5	926	185.2	181	188	0.15806093709994026
+16	solveConfig	12	540	45	39	63	0.09217376461551592
+17	statWeightRequestsWasmCall	5	303	60.6	57	66	0.051719723478706146
+18	prepareItemCandidates	6	201	33.5	32	36	0.03430912349577537
+19	decodeSimResult	150	91	0.6066666666666667	0	3	0.015532986259281387
+20	round:0	1	71	71	71	71	0.01211914312537339
+21	runLPModelWithAvoidanceConvergence	6	67	11.166666666666666	5	29	0.01143637449859179
+22	runLPModel	8	64	8	5	23	0.01092429802850559
+23	isSignificantImprovement	5	52	10.4	9	11	0.008875992148160792
+24	glpkSolve	8	34	4.25	3	5	0.005803533327643594
+25	statWeightsRequestEncode	5	24	4.8	4	6	0.004096611760689596
+26	glpkModuleAcquire	8	15	1.875	0	15	0.0025603823504309975
+27	transformChosenItems	8	9	1.125	1	2	0.0015362294102585986
+28	avoidanceConvergenceIterations	6	8	1.3333333333333333	1	2	0.0013655372535631987
+29	round:4:unaccounted	1	8	8	8	8	0.0013655372535631987
+30	round:5:unaccounted	1	8	8	8	8	0.0013655372535631987
+31	round:0:unaccounted	1	7	7	7	7	0.0011948450968677989
+32	round:1:unaccounted	1	7	7	7	7	0.0011948450968677989
+33	round:2:unaccounted	1	7	7	7	7	0.0011948450968677989
+34	buildLpModel	8	6	0.75	0	1	0.001024152940172399
+35	round:3:unaccounted	1	6	6	6	6	0.001024152940172399
+36	buildStatWeightsRequest	5	5	1	1	1	0.0008534607834769992
+37	resetSimEnvironment	5	4	0.8	0	1	0.0006827686267815993
+38	runLPModelWithAvoidanceConvergence:unaccounted	6	3	0.5	0	2	0.0005120764700861995
+39	splitGearAndConsumables	6	2	0.3333333333333333	0	1	0.00034138431339079966
+40	runCalibrationBatches:unaccounted	5	2	0.4	0	1	0.00034138431339079966
+41	filterItemsForClass	1	1	1	1	1	0.00017069215669539983
+42	getConsumableLPItems	6	1	0.16666666666666666	0	1	0.00017069215669539983
+43	solveConfig:unaccounted	6	1	0.16666666666666666	0	1	0.00017069215669539983
+44	solveConfigForSimMetric:unaccounted	1	1	1	1	1	0.00017069215669539983
+45	runLPModel:unaccounted	8	0	0	0	0	0
+22:23:32.991 LOG Go to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fsolver%2Findex.ts%3A164%3A4 
+ →  worker result __root.tsx:54:18
+22:23:32.991 LOG Go to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fsolver%2Findex.ts%3A169%3A4 
+ →  [perf] main-thread solve() wall clock: 69528.0ms __root.tsx:54:18
+22:23:33.337 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 0: starting round's LP solve (t=346ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:23:33.337 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:23:33.337 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:23:33.373 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:23:33.373 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:23:33.373 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:23:33.373 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=382ms) solveConfig.ts:329:15
+22:23:33.373 LOG /src/solver/solveConfig.ts:305:3
+ →  [lp] creating shared glpk worker (t=382ms) solveConfig.ts:174:13
+22:23:33.389 LOG /src/solver/solveConfig.ts:310:4
+ →  [lp] shared glpk worker ready (t=397ms) solveConfig.ts:180:21
+22:23:33.390 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=398ms, 469 vars, 153 constraints) solveConfig.ts:259:13
+22:23:33.394       0: obj =   3.936235560e+02 inf =   4.463e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:33.394       3: obj =   4.073046736e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:33.395 *    42: obj =   6.013739139e+02 inf =   6.446e-16 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:33.395 +    42: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:33.395 Solution found by heuristic: 597.812451328 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:33.396 Solution found by heuristic: 599.603309299 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:33.398 Solution found by heuristic: 599.949602212 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:33.398 +    58: mip =   5.999496022e+02 <=     tree is empty   0.0% (0; 7) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:33.399 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 10ms (t=408ms, status=5) solveConfig.ts:265:13
+22:23:33.401 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.43905558723958, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:23:33.402 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 5.421462746460832, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:23:33.402 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=410ms) solveConfig.ts:329:15
+22:23:33.402 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=411ms, 469 vars, 153 constraints) solveConfig.ts:259:13
+22:23:33.405       0: obj =   3.936235560e+02 inf =   4.503e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:33.405       3: obj =   4.077052158e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:33.406 *    42: obj =   6.012059365e+02 inf =   8.933e-16 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:33.406 +    42: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:33.406 Solution found by heuristic: 597.812451328 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:33.407 Solution found by heuristic: 599.603309299 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:33.409 +    59: mip =   5.996033093e+02 <=     tree is empty   0.0% (0; 7) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:33.409 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 7ms (t=418ms, status=5) solveConfig.ts:265:13
+22:23:33.411 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 0: LP solve done in 74ms (t=420ms) solveSimMetric.ts:281:15
+22:23:33.418 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 1: resetting sim environment (t=427ms) solveSimMetric.ts:202:17
+22:23:33.418 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:23:46.686 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 1: calibration done in 13267ms (t=13694ms) solveSimMetric.ts:219:17
+22:23:46.686 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 1: starting round's LP solve (t=13694ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:23:46.686 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:23:46.686 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:23:46.721 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:23:46.721 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:23:46.721 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:23:46.721 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=13729ms) solveConfig.ts:329:15
+22:23:46.722 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=13730ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:23:46.726       0: obj =   3.871786957e+02 inf =   4.463e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:46.726       3: obj =   4.008753127e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:46.726 *    40: obj =   5.787382433e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:46.726 +    40: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:46.727 Solution found by heuristic: 573.600705821 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:46.729 Solution found by heuristic: 576.241803052 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:46.730 +    58: >>>>>   5.772027898e+02 <=   5.777953922e+02   0.1% (8; 1) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:46.730 +    61: mip =   5.772027898e+02 <=     tree is empty   0.0% (0; 17) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:46.731 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 10ms (t=13740ms, status=5) solveConfig.ts:265:13
+22:23:46.733 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.4657175313129, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:23:46.733 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 5.176585098584332, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:23:46.733 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=13741ms) solveConfig.ts:329:15
+22:23:46.733 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=13742ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:23:46.736       0: obj =   3.871786957e+02 inf =   4.503e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:46.736       3: obj =   4.013311373e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:46.737 *    40: obj =   5.785848404e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:46.737 +    40: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:46.737 Solution found by heuristic: 573.600705821 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:46.739 Solution found by heuristic: 576.241803052 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:46.742 +    77: mip =   5.762418031e+02 <=     tree is empty   0.0% (0; 23) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:23:46.743 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 10ms (t=13752ms, status=5) solveConfig.ts:265:13
+22:23:46.745 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 1: LP solve done in 59ms (t=13753ms) solveSimMetric.ts:281:15
+22:23:46.761 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 2: resetting sim environment (t=13770ms) solveSimMetric.ts:202:17
+22:23:46.761 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:23:59.990 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 2: calibration done in 13228ms (t=26998ms) solveSimMetric.ts:219:17
+22:23:59.990 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 2: starting round's LP solve (t=26998ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:23:59.990 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:23:59.990 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:24:00.026 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:24:00.026 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:24:00.026 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:24:00.026 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=27034ms) solveConfig.ts:329:15
+22:24:00.027 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=27035ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:24:00.030       0: obj =   3.788993909e+02 inf =   4.463e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:00.030       3: obj =   3.889520312e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:00.031 *    35: obj =   5.724079630e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:00.031 +    35: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:00.031 Solution found by heuristic: 564.224176863 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:00.032 +    44: >>>>>   5.652489156e+02 <=   5.716704189e+02   1.1% (5; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:00.034 Solution found by heuristic: 567.261672544 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:00.035 +    63: >>>>>   5.682864112e+02 <=   5.700732801e+02   0.3% (12; 2) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:00.035 Solution found by heuristic: 569.855732692 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:00.036 +    68: mip =   5.698557327e+02 <=     tree is empty   0.0% (0; 27) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:00.036 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 10ms (t=27045ms, status=5) solveConfig.ts:265:13
+22:24:00.038 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 2: LP solve done in 48ms (t=27046ms) solveSimMetric.ts:281:15
+22:24:00.054 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 3: resetting sim environment (t=27063ms) solveSimMetric.ts:202:17
+22:24:00.054 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:24:12.893 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 3: calibration done in 12838ms (t=39902ms) solveSimMetric.ts:219:17
+22:24:12.894 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 3: starting round's LP solve (t=39902ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:24:12.894 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:24:12.894 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:24:12.929 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:24:12.929 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:24:12.929 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:24:12.929 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=39938ms) solveConfig.ts:329:15
+22:24:12.930 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=39939ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:24:12.934       0: obj =   4.717790363e+02 inf =   4.463e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.934       3: obj =   4.893820665e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.934 *    43: obj =   6.913953523e+02 inf =   9.607e-17 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.934 +    43: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.935 Solution found by heuristic: 689.499927153 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.937 +    62: >>>>>   6.899795818e+02 <=   6.899795818e+02   0.0% (1; 3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.937 +    62: mip =   6.899795818e+02 <=     tree is empty   0.0% (0; 7) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.938 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 8ms (t=39947ms, status=5) solveConfig.ts:265:13
+22:24:12.940 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.4657175313129, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:24:12.940 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 5.176585098584332, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:24:12.940 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=39948ms) solveConfig.ts:329:15
+22:24:12.940 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=39948ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:24:12.943       0: obj =   4.717790363e+02 inf =   4.503e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.943       3: obj =   4.899133817e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.943 *    43: obj =   6.912195618e+02 inf =   1.921e-16 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.943 +    43: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.944 Solution found by heuristic: 686.847893353 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.945 +    52: >>>>>   6.877045836e+02 <=   6.907999036e+02   0.5% (6; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.947 Solution found by heuristic: 688.171309667 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.950 Solution found by heuristic: 688.600993539 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.951 +   101: >>>>>   6.889955244e+02 <=   6.892747581e+02 < 0.1% (8; 11) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.951 Solution found by heuristic: 689.122891558 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.952 +   106: mip =   6.891228916e+02 <=     tree is empty   0.0% (0; 31) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:12.953 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 14ms (t=39962ms, status=5) solveConfig.ts:265:13
+22:24:12.954 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 3: LP solve done in 61ms (t=39963ms) solveSimMetric.ts:281:15
+22:24:12.971 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 4: resetting sim environment (t=39979ms) solveSimMetric.ts:202:17
+22:24:12.971 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:24:25.870 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 4: calibration done in 12899ms (t=52879ms) solveSimMetric.ts:219:17
+22:24:25.870 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 4: starting round's LP solve (t=52879ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:24:25.870 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:24:25.870 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:24:25.904 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:24:25.904 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:24:25.904 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:24:25.904 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=52912ms) solveConfig.ts:329:15
+22:24:25.905 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=52914ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:24:25.908       0: obj =   4.621526176e+02 inf =   4.463e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:25.909       3: obj =   4.829332309e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:25.909 *    42: obj =   6.665807304e+02 inf =   2.924e-15 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:25.909 +    42: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:25.910 Solution found by heuristic: 665.881049345 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:25.911 Solution found by heuristic: 665.971719531 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:25.911 +    52: mip =   6.659717195e+02 <=     tree is empty   0.0% (0; 7) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:25.912 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 6ms (t=52920ms, status=5) solveConfig.ts:265:13
+22:24:25.913 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 4: LP solve done in 43ms (t=52922ms) solveSimMetric.ts:281:15
+22:24:25.929 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 5: resetting sim environment (t=52938ms) solveSimMetric.ts:202:17
+22:24:25.929 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:24:38.942 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 5: calibration done in 13011ms (t=65950ms) solveSimMetric.ts:219:17
+22:24:38.942 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 5: starting round's LP solve (t=65951ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:24:38.942 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:24:38.942 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:24:38.983 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:24:38.983 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:24:38.984 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:24:38.984 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=65992ms) solveConfig.ts:329:15
+22:24:38.984 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=65993ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:24:38.988       0: obj =   3.713957377e+02 inf =   4.463e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:38.988       3: obj =   3.832884487e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:38.989 *    42: obj =   5.603889013e+02 inf =   1.546e-16 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:38.989 +    42: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:38.990 Solution found by heuristic: 558.222820417 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:38.992 +    70: mip =   5.582228204e+02 <=     tree is empty   0.0% (0; 11) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:38.992 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 8ms (t=66001ms, status=5) solveConfig.ts:265:13
+22:24:38.994 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 5: LP solve done in 51ms (t=66002ms) solveSimMetric.ts:281:15
+22:24:39.010 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 6: resetting sim environment (t=66019ms) solveSimMetric.ts:202:17
+22:24:39.010 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:24:52.128 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 6: calibration done in 13116ms (t=79136ms) solveSimMetric.ts:219:17
+22:24:52.128 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 6: starting round's LP solve (t=79136ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:24:52.128 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:24:52.128 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:24:52.164 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:24:52.164 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:24:52.164 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:24:52.164 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=79172ms) solveConfig.ts:329:15
+22:24:52.165 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=79173ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:24:52.168       0: obj =   4.117260231e+02 inf =   4.463e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.168       3: obj =   4.278374215e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.169 *    42: obj =   5.963662940e+02 inf =   1.902e-15 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.169 +    42: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.169 Solution found by heuristic: 591.98222084 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.170 Solution found by heuristic: 593.845361679 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.174 Solution found by heuristic: 595.197957932 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.174 +    84: mip =   5.951979579e+02 <=     tree is empty   0.0% (0; 21) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.175 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 11ms (t=79184ms, status=5) solveConfig.ts:265:13
+22:24:52.177 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.4657175313129, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:24:52.177 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 5.176585098584332, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:24:52.177 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=79185ms) solveConfig.ts:329:15
+22:24:52.177 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=79185ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:24:52.180       0: obj =   4.117260231e+02 inf =   4.503e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.180       3: obj =   4.283178520e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.180 *    42: obj =   5.962186675e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.180 +    42: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.181 Solution found by heuristic: 591.98222084 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.181 Solution found by heuristic: 593.845361679 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.186 +    88: >>>>>   5.943048097e+02 <=   5.943832829e+02 < 0.1% (6; 9) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.186 +    90: mip =   5.943048097e+02 <=     tree is empty   0.0% (0; 25) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:24:52.187 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 11ms (t=79196ms, status=5) solveConfig.ts:265:13
+22:24:52.189 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 6: LP solve done in 61ms (t=79197ms) solveSimMetric.ts:281:15
+22:24:52.205 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 7: resetting sim environment (t=79214ms) solveSimMetric.ts:202:17
+22:24:52.205 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:25:05.353 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 7: calibration done in 13146ms (t=92361ms) solveSimMetric.ts:219:17
+22:25:05.353 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 7: starting round's LP solve (t=92361ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:25:05.353 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:25:05.353 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:25:05.389 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:25:05.389 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:25:05.389 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:25:05.389 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=92397ms) solveConfig.ts:329:15
+22:25:05.390 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=92399ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:25:05.393       0: obj =   4.691291026e+02 inf =   4.463e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:05.393       3: obj =   4.868872299e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:05.394 *    39: obj =   6.881576896e+02 inf =   2.321e-15 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:05.394 +    39: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:05.394 Solution found by heuristic: 684.236858968 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:05.394 Solution found by heuristic: 687.062494661 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:05.396 +    54: mip =   6.870624947e+02 <=     tree is empty   0.0% (0; 7) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:05.397 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 6ms (t=92405ms, status=5) solveConfig.ts:265:13
+22:25:05.398 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.43905558723958, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:25:05.398 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 5.421462746460832, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:25:05.398 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=92406ms) solveConfig.ts:329:15
+22:25:05.398 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=92407ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:25:05.401       0: obj =   4.691291026e+02 inf =   4.503e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:05.401       3: obj =   4.874003477e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:05.402 *    39: obj =   6.879951396e+02 inf =   2.321e-15 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:05.402 +    39: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:05.402 Solution found by heuristic: 684.236858968 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:05.405 Solution found by heuristic: 686.651428658 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:05.406 +    76: mip =   6.866514287e+02 <=     tree is empty   0.0% (0; 21) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:05.407 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 9ms (t=92416ms, status=5) solveConfig.ts:265:13
+22:25:05.409 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 7: LP solve done in 57ms (t=92418ms) solveSimMetric.ts:281:15
+22:25:05.426 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 8: resetting sim environment (t=92435ms) solveSimMetric.ts:202:17
+22:25:05.426 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:25:18.487 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 8: calibration done in 13060ms (t=105496ms) solveSimMetric.ts:219:17
+22:25:18.487 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 8: starting round's LP solve (t=105496ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:25:18.487 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:25:18.487 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:25:18.523 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:25:18.523 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:25:18.523 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:25:18.523 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=105532ms) solveConfig.ts:329:15
+22:25:18.524 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=105533ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:25:18.527       0: obj =   4.690952733e+02 inf =   4.463e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:18.527       3: obj =   4.837610552e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:18.528 *    40: obj =   7.007743193e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:18.528 +    40: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:18.528 Solution found by heuristic: 696.295135015 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:18.529 Solution found by heuristic: 698.35014954 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:18.529 Solution found by heuristic: 698.361990865 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:18.530 +    53: mip =   6.983619909e+02 <=     tree is empty   0.0% (0; 9) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:18.531 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 7ms (t=105540ms, status=5) solveConfig.ts:265:13
+22:25:18.532 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.43905558723958, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:25:18.532 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 5.421462746460832, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:25:18.532 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=105541ms) solveConfig.ts:329:15
+22:25:18.532 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=105541ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:25:18.535       0: obj =   4.690952733e+02 inf =   4.503e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:18.535       3: obj =   4.842242619e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:18.535 *    40: obj =   7.005505199e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:18.535 +    40: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:18.535 Solution found by heuristic: 696.295135015 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:18.536 Solution found by heuristic: 698.35014954 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:18.537 +    53: mip =   6.983501495e+02 <=     tree is empty   0.0% (0; 9) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:18.538 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 5ms (t=105546ms, status=5) solveConfig.ts:265:13
+22:25:18.539 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 8: LP solve done in 52ms (t=105548ms) solveSimMetric.ts:281:15
+22:25:18.556 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 9: resetting sim environment (t=105565ms) solveSimMetric.ts:202:17
+22:25:18.556 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:25:31.594 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 9: calibration done in 13031ms (t=118602ms) solveSimMetric.ts:219:17
+22:25:31.594 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 9: starting round's LP solve (t=118602ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:25:31.594 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:25:31.594 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:25:31.639 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:25:31.639 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:25:31.639 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:25:31.639 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=118647ms) solveConfig.ts:329:15
+22:25:31.640 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=118648ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:25:31.643       0: obj =   4.233164360e+02 inf =   4.463e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:31.643       3: obj =   4.379596094e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:31.644 *    38: obj =   6.204805506e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:31.644 +    38: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:31.644 Solution found by heuristic: 617.619344264 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:31.647 +    75: mip =   6.176193443e+02 <=     tree is empty   0.0% (0; 17) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:31.648 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 9ms (t=118657ms, status=5) solveConfig.ts:265:13
+22:25:31.649 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 9: LP solve done in 55ms (t=118657ms) solveSimMetric.ts:281:15
+22:25:31.665 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 10: resetting sim environment (t=118674ms) solveSimMetric.ts:202:17
+22:25:31.665 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:25:44.782 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 10: calibration done in 13115ms (t=131790ms) solveSimMetric.ts:219:17
+22:25:44.782 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 10: starting round's LP solve (t=131791ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:25:44.782 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:25:44.782 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:25:44.839 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:25:44.839 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:25:44.839 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:25:44.839 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=131848ms) solveConfig.ts:329:15
+22:25:44.840 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=131849ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:25:44.844       0: obj =   4.040205978e+02 inf =   4.463e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:44.844       3: obj =   4.189106043e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:44.844 *    43: obj =   5.930813710e+02 inf =   1.987e-15 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:44.844 +    43: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:44.845 Solution found by heuristic: 588.098388337 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:44.845 Solution found by heuristic: 589.843134391 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:44.848 Solution found by heuristic: 591.293974141 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:44.849 +    88: mip =   5.912939741e+02 <=     tree is empty   0.0% (0; 27) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:44.850 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 10ms (t=131859ms, status=5) solveConfig.ts:265:13
+22:25:44.851 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.4657175313129, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:25:44.851 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 5.176585098584332, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:25:44.851 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=131859ms) solveConfig.ts:329:15
+22:25:44.852 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=131860ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:25:44.854       0: obj =   4.040205978e+02 inf =   4.503e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:44.854       3: obj =   4.193538185e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:44.855 *    43: obj =   5.929206007e+02 inf =   1.067e-15 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:44.855 +    43: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:44.855 Solution found by heuristic: 588.098388337 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:44.856 Solution found by heuristic: 589.843134391 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:44.860 +    95: mip =   5.898431344e+02 <=     tree is empty   0.0% (0; 23) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:44.861 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 9ms (t=131869ms, status=5) solveConfig.ts:265:13
+22:25:44.862 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 10: LP solve done in 80ms (t=131871ms) solveSimMetric.ts:281:15
+22:25:44.879 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 11: resetting sim environment (t=131887ms) solveSimMetric.ts:202:17
+22:25:44.879 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:25:57.771 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 11: calibration done in 12892ms (t=144780ms) solveSimMetric.ts:219:17
+22:25:57.771 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 11: starting round's LP solve (t=144780ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:25:57.771 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:25:57.771 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:25:57.807 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:25:57.807 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:25:57.807 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:25:57.807 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=144815ms) solveConfig.ts:329:15
+22:25:57.808 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=144816ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:25:57.811       0: obj =   4.409925101e+02 inf =   4.463e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:57.811       3: obj =   4.550772431e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:57.812 *    37: obj =   6.534511284e+02 inf =   1.110e-16 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:57.812 +    37: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:57.814 Solution found by heuristic: 648.910328403 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:57.815 Solution found by heuristic: 650.407929188 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:57.816 Solution found by heuristic: 650.629400185 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:57.817 +    82: mip =   6.506294002e+02 <=     tree is empty   0.0% (0; 23) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:25:57.818 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 10ms (t=144826ms, status=5) solveConfig.ts:265:13
+22:25:57.819 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 11: LP solve done in 47ms (t=144827ms) solveSimMetric.ts:281:15
+22:25:57.835 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 12: resetting sim environment (t=144844ms) solveSimMetric.ts:202:17
+22:25:57.836 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:26:10.946 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 12: calibration done in 13109ms (t=157954ms) solveSimMetric.ts:219:17
+22:26:10.946 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 12: starting round's LP solve (t=157954ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:26:10.946 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:26:10.946 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:26:10.985 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:26:10.985 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:26:10.985 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:26:10.985 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=157994ms) solveConfig.ts:329:15
+22:26:10.986 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=157995ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:26:10.989       0: obj =   5.253170298e+02 inf =   4.463e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:10.989       3: obj =   5.437696479e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:10.990 *    40: obj =   7.757041128e+02 inf =   9.607e-17 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:10.990 +    40: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:10.990 Solution found by heuristic: 770.829461378 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:10.991 Solution found by heuristic: 772.694648849 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:10.991 +    52: >>>>>   7.729018013e+02 <=   7.742504143e+02   0.2% (3; 2) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:10.992 Solution found by heuristic: 773.949098367 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:10.992 +    56: mip =   7.739490984e+02 <=     tree is empty   0.0% (0; 11) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:10.999 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 13ms (t=158008ms, status=5) solveConfig.ts:265:13
+22:26:11.002 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.43905558723958, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:26:11.002 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 5.421462746460832, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:26:11.002 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=158011ms) solveConfig.ts:329:15
+22:26:11.003 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=158012ms, 484 vars, 154 constraints) solveConfig.ts:259:13
+22:26:11.006       0: obj =   5.253170298e+02 inf =   4.503e+00 (3) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:11.006       3: obj =   5.442770675e+02 inf =   0.000e+00 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:11.006 *    40: obj =   7.754619089e+02 inf =   9.607e-17 (0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:11.006 +    40: mip =     not found yet <=              +inf        (1; 0) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:11.006 Solution found by heuristic: 770.829461378 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:11.007 Solution found by heuristic: 772.694648849 ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:11.008 +    52: >>>>>   7.729018013e+02 <=   7.739716000e+02   0.1% (2; 2) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:11.009 +    63: mip =   7.729018013e+02 <=     tree is empty   0.0% (0; 15) ee7c2cfb-c883-4f5d-ad11-06b5aaaaec67:1:5786
+22:26:11.010 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 7ms (t=158019ms, status=5) solveConfig.ts:265:13
+22:26:11.012 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 12: LP solve done in 65ms (t=158020ms) solveSimMetric.ts:281:15
+22:26:13.901 LOG /src/helpers/perfTrace.ts:127:14
+ →  [perf] sim-backed solve perfTrace.ts:86:24
+22:26:13.901 console.table() perfTrace.ts:87:13
+(index)	name	count	totalMs	avgMs	minMs	maxMs	pctOfTotal
+0	simWorkerRoundTrip	360	565462	1570.7277777777779	1418	2261	40.78485283648683
+1	solveConfigForSimMetric	1	160565	160565	160565	160565	11.581007911567015
+2	calibrateWeights	12	156712	13059.333333333334	12838	13267	11.303104112586741
+3	runCalibrationBatches	12	156709	13059.083333333334	12837	13267	11.302887732779594
+4	simJobQueueDispatch	12	149766	12480.5	12254	12776	10.802112732436992
+5	simWorkerWasmInstantiate	48	18297	381.1875	225	496	1.3197004437949844
+6	round:1	1	13342	13342	13342	13342	0.962313128989052
+7	round:2	1	13294	13294	13294	13294	0.9588510520746857
+8	round:7	1	13221	13221	13221	13221	0.9535858101007537
+9	round:10	1	13213	13213	13213	13213	0.9530087972816925
+10	round:6	1	13195	13195	13195	13195	0.9517105184388053
+11	round:12	1	13194	13194	13194	13194	0.9516383918364226
+12	round:8	1	13130	13130	13130	13130	0.9470222892839343
+13	round:9	1	13109	13109	13109	13109	0.9455076306338991
+14	round:5	1	13081	13081	13081	13081	0.9434880857671855
+15	round:4	1	12959	12959	12959	12959	0.9346886402765046
+16	round:11	1	12957	12957	12957	12957	0.9345443870717393
+17	round:3	1	12916	12916	12916	12916	0.9315871963740514
+18	buildReplicateJobBundles	12	4779	398.25	303	459	0.34469303278658964
+19	buildReplicateJobBundles:unaccounted	12	3871	322.5833333333333	236	385	0.2792020778231614
+20	coordinatorWasmInstantiate	12	3454	287.8333333333333	208	352	0.24912528462960465
+21	measureFinalSimMetrics	1	2871	2871	2871	2871	0.20707547544053126
+22	computeStatWeights	12	2164	180.33333333333334	168	188	0.15608196755601172
+23	solveConfig	26	1506	57.92307692307692	43	80	0.10862266318824106
+24	statWeightRequestsWasmCall	12	830	69.16666666666667	58	119	0.05986507997758306
+25	prepareItemCandidates	13	488	37.53846153846154	32	57	0.03519778196272353
+26	runLPModelWithAvoidanceConvergence	13	252	19.384615384615383	10	38	0.018175903800422805
+27	runLPModel	21	242	11.523809523809524	6	27	0.017454637776596504
+28	decodeSimResult	360	201	0.5583333333333333	0	3	0.014497447078908666
+29	glpkSolve	21	190	9.047619047619047	5	14	0.013704054452699736
+30	isSignificantImprovement	12	120	10	9	11	0.008655192285915622
+31	round:0	1	80	80	80	80	0.005770128190610415
+32	statWeightsRequestEncode	12	67	5.583333333333333	4	13	0.004832482359636223
+33	avoidanceConvergenceIterations	13	21	1.6153846153846154	1	2	0.0015146586500352339
+34	buildLpModel	21	20	0.9523809523809523	0	2	0.0014425320476526037
+35	transformChosenItems	21	17	0.8095238095238095	0	2	0.0012261522405047133
+36	resetSimEnvironment	12	16	1.3333333333333333	0	6	0.0011540256381220829
+37	glpkModuleAcquire	21	15	0.7142857142857143	0	15	0.0010818990357394527
+38	buildStatWeightsRequest	12	11	0.9166666666666666	0	2	0.0007933926262089321
+39	solveConfig:unaccounted	13	9	0.6923076923076923	0	1	0.0006491394214436716
+40	runLPModelWithAvoidanceConvergence:unaccounted	13	8	0.6153846153846154	0	2	0.0005770128190610414
+41	round:12:unaccounted	1	8	8	8	8	0.0005770128190610414
+42	round:1:unaccounted	1	7	7	7	7	0.0005048862166784113
+43	round:2:unaccounted	1	7	7	7	7	0.0005048862166784113
+44	round:4:unaccounted	1	7	7	7	7	0.0005048862166784113
+45	round:5:unaccounted	1	7	7	7	7	0.0005048862166784113
+46	round:6:unaccounted	1	7	7	7	7	0.0005048862166784113
+47	round:8:unaccounted	1	7	7	7	7	0.0005048862166784113
+48	round:10:unaccounted	1	7	7	7	7	0.0005048862166784113
+49	round:11:unaccounted	1	7	7	7	7	0.0005048862166784113
+50	round:0:unaccounted	1	6	6	6	6	0.0004327596142957811
+51	round:3:unaccounted	1	6	6	6	6	0.0004327596142957811
+52	round:7:unaccounted	1	6	6	6	6	0.0004327596142957811
+53	round:9:unaccounted	1	6	6	6	6	0.0004327596142957811
+54	getConsumableLPItems	13	4	0.3076923076923077	0	1	0.0002885064095305207
+55	filterItemsForClass	1	2	2	2	2	0.00014425320476526036
+56	splitGearAndConsumables	13	2	0.15384615384615385	0	1	0.00014425320476526036
+57	solveConfigForSimMetric:unaccounted	1	1	1	1	1	0.00007212660238263018
+58	runLPModel:unaccounted	21	0	0	0	0	0
+59	runCalibrationBatches:unaccounted	12	0	0	0	0	0
+22:26:13.907 console.table() index.ts:41:17
+(index)	name	count	totalMs	avgMs	minMs	maxMs	pctOfTotal
+0	simWorkerRoundTrip	360	565462	1570.7277777777779	1418	2261	40.78485283648683
+1	solveConfigForSimMetric	1	160565	160565	160565	160565	11.581007911567015
+2	calibrateWeights	12	156712	13059.333333333334	12838	13267	11.303104112586741
+3	runCalibrationBatches	12	156709	13059.083333333334	12837	13267	11.302887732779594
+4	simJobQueueDispatch	12	149766	12480.5	12254	12776	10.802112732436992
+5	simWorkerWasmInstantiate	48	18297	381.1875	225	496	1.3197004437949844
+6	round:1	1	13342	13342	13342	13342	0.962313128989052
+7	round:2	1	13294	13294	13294	13294	0.9588510520746857
+8	round:7	1	13221	13221	13221	13221	0.9535858101007537
+9	round:10	1	13213	13213	13213	13213	0.9530087972816925
+10	round:6	1	13195	13195	13195	13195	0.9517105184388053
+11	round:12	1	13194	13194	13194	13194	0.9516383918364226
+12	round:8	1	13130	13130	13130	13130	0.9470222892839343
+13	round:9	1	13109	13109	13109	13109	0.9455076306338991
+14	round:5	1	13081	13081	13081	13081	0.9434880857671855
+15	round:4	1	12959	12959	12959	12959	0.9346886402765046
+16	round:11	1	12957	12957	12957	12957	0.9345443870717393
+17	round:3	1	12916	12916	12916	12916	0.9315871963740514
+18	buildReplicateJobBundles	12	4779	398.25	303	459	0.34469303278658964
+19	buildReplicateJobBundles:unaccounted	12	3871	322.5833333333333	236	385	0.2792020778231614
+20	coordinatorWasmInstantiate	12	3454	287.8333333333333	208	352	0.24912528462960465
+21	measureFinalSimMetrics	1	2871	2871	2871	2871	0.20707547544053126
+22	computeStatWeights	12	2164	180.33333333333334	168	188	0.15608196755601172
+23	solveConfig	26	1506	57.92307692307692	43	80	0.10862266318824106
+24	statWeightRequestsWasmCall	12	830	69.16666666666667	58	119	0.05986507997758306
+25	prepareItemCandidates	13	488	37.53846153846154	32	57	0.03519778196272353
+26	runLPModelWithAvoidanceConvergence	13	252	19.384615384615383	10	38	0.018175903800422805
+27	runLPModel	21	242	11.523809523809524	6	27	0.017454637776596504
+28	decodeSimResult	360	201	0.5583333333333333	0	3	0.014497447078908666
+29	glpkSolve	21	190	9.047619047619047	5	14	0.013704054452699736
+30	isSignificantImprovement	12	120	10	9	11	0.008655192285915622
+31	round:0	1	80	80	80	80	0.005770128190610415
+32	statWeightsRequestEncode	12	67	5.583333333333333	4	13	0.004832482359636223
+33	avoidanceConvergenceIterations	13	21	1.6153846153846154	1	2	0.0015146586500352339
+34	buildLpModel	21	20	0.9523809523809523	0	2	0.0014425320476526037
+35	transformChosenItems	21	17	0.8095238095238095	0	2	0.0012261522405047133
+36	resetSimEnvironment	12	16	1.3333333333333333	0	6	0.0011540256381220829
+37	glpkModuleAcquire	21	15	0.7142857142857143	0	15	0.0010818990357394527
+38	buildStatWeightsRequest	12	11	0.9166666666666666	0	2	0.0007933926262089321
+39	solveConfig:unaccounted	13	9	0.6923076923076923	0	1	0.0006491394214436716
+40	runLPModelWithAvoidanceConvergence:unaccounted	13	8	0.6153846153846154	0	2	0.0005770128190610414
+41	round:12:unaccounted	1	8	8	8	8	0.0005770128190610414
+42	round:1:unaccounted	1	7	7	7	7	0.0005048862166784113
+43	round:2:unaccounted	1	7	7	7	7	0.0005048862166784113
+44	round:4:unaccounted	1	7	7	7	7	0.0005048862166784113
+45	round:5:unaccounted	1	7	7	7	7	0.0005048862166784113
+46	round:6:unaccounted	1	7	7	7	7	0.0005048862166784113
+47	round:8:unaccounted	1	7	7	7	7	0.0005048862166784113
+48	round:10:unaccounted	1	7	7	7	7	0.0005048862166784113
+49	round:11:unaccounted	1	7	7	7	7	0.0005048862166784113
+50	round:0:unaccounted	1	6	6	6	6	0.0004327596142957811
+51	round:3:unaccounted	1	6	6	6	6	0.0004327596142957811
+52	round:7:unaccounted	1	6	6	6	6	0.0004327596142957811
+53	round:9:unaccounted	1	6	6	6	6	0.0004327596142957811
+54	getConsumableLPItems	13	4	0.3076923076923077	0	1	0.0002885064095305207
+55	filterItemsForClass	1	2	2	2	2	0.00014425320476526036
+56	splitGearAndConsumables	13	2	0.15384615384615385	0	1	0.00014425320476526036
+57	solveConfigForSimMetric:unaccounted	1	1	1	1	1	0.00007212660238263018
+58	runLPModel:unaccounted	21	0	0	0	0	0
+59	runCalibrationBatches:unaccounted	12	0	0	0	0	0
+22:26:13.909 LOG Go to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fsolver%2Findex.ts%3A164%3A4 
+ →  worker result __root.tsx:54:18
+22:26:13.909 LOG Go to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fsolver%2Findex.ts%3A169%3A4 
+ →  [perf] main-thread solve() wall clock: 160918.0ms __root.tsx:54:18
+22:26:13.914 XHR POST
+http://localhost:3000/api/track
+[HTTP/1.1 404 Not Found 1ms]
+22:46:33.733 XHR POST
+http://localhost:3000/api/track
+[HTTP/1.1 404 Not Found 1ms]
+22:46:34.083 LOG /src/sim/solveSimMetric.ts:600:4
+ →  [sim] round 0: starting round's LP solve (t=351ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then. solveSimMetric.ts:261:15
+22:46:34.083 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:46:34.083 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:46:34.121 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:46:34.121 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:46:34.121 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:46:34.121 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=389ms) solveConfig.ts:329:15
+22:46:34.121 LOG /src/solver/solveConfig.ts:305:3
+ →  [lp] creating shared glpk worker (t=389ms) solveConfig.ts:174:13
+22:46:34.136 LOG /src/solver/solveConfig.ts:310:4
+ →  [lp] shared glpk worker ready (t=405ms) solveConfig.ts:180:21
+22:46:34.139 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=408ms, 5326 vars, 259 constraints) solveConfig.ts:259:13
+22:46:34.166       0: obj =   9.039302353e+02 inf =   6.235e+00 (5) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:34.169      28: obj =   9.016114956e+02 inf =   5.551e-17 (0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:34.175 *   177: obj =   1.172607341e+03 inf =   0.000e+00 (0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:34.175 +   177: mip =     not found yet <=              +inf        (1; 0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:34.176 +   177: >>>>>   1.172607341e+03 <=   1.172607341e+03   0.0% (1; 0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:34.177 +   177: mip =   1.172607341e+03 <=     tree is empty   0.0% (0; 1) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:34.181 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 42ms (t=450ms, status=5) solveConfig.ts:265:13
+22:46:34.188 LOG /src/sim/solveSimMetric.ts:620:4
+ →  [sim] round 0: LP solve done in 104ms (t=456ms) solveSimMetric.ts:281:15
+22:46:34.197 LOG /src/sim/solveSimMetric.ts:521:5
+ →  [sim] round 1: resetting sim environment (t=465ms) solveSimMetric.ts:202:17
+22:46:34.197 [sim] Recycling wasm coordinator + worker pool between calibration rounds. statWeightsClient.ts:48:11
+22:46:47.464 LOG /src/sim/solveSimMetric.ts:545:5
+ →  [sim] round 1: calibration done in 13268ms (t=13733ms) solveSimMetric.ts:219:17
+22:46:47.464 LOG /src/sim/solveSimMetric.ts:564:6
+ →  [sim] round 1: measuring achievable scale for [tps, tmi] (4 silent LP solves, t=13733ms) solveSimMetric.ts:226:19
+22:46:47.464 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:46:47.464 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:46:47.495 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:46:47.495 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:46:47.495 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:46:47.495 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=13764ms) solveConfig.ts:329:15
+22:46:47.496 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:46:47.496 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:46:47.517 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:46:47.517 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:46:47.517 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:46:47.517 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=13786ms) solveConfig.ts:329:15
+22:46:47.517 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:46:47.517 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:46:47.544 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:46:47.544 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:46:47.544 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:46:47.544 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=13812ms) solveConfig.ts:329:15
+22:46:47.544 LOG /src/solver/solveConfig.ts:597:2
+ →  worker started solveConfig.ts:399:11
+22:46:47.544 LOG /src/solver/solveConfig.ts:598:2
+ →  
+Object { items: (56) […], options: {…} }
+solveConfig.ts:400:11
+22:46:47.564 LOG /src/solver/solveConfig.ts:616:2
+ →  avoidance target: 45.47 solveConfig.ts:415:11
+22:46:47.564 LOG /src/solver/solveConfig.ts:617:2
+ →  uncritability target: 4.8 solveConfig.ts:416:11
+22:46:47.564 LOG /src/solver/solveConfig.ts:618:2
+ →  items: 62 solveConfig.ts:417:11
+22:46:47.564 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 1/5 starting (t=13833ms) solveConfig.ts:329:15
+22:46:47.567 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=13835ms, 4730 vars, 252 constraints) solveConfig.ts:259:13
+22:46:47.570 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=13839ms, 1654 vars, 213 constraints) solveConfig.ts:259:13
+22:46:47.572 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=13841ms, 3231 vars, 234 constraints) solveConfig.ts:259:13
+22:46:47.574 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=13843ms, 1654 vars, 213 constraints) solveConfig.ts:259:13
+22:46:47.587       0: obj =   8.085523111e+02 inf =   6.235e+00 (5) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:47.589      28: obj =   8.482324582e+02 inf =   2.220e-16 (0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:47.594 *   161: obj =   1.330678178e+03 inf =   6.782e-16 (0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:47.594 +   161: mip =     not found yet <=              +inf        (1; 0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:47.624 Solution found by heuristic: 1316.66202853 c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:47.635 Solution found by heuristic: 1327.12605467 c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:47.640 Solution found by heuristic: 1327.79574768 c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:47.643 +   263: >>>>>   1.328231981e+03 <=   1.329053378e+03 < 0.1% (10; 6) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:47.687 +   353: mip =   1.328231981e+03 <=     tree is empty   0.0% (0; 51) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:47.691 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 125ms (t=13960ms, status=5) solveConfig.ts:265:13
+22:46:47.695 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.385562047081194, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:46:47.695 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 5.176585098584332, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:46:47.695 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=13964ms) solveConfig.ts:329:15
+22:46:47.696 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=13965ms, 4730 vars, 252 constraints) solveConfig.ts:259:13
+22:46:47.697       0: obj =  -8.254637176e+02 inf =   2.750e+00 (3) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:47.697       2: obj =  -8.391135127e+02 inf =   0.000e+00 (0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:47.699 *    88: obj =  -4.998330197e+02 inf =   1.110e-16 (0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:47.699 +    88: mip =     not found yet <=              +inf        (1; 0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:47.699 Solution found by heuristic: -505.374229367 c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:47.702 Solution found by heuristic: -504.084719715 c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:49.345 +  4559: mip =  -5.040847197e+02 <=     tree is empty   0.0% (0; 3399) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:49.347 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 1776ms (t=15615ms, status=5) solveConfig.ts:265:13
+22:46:49.353 LOG /src/solver/solveConfig.ts:565:4
+ →  item avoidance: 45.44606404551233, real target: 45.47, LP constraint this iteration: 45.47 solveConfig.ts:368:15
+22:46:49.353 LOG /src/solver/solveConfig.ts:568:4
+ →  item uncrit: 8.684875212755973, real target: 4.8, LP constraint this iteration: 4.8 solveConfig.ts:372:15
+22:46:49.353 LOG /src/solver/solveConfig.ts:513:4
+ →  [lp] avoidance-convergence iteration 2/5 starting (t=15622ms) solveConfig.ts:329:15
+22:46:49.355 LOG /src/solver/solveConfig.ts:410:3
+ →  [lp] starting glpk.solve (t=15623ms, 1654 vars, 213 constraints) solveConfig.ts:259:13
+22:46:49.358       0: obj =   5.248996016e+04 inf =   5.796e+00 (5) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:49.359      28: obj =   5.127394415e+04 inf =   0.000e+00 (0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:49.361 *   136: obj =   7.035002418e+04 inf =   0.000e+00 (0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:49.361 +   136: mip =     not found yet <=              +inf        (1; 0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:49.362 +   136: >>>>>   7.035002418e+04 <=   7.035002418e+04   0.0% (1; 0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:49.362 +   136: mip =   7.035002418e+04 <=     tree is empty   0.0% (0; 1) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:49.365 LOG /src/solver/solveConfig.ts:415:3
+ →  [lp] glpk.solve done in 1793ms (t=15634ms, status=5) solveConfig.ts:265:13
+22:46:49.370       0: obj =  -5.140244751e+04 inf =   2.750e+00 (3) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:49.370       2: obj =  -4.950547326e+04 inf =   0.000e+00 (0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:49.372 *    83: obj =  -4.003318334e+04 inf =   2.675e-16 (0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:49.372 +    83: mip =     not found yet <=              +inf        (1; 0) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:49.372 Solution found by heuristic: -40064.3664443 c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:54.371 + 16334: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (4771; 1791) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:46:59.369 + 31292: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (9372; 3683) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:47:04.369 + 45348: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (13817; 5606) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:47:09.369 + 58325: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (18254; 7408) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:47:14.368 + 69794: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (22178; 9269) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:47:19.368 + 75931: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (24358; 11957) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:47:24.367 + 83727: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (29380; 13342) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:47:29.367 + 90910: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (34081; 14677) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:47:34.367 + 97261: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (38125; 15884) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:47:39.367 +103230: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (42015; 17037) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:47:44.371 +107940: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (45112; 17975) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:47:49.378 +112318: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (47985; 18775) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:47:54.386 +116165: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (50431; 19539) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:47:59.389 +120755: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (53455; 20483) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:48:04.392 +125130: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (56320; 21369) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:48:09.396 +129188: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (59031; 22200) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:48:14.401 +133200: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (61685; 22969) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:48:19.402 +137188: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (64321; 23654) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:48:24.409 +140607: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (66523; 24342) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:48:29.410 +143858: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (68686; 25009) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:48:34.415 +146985: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (70759; 25626) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:48:39.421 +150159: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (72885; 26205) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:48:44.424 +153133: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (74855; 26799) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:48:49.427 +156167: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (76895; 27343) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:48:54.432 +159205: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (78927; 27857) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:48:59.435 +162234: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (80946; 28323) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:49:04.438 +164933: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (82731; 28801) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:49:09.442 +167371: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (84346; 29288) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:49:14.450 +169736: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (85939; 29712) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:49:19.465 +172206: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (87599; 30134) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:49:24.475 +174928: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (89424; 30535) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:49:29.480 +177604: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (91226; 30958) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:49:34.485 +180370: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (93082; 31313) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:49:39.507 +182527: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (94525; 31624) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:49:44.521 +184438: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (95803; 31948) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:49:49.531 +186698: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (97329; 32265) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786
+22:49:54.544 +189010: mip =  -4.006436644e+04 <=  -4.005982938e+04 < 0.1% (98886; 32549) c6f77802-52b4-4451-bbe0-62a770dbb2c8:1:5786

@@ -62,6 +62,8 @@ export interface WorkerProgressDetail {
 	phase?: SimMetricSolvePhase;
 	calibrationCompletedIterations?: number;
 	calibrationTotalIterations?: number;
+	calibrationCompletedSims?: number;
+	calibrationTotalSims?: number;
 }
 
 type WorkerMessage =
@@ -200,6 +202,35 @@ export const solve = async (
 	});
 };
 
+// Turns one WorkerProgressDetail into a 0..1 fraction of "how far through this config's solve
+// are we". For plain "stats"/"ehp" solves this is just the avoidance-convergence LP sub-loop's
+// own iteration/maxIterations. Sim-backed objectives (see solveSimMetric.ts) run several whole
+// calibration rounds (simIteration of maxSimIterations) per config, each of which recalibrates
+// (the slow part, usually ~15s+) and then re-solves the LP (the fast part, usually <1s) - so the
+// primary axis has to be simIteration/maxSimIterations, with the round's own phase progress as a
+// sub-fraction *within* that round. Getting this wrong (e.g. just using iteration/maxIterations
+// directly, which resets to 0/1 every round during calibration - see solveSimMetric.ts's
+// onCalibrationProgress call sites) is what made the progress bar visibly jump backward every
+// round: a real bug a user spotted, not a hypothetical.
+function computeInnerFraction(progress: WorkerProgressDetail): number {
+	if (progress.maxSimIterations == null || progress.simIteration == null) {
+		return progress.iteration / progress.maxIterations;
+	}
+	// Calibration (running the sims) dominates a round's wall time; the round's LP re-solve
+	// afterward is comparatively instant. Weighting the split 90/10 keeps the bar's rate roughly
+	// proportional to where the time is actually going, rather than implying they're equal-cost.
+	let roundFraction = 0;
+	if (progress.phase === "calibrating") {
+		roundFraction = progress.calibrationTotalIterations
+			? (0.9 * (progress.calibrationCompletedIterations ?? 0)) /
+				progress.calibrationTotalIterations
+			: 0;
+	} else if (progress.phase === "solving") {
+		roundFraction = 0.9 + 0.1 * (progress.iteration / progress.maxIterations);
+	}
+	return (progress.simIteration + roundFraction) / progress.maxSimIterations;
+}
+
 export interface SolveAllProgress {
 	configIndex: number;
 	totalConfigs: number;
@@ -257,7 +288,7 @@ export const solveAll = async (
 						configIndex,
 						totalConfigs,
 						configName: solverConfig.name,
-						innerFraction: progress.iteration / progress.maxIterations,
+						innerFraction: computeInnerFraction(progress),
 						detail: progress,
 					}),
 				(result) => {

@@ -1,6 +1,5 @@
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import Link from "@mui/material/Link";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
@@ -652,20 +651,6 @@ export default function RaidProfileFields({
 						</Select>
 					</Stack>
 				</Stack>
-			</Stack>
-
-			<Stack spacing={0.5}>
-				<Typography variant="caption" color="text.disabled">
-					Reference encounter:{" "}
-					<Link
-						href="https://www.wowhead.com/tbc/zone=4131/magtheridons-lair"
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						Magtheridon's Lair
-					</Link>{" "}
-					profile, as shipped by tbc-new's own defaults.
-				</Typography>
 			</Stack>
 		</Stack>
 	);

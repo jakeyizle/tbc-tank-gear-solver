@@ -52,7 +52,9 @@ export default function ConsumablesRow({ items }: ConsumablesRowProps) {
 							consumable?.wowheadId ?? 0,
 							consumable?.id ?? item.id,
 						);
-						const tooltip = ItemTooltips.find((t) => t.id === item.id)?.icon;
+						const tooltip = ItemTooltips.find(
+							(t) => t.id === String(consumable?.wowheadId),
+						)?.icon;
 
 						return (
 							<Stack

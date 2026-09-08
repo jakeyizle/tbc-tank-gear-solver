@@ -43,9 +43,11 @@ export interface SimMetricSolveProgress extends SolveProgress {
 	simIteration: number;
 	maxSimIterations: number;
 	phase: SimMetricSolvePhase;
-	// only meaningful when phase === "calibrating"
+	// only meaningful when phase === "calibrating" or "measuring"
 	calibrationCompletedIterations?: number;
 	calibrationTotalIterations?: number;
+	calibrationCompletedSims?: number;
+	calibrationTotalSims?: number;
 }
 
 export interface SimMetricSolveResult {
@@ -334,17 +336,20 @@ export async function measureMetricAchievableScale(
 	rawVector: Stat[],
 	eligibleItems: InputItem[],
 	options: Omit<SolveOptions, "optimizeStats" | "objectiveMode">,
+	lpQualityOverride?: SolveOptions["lpQualityOverride"],
 ): Promise<number | undefined> {
 	const [bestProposal, worstProposal] = await Promise.all([
 		solveConfig(eligibleItems, {
 			...options,
 			objectiveMode: "stats",
 			optimizeStats: rawVector,
+			lpQualityOverride,
 		}),
 		solveConfig(eligibleItems, {
 			...options,
 			objectiveMode: "stats",
 			optimizeStats: negateVector(rawVector),
+			lpQualityOverride,
 		}),
 	]);
 	const config = new SolverConfiguration({
@@ -479,6 +484,8 @@ export async function solveConfigForSimMetric(
 					calibrationCompletedIterations:
 						calibrationProgress.completedIterations,
 					calibrationTotalIterations: calibrationProgress.totalIterations,
+					calibrationCompletedSims: calibrationProgress.completedSims,
+					calibrationTotalSims: calibrationProgress.totalSims,
 				});
 
 			let optimizeStats: Stat[];
@@ -546,6 +553,20 @@ export async function solveConfigForSimMetric(
 					`[sim] round ${roundIndex}: calibration done in ${calibrateMs.toFixed(0)}ms (t=${performance.now().toFixed(0)}ms)`,
 				);
 
+				// Fire the "solving" tick here, before measureMetricAchievableScale's silent
+				// solveConfig calls below - those are real LP solves too (just not wired to report
+				// progress), so leaving the tick any later means the UI keeps showing a 100%-done
+				// "Simulating" line for however long those silent solves take, which reads as a hang
+				// even though solving has already started. See this block's own comment below for
+				// why those calls have no onProgress wired up.
+				onProgress?.({
+					iteration: 0,
+					maxIterations: 1,
+					simIteration: iteration,
+					maxSimIterations: maxIterations,
+					phase: "solving",
+				});
+
 				// Measure each active metric's real, LP-grounded achievable score swing against
 				// this exact pool/options/hard-constraints - see measureMetricAchievableScale's own
 				// doc comment for why this replaces an earlier per-stat item-range heuristic that
@@ -571,6 +592,15 @@ export async function solveConfigForSimMetric(
 								perMetricStatWeights?.[metric] ?? [],
 								eligibleItems,
 								options,
+								// This result only normalizes a blend ratio, never picks final gear, so it
+								// doesn't need the same precision as a real solve - a real empirical sweep
+								// (this session's investigation) found the default 0.01% gap tolerance let
+								// hard instances grind for 15-20+ seconds, while 1% resolved the same
+								// instances in well under 100ms with the resulting scale moving by under 1%
+								// in 3 of 4 hard cases (1.7% in the worst) - negligible for a normalization
+								// factor. 5% gap bought no further speedup over 1% in that data, only extra
+								// drift, so 1% is the sweet spot, not just "as loose as possible."
+								{ mipGap: 0.01 },
 							),
 						),
 					);
@@ -598,8 +628,20 @@ export async function solveConfigForSimMetric(
 			}
 
 			console.log(
-				`[sim] round ${roundIndex}: starting round's LP solve (t=${performance.now().toFixed(0)}ms) - note: onProgress here only fires AFTER the avoidance-convergence loop's first glpk.solve() completes (see solveConfig.ts's logging), so the UI can still show a stale "Calibrating"/no update at all until then.`,
+				`[sim] round ${roundIndex}: starting round's LP solve (t=${performance.now().toFixed(0)}ms)`,
 			);
+			// Round 1 (iteration === 0) never runs the achievable-scale block above, so it never got
+			// the earlier "solving" tick - fire it here instead, right before solveConfig's own
+			// avoidance-convergence loop starts (whose own onProgress below only fires after its
+			// loop's first glpk.solve() completes). For iteration > 0 this is a harmless repeat of
+			// the tick already fired above.
+			onProgress?.({
+				iteration: 0,
+				maxIterations: 1,
+				simIteration: iteration,
+				maxSimIterations: maxIterations,
+				phase: "solving",
+			});
 			const stopSolve = perfTrace.mark("solveConfig");
 			const proposal = await solveConfig(
 				eligibleItems,
@@ -754,6 +796,8 @@ export async function solveConfigForSimMetric(
 				phase: "measuring",
 				calibrationCompletedIterations: calibrationProgress.completedIterations,
 				calibrationTotalIterations: calibrationProgress.totalIterations,
+				calibrationCompletedSims: calibrationProgress.completedSims,
+				calibrationTotalSims: calibrationProgress.totalSims,
 			}),
 	);
 	const measureFinalMs = stopMeasureFinal();
