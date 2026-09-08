@@ -1,8 +1,16 @@
 import { getBaseStats } from "#/data/baseStats";
 import { calculateStatValue } from "#/helpers/stats";
+import { raidProfileToModifierSources } from "#/sim/raidProfileToModifierSources";
 import { CONSUMABLE_TYPES } from "#/solver/itemSlots";
 import type { LPItem, ModifierSource } from "#/solver/types";
 import type { BaseConfig, SolveResult, SolverConfiguration } from "#/types/SolverConfig";
+
+const SIM_OBJECTIVE_MODES = new Set<SolverConfiguration["objectiveMode"]>([
+	"tps",
+	"dtps",
+	"tmi",
+	"balanced",
+]);
 
 interface HeadlineStat {
 	name: string;
@@ -18,10 +26,17 @@ export function buildStatInputs(
 	const filteredItems = includeBuffsConsumables
 		? items
 		: items.filter((item) => !CONSUMABLE_TYPES.includes(item.type));
+	// Sim objective modes configure buffs via the raid profile, not the formula-mode buffs list
+	// (which stays hidden and stuck at its all-unchecked default whenever a sim objective mode is
+	// active - see ConfigCard.tsx) - so the buffed-stats display must derive its modifier sources
+	// from the raid profile instead for those modes.
+	const buffModifierSources = SIM_OBJECTIVE_MODES.has(solverConfig.objectiveMode)
+		? raidProfileToModifierSources(baseConfig.simCalibrationProfile.raidProfile)
+		: solverConfig.buffs;
 	const modifierSources = [
 		...baseConfig.abilitySources,
 		...baseConfig.talentSources,
-		...(includeBuffsConsumables ? solverConfig.buffs : []),
+		...(includeBuffsConsumables ? buffModifierSources : []),
 	];
 	return { items: filteredItems, modifierSources };
 }

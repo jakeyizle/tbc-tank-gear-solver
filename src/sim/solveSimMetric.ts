@@ -28,6 +28,7 @@ import {
 	resetSimEnvironment,
 	type SimMetric,
 } from "./calibrateWeights";
+import { raidProfileToModifierSources } from "./raidProfileToModifierSources";
 import {
 	type ConsumablesOverride,
 	splitGearAndConsumables,
@@ -419,6 +420,13 @@ export async function solveConfigForSimMetric(
 	perfTrace.reset();
 	const stopSolveConfigForSimMetric = perfTrace.mark("solveConfigForSimMetric");
 	const roundMsList: number[] = [];
+
+	// Sim objective modes configure buffs via the raid profile, not the formula-mode buffs list
+	// (BuffSection stays hidden and options.buffs stuck at its all-unchecked default whenever a
+	// sim objective mode is active - see ConfigCard.tsx) - so every solveConfig/SolverConfiguration
+	// call below must use the raid profile's translated buffs instead of whatever options.buffs
+	// was passed in.
+	options = { ...options, buffs: raidProfileToModifierSources(profile.raidProfile) };
 
 	const maxIterations = profile.calibration.maxRounds;
 	const stopFilterItems = perfTrace.mark("filterItemsForClass");

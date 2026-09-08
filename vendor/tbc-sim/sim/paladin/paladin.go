@@ -116,6 +116,14 @@ func NewPaladin(character *core.Character, talentsStr string, options *proto.Pal
 	})
 
 	paladin.AddStatDependency(stats.Strength, stats.AttackPower, 2)
+	// Block Value from Strength - a universal formula for every shield-blocking class (TBC's
+	// block value = shield base + Strength/20), not warrior-specific - see
+	// vendor/tbc-sim/sim/warrior/warrior.go's identical AddStatDependency call. Paladins are also
+	// a shield-blocking class (PseudoStats.CanBlock/BaseBlockChance are already set above), so
+	// this was a real gap: without it, Strength contributed nothing to block value at all,
+	// which this repo's own stat-weight calibration confirmed directly (measured 0 DTPS/TMI
+	// effect from Strength even under a +200 rating perturbation, before this fix).
+	paladin.AddStatDependency(stats.Strength, stats.BlockValue, 1/20.0)
 	paladin.AddStatDependency(stats.Agility, stats.PhysicalCritPercent, core.CritPerAgiMaxLevel[character.Class])
 	paladin.AddStatDependency(stats.Agility, stats.DodgeRating, 1/25.0*core.DodgeRatingPerDodgePercent)
 	paladin.AddStatDependency(stats.BonusArmor, stats.Armor, 1)

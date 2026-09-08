@@ -712,6 +712,39 @@ describe("solveConfigForSimMetric", () => {
 			expect.anything(),
 		);
 	});
+
+	// Sim objective modes configure buffs via the raid profile, not the formula-mode buffs list -
+	// BuffSection stays hidden and options.buffs stuck at its all-unchecked default whenever a sim
+	// objective mode is active (see ConfigCard.tsx) - so solveConfig must be called with the raid
+	// profile's translated buffs, not whatever (possibly empty) options.buffs was passed in.
+	it("solves using the raid profile's buffs, not options.buffs, ignoring an avoidance target that would otherwise assume zero buffs", async () => {
+		vi.mocked(calibrateWeights).mockResolvedValueOnce({
+			optimizeStats: [],
+			stdevStats: [],
+		});
+		vi.mocked(solveConfig).mockResolvedValueOnce(roundOneProposal);
+
+		await solveConfigForSimMetric(
+			[],
+			// options.buffs deliberately empty - simulating BuffSection's hidden, all-unchecked
+			// default in sim mode.
+			baseOptions,
+			[],
+			{ items: [], enchants: [], gems: [] },
+			{ tmi: 1 },
+			// DEFAULT_SIM_CALIBRATION_PROFILE's raidProfile has Blessing of Kings, improved Power
+			// Word: Fortitude, etc. enabled - see protPaladinProfile.ts's PROT_PALADIN_*_BUFFS.
+			singleRoundProfile,
+		);
+
+		const [, solveConfigOptions] = vi.mocked(solveConfig).mock.calls[0];
+		expect(solveConfigOptions.buffs).not.toEqual([]);
+		expect(solveConfigOptions.buffs).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ id: "blessing-of-kings" }),
+			]),
+		);
+	});
 });
 
 describe("absoluteValueForMetric", () => {
