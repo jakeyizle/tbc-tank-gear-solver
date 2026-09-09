@@ -174,6 +174,7 @@ describe("parseCharacterExport", () => {
 				"holy-shield": 1,
 				"combat-expertise": 5,
 				"avengers-shield": 0,
+				"improved-righteous-fury": 3,
 				deflection: 5,
 				"sanctity-aura": 1,
 			},

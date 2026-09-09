@@ -11,7 +11,7 @@ import {
 import type { InputItem, LPItem } from "./types";
 
 // Same armor mitigation constant used by convertStat.ts's Armor conversion (EHP = Health / (1 - armor/(armor+K))).
-const ARMOR_MITIGATION_K = 10557.5;
+const ARMOR_MITIGATION_K = 11960;
 
 // EHP = Health / (1 - D(Armor)), where D(Armor) = Armor / (Armor + K) is the (nonlinear,
 // diminishing-returns) armor mitigation curve. That makes EHP nonlinear in the decision

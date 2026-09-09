@@ -1,14 +1,26 @@
 import Box from "@mui/material/Box";
+import Chip from "@mui/material/Chip";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { getBaseStats } from "#/data/baseStats";
 import { convertStatToPercentageOrSkill } from "#/helpers/convertStat";
 import { buildStatInputs } from "#/helpers/resultStats";
 import { calculateStatValue } from "#/helpers/stats";
-import type { LPItem, Stat } from "#/solver/types";
+import { STAT_LABELS, type LPItem, type ModifierSource, type Stat } from "#/solver/types";
 import type { SimMetricsSnapshot } from "#/types/SimCalibrationProfile";
 import type { BaseConfig, SolverConfiguration } from "#/types/SolverConfig";
 import StatsGroup from "./StatsGroup";
 import StatWeightTabs from "./StatWeightTabs";
+
+function buffTooltip(buff: ModifierSource): string {
+	return buff.stats
+		.map((s) =>
+			s.type === "multiplier"
+				? `${STAT_LABELS[s.name]} +${(s.value * 100).toLocaleString()}%`
+				: `${STAT_LABELS[s.name]} +${s.value.toLocaleString()}`,
+		)
+		.join(", ");
+}
 
 interface StatsSummaryProps {
 	items: LPItem[];
@@ -33,7 +45,7 @@ export default function StatsSummary({
 		return null;
 	}
 	const baseStats = getBaseStats(baseConfig.raceId, baseConfig.classId);
-	const { items, modifierSources } = buildStatInputs(
+	const { items, modifierSources, buffSources } = buildStatInputs(
 		rawItems,
 		baseConfig,
 		solverConfig,
@@ -64,9 +76,21 @@ export default function StatsSummary({
 	const spellHitRating = stat("SpellHit");
 	const spellCritRating = stat("SpellCrit");
 
+	const armorValue = stat("Armor");
+	// The 75% cap is a display-only clamp (matches the reference WeakAura, which caps the shown
+	// dr% but computes Effective HP - see calculateEffectiveHP in stats.ts - from the uncapped
+	// value): true in-game physical damage reduction can never exceed 75%, even though the
+	// armor/(armor+K) curve alone would only approach 100% asymptotically.
+	const armorDR =
+		Math.min(
+			convertStatToPercentageOrSkill({ name: "Armor", value: armorValue, type: "flat" }),
+			0.75,
+		) * 100;
+
 	const mitigationStats = [
 		{ name: "Health", value: stat("TotalHealth") },
-		{ name: "Armor", value: stat("Armor") },
+		{ name: "Armor", value: armorValue },
+		{ name: "Armor DR", value: armorDR, unit: "%" as const },
 		{ name: "Effective HP", value: Math.trunc(stat("Effective HP")) },
 		{
 			name: "Defense",
@@ -212,6 +236,25 @@ export default function StatsSummary({
 					</Box>
 				))}
 			</Box>
+
+			{includeBuffsConsumables && (
+				<Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+					<Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+						Buffs included
+					</Typography>
+					{buffSources.length === 0 ? (
+						<Typography variant="body2" color="text.secondary" fontStyle="italic">
+							None
+						</Typography>
+					) : (
+						buffSources.map((buff) => (
+							<Tooltip key={buff.id} title={buffTooltip(buff)} arrow>
+								<Chip label={buff.name} size="small" variant="outlined" />
+							</Tooltip>
+						))
+					)}
+				</Box>
+			)}
 
 			{showSimMetrics && (
 				<Box

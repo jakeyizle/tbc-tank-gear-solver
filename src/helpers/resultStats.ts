@@ -22,7 +22,11 @@ export function buildStatInputs(
 	baseConfig: BaseConfig,
 	solverConfig: SolverConfiguration,
 	includeBuffsConsumables: boolean,
-): { items: LPItem[]; modifierSources: ModifierSource[] } {
+): {
+	items: LPItem[];
+	modifierSources: ModifierSource[];
+	buffSources: ModifierSource[];
+} {
 	const filteredItems = includeBuffsConsumables
 		? items
 		: items.filter((item) => !CONSUMABLE_TYPES.includes(item.type));
@@ -33,12 +37,13 @@ export function buildStatInputs(
 	const buffModifierSources = SIM_OBJECTIVE_MODES.has(solverConfig.objectiveMode)
 		? raidProfileToModifierSources(baseConfig.simCalibrationProfile.raidProfile)
 		: solverConfig.buffs;
+	const buffSources = includeBuffsConsumables ? buffModifierSources : [];
 	const modifierSources = [
 		...baseConfig.abilitySources,
 		...baseConfig.talentSources,
-		...(includeBuffsConsumables ? buffModifierSources : []),
+		...buffSources,
 	];
-	return { items: filteredItems, modifierSources };
+	return { items: filteredItems, modifierSources, buffSources };
 }
 
 export function getHeadlineStats(

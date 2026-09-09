@@ -531,6 +531,12 @@ const calculateShearAvoidance = (
 	);
 };
 
+// Improved Righteous Fury has no gear-style StatName - it's a flat multiplicative damage
+// reduction stacked on top of armor mitigation, not summed like a stat - so its rank is read
+// directly off the talent's ModifierSource rather than through sumStatValue. See talents.ts.
+const IMPROVED_RIGHTEOUS_FURY_ID = "improved-righteous-fury";
+const IMPROVED_RIGHTEOUS_FURY_DR_PER_RANK = 0.02;
+
 const calculateEffectiveHP = (
 	items: LPItem[],
 	modifierSources: ModifierSource[],
@@ -539,7 +545,7 @@ const calculateEffectiveHP = (
 	const health = calculateStatValue({
 		items,
 		modifierSources,
-		statName: "Health",
+		statName: "TotalHealth",
 		baseStats,
 	});
 	const armor = calculateStatValue({
@@ -553,5 +559,12 @@ const calculateEffectiveHP = (
 		value: armor,
 		type: "flat",
 	});
-	return health / (1 - armorDR);
+
+	const improvedRighteousFuryRank =
+		modifierSources.find((source) => source.id === IMPROVED_RIGHTEOUS_FURY_ID)
+			?.rank ?? 0;
+	const talentDR = improvedRighteousFuryRank * IMPROVED_RIGHTEOUS_FURY_DR_PER_RANK;
+	const totalDR = 1 - (1 - armorDR) * (1 - talentDR);
+
+	return health / (1 - totalDR);
 };

@@ -43,7 +43,9 @@ const statConversions: Record<StatRatingName, Conversion> = {
 		toRating: (v) => v * 39.4231,
 	},
 	Armor: {
-		toPercentageOrSkill: (v) => v / (v + 10557.5),
+		// K = 467.5*AttackerLevel - 22167.5, for a level-73 attacker (a level-70 character's
+		// standard raid boss, +3) - matches the reference WeakAura's armor mitigation formula.
+		toPercentageOrSkill: (v) => v / (v + 11960),
 		toRating: () => {
 			throw new Error("Armor cannot be converted to rating");
 		},

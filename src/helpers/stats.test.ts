@@ -143,8 +143,75 @@ describe("Effective HP", () => {
 			baseStats: [],
 			statName: "Effective HP",
 		});
-		const armorDR = 5000 / (5000 + 10557.5);
+		const armorDR = 5000 / (5000 + 11960);
 		expect(ehp).toBeCloseTo(1000 / (1 - armorDR));
+	});
+
+	it("uses the true (Stamina-clamped) Health total, not the unclamped per-item scoring value", () => {
+		const baseStats = getBaseStats("1", "2");
+		const stamina = calculateStatValue({
+			items: [],
+			modifierSources: [],
+			baseStats,
+			statName: "Stamina",
+		});
+		const ehp = calculateStatValue({
+			items: [],
+			modifierSources: [],
+			baseStats,
+			statName: "Effective HP",
+		});
+		const totalHealth = calculateStatValue({
+			items: [],
+			modifierSources: [],
+			baseStats,
+			statName: "TotalHealth",
+		});
+		const unclampedHealth = calculateStatValue({
+			items: [],
+			modifierSources: [],
+			baseStats,
+			statName: "Health",
+		});
+		const armor = calculateStatValue({
+			items: [],
+			modifierSources: [],
+			baseStats,
+			statName: "Armor",
+		});
+		// a real character's base Stamina is always above the 20-point clamp threshold, so the
+		// clamped and unclamped totals actually diverge for this fixture
+		expect(stamina).toBeGreaterThan(20);
+		expect(totalHealth).toBeLessThan(unclampedHealth);
+		const armorDR = armor / (armor + 11960);
+		expect(ehp).toBeCloseTo(totalHealth / (1 - armorDR));
+	});
+
+	it("stacks Improved Righteous Fury's rank as a multiplicative reduction on top of armor mitigation", () => {
+		const items = [
+			makeItem([
+				{ name: "Health", value: 1000, type: "flat" },
+				{ name: "Armor", value: 5000, type: "flat" },
+			]),
+		];
+		const modifierSources: ModifierSource[] = [
+			makeModifierSource([], {
+				id: "improved-righteous-fury",
+				name: "Improved Righteous Fury",
+				type: "talent",
+				rank: 3,
+			}),
+		];
+		const ehp = calculateStatValue({
+			items,
+			modifierSources,
+			baseStats: [],
+			statName: "Effective HP",
+		});
+		const armorDR = 5000 / (5000 + 11960);
+		const talentDR = 3 * 0.02;
+		const totalDR = 1 - (1 - armorDR) * (1 - talentDR);
+		expect(ehp).toBeCloseTo(1000 / (1 - totalDR));
 	});
 });
 

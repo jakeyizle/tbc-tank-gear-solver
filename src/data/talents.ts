@@ -29,6 +29,7 @@ const TALENT_STRING_POSITIONS: Record<
 		"holy-shield": { segment: 1, index: 18 },
 		"combat-expertise": { segment: 1, index: 20 },
 		"avengers-shield": { segment: 1, index: 21 },
+		"improved-righteous-fury": { segment: 1, index: 6 },
 		deflection: { segment: 2, index: 4 },
 		"sanctity-aura": { segment: 2, index: 13 },
 	},
@@ -127,5 +128,16 @@ export const TALENTS: ModifierSource[] = [
 				type: "flat",
 			},
 		],
+	},
+	// Improved Righteous Fury has no equivalent StatName (it's a flat multiplicative reduction
+	// applied on top of armor mitigation, not a gear-style stat), so it carries no `stats` entry
+	// here - calculateEffectiveHP reads its rank directly by id. See ImprovedRighteousFury docs.
+	{
+		classId: "2",
+		id: "improved-righteous-fury",
+		name: "Improved Righteous Fury",
+		type: "talent",
+		maxRank: 3,
+		stats: [],
 	},
 ];
