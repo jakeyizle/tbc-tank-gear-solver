@@ -100,6 +100,16 @@ export const validateSolution = (
 		if (count > 2) issues.push(`expected at most 2 ${slot}, got ${count}`);
 	}
 
+	// A two-hander occupies the off-hand slot a shield would, so the two can never be equipped
+	// together - see solveConfig.ts's makeWeaponShieldConstraint.
+	const hasShield = items.some((item) => item.type === "Shield");
+	const hasTwoHand = items.some(
+		(item) => item.type === "Weapon" && item.handType === "TwoHand",
+	);
+	if (hasShield && hasTwoHand) {
+		issues.push("a two-handed weapon was equipped alongside a shield");
+	}
+
 	const idCounts = new Map<string, number>();
 	for (const item of items)
 		idCounts.set(item.id, (idCounts.get(item.id) ?? 0) + 1);

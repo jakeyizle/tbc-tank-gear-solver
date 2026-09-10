@@ -37,7 +37,14 @@ export interface SolveOptions {
 	// solveSimMetric.ts. "balanced" blends tps against `survivabilityMetric` per `balance` - see
 	// calibrateWeights.ts's metricRatiosForBalance. TPS/DTPS/TMI-5 are all measured and shown in
 	// results regardless of which mode is chosen.
-	objectiveMode?: "stats" | "ehp" | "tps" | "dtps" | "tmi" | "balanced";
+	objectiveMode?:
+		| "stats"
+		| "ehp"
+		| "hardAvoidance"
+		| "tps"
+		| "dtps"
+		| "tmi"
+		| "balanced";
 	// Only meaningful for "balanced" mode - see calibrateWeights.ts's metricRatiosForBalance.
 	// Kept as plain literal types here (not imported from src/sim/), since this file is the
 	// generic LP core and never imports from the tbc-new sim integration.
@@ -174,25 +181,65 @@ const makeResistanceConstraint = (
 
 // each slot can have 1 (or 2 for finger/trinket) items
 // flasks/elixirs are optional (0 or up to the bound), unlike mandatory gear slots
+// "Shield" is excluded here - a two-hander occupies the same off-hand slot a shield would, so
+// its count can't be pinned to a fixed bound independent of what's chosen for "Weapon" - see
+// makeWeaponShieldConstraint below, which replaces this slot's constraint entirely.
 const makeSlotConstraint = (
 	headersByType: Record<ProcessedItemType, ItemHeader[]>,
 	glpk: GLPKType,
 ) => {
-	return Object.entries(headersByType).map(([type, headers]) => {
-		const bound = typeBoundNumber(type as ProcessedItemType);
-		const isOptional = OPTIONAL_TYPES.includes(type as ProcessedItemType);
-		return {
-			name: `type_${type}`,
-			vars: headers.map((header) => ({
-				name: header.uniqueId,
-				coef: 1,
-			})),
-			// TODO: fix type cast
-			bnds: isOptional
-				? { type: glpk.GLP_UP, lb: 0, ub: bound }
-				: { type: glpk.GLP_FX, lb: bound, ub: bound },
-		};
-	});
+	return Object.entries(headersByType)
+		.filter(([type]) => type !== "Shield")
+		.map(([type, headers]) => {
+			const bound = typeBoundNumber(type as ProcessedItemType);
+			const isOptional = OPTIONAL_TYPES.includes(type as ProcessedItemType);
+			return {
+				name: `type_${type}`,
+				vars: headers.map((header) => ({
+					name: header.uniqueId,
+					coef: 1,
+				})),
+				// TODO: fix type cast
+				bnds: isOptional
+					? { type: glpk.GLP_UP, lb: 0, ub: bound }
+					: { type: glpk.GLP_FX, lb: bound, ub: bound },
+			};
+		});
+};
+
+// A two-handed weapon can't be paired with a shield - both occupy the same off-hand slot, and
+// "Weapon"/"Shield" are otherwise modeled as independent mandatory slots (see makeSlotConstraint),
+// which lets the solver equip a two-hander AND a shield at once with nothing to stop it. The
+// "Weapon" slot's own exactly-1 constraint still guarantees exactly one weapon (one- or
+// two-handed) gets chosen; this constraint ties the off-hand to that choice: exactly one of
+// {a shield, a two-hander} must be true, so a one-hander forces a shield to be picked (preserving
+// the previous always-equip-a-shield behavior) and a two-hander forces the shield count to 0.
+// A pool with no shield candidates at all needs no such link (the two-hander vs one-hander
+// distinction is moot without an off-hand slot to contest), so this returns [] in that case.
+const makeWeaponShieldConstraint = (
+	headersByType: Record<ProcessedItemType, ItemHeader[]>,
+	glpk: GLPKType,
+): SubjectTo[] => {
+	const shieldHeaders = headersByType.Shield ?? [];
+	if (shieldHeaders.length === 0) return [];
+
+	const twoHandWeaponHeaders = (headersByType.Weapon ?? []).filter(
+		(header) => header.handType === "TwoHand",
+	);
+
+	return [
+		{
+			name: "weapon_shield_exclusivity",
+			vars: [
+				...shieldHeaders.map((header) => ({ name: header.uniqueId, coef: 1 })),
+				...twoHandWeaponHeaders.map((header) => ({
+					name: header.uniqueId,
+					coef: 1,
+				})),
+			],
+			bnds: { type: glpk.GLP_FX, lb: 1, ub: 1 },
+		},
+	];
 };
 
 // a flask replaces both elixirs, so a flask can't be combined with either elixir type
@@ -387,6 +434,10 @@ const runLPModel = async (
 		};
 
 		const slotConstraint = makeSlotConstraint(headersByType, glpk);
+		const weaponShieldConstraint = makeWeaponShieldConstraint(
+			headersByType,
+			glpk,
+		);
 		const baseItemConstraint = makeBaseItemConstaint(headersByItemId, glpk);
 		const uniqueGemVars = buildUniqueGemVars(fixedItems, decomposableItems);
 		const uniqueGemConstraint = makeUniqueGemConstraint(uniqueGemVars, glpk);
@@ -401,6 +452,7 @@ const runLPModel = async (
 
 		const constraints: SubjectTo[] = [
 			...slotConstraint,
+			...weaponShieldConstraint,
 			...baseItemConstraint,
 			...uniqueGemConstraint,
 			...consumableExclusionConstraint,

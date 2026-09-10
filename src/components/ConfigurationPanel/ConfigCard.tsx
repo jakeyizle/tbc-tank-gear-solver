@@ -45,6 +45,7 @@ const UNCRUSHABLE_TAGS: Record<number, string> = {
 // (see docs/plans/sim-backed-objectives.md). All are labeled/explained the same way in this UI.
 const NON_STATS_OBJECTIVE_LABELS: Record<string, string> = {
 	ehp: "Maximize Effective HP",
+	hardAvoidance: "Maximize Hard Avoidance",
 	tps: "Maximize TPS",
 	dtps: "Minimize DTPS",
 	tmi: "Minimize TMI-5",
@@ -77,7 +78,14 @@ interface ConfigCardProps {
 	onUpdateConstraints: (uncritability: number, uncrushability: number) => void;
 	onUpdateOptimizeStats: (stats: Stat[]) => void;
 	onUpdateObjectiveMode: (
-		mode: "stats" | "ehp" | "tps" | "dtps" | "tmi" | "balanced",
+		mode:
+			| "stats"
+			| "ehp"
+			| "hardAvoidance"
+			| "tps"
+			| "dtps"
+			| "tmi"
+			| "balanced",
 	) => void;
 	onUpdateBalance: (balance: number) => void;
 	onUpdateSurvivabilityMetric: (metric: "tmi" | "dtps") => void;
@@ -441,6 +449,12 @@ export default function ConfigCard({
 						<ToggleButton value="ehp" sx={{ px: 1.5, py: 0.375, fontSize: 12 }}>
 							Maximize Effective HP
 						</ToggleButton>
+						<ToggleButton
+							value="hardAvoidance"
+							sx={{ px: 1.5, py: 0.375, fontSize: 12 }}
+						>
+							Maximize Hard Avoidance
+						</ToggleButton>
 						<ToggleButton value="tps" sx={{ px: 1.5, py: 0.375, fontSize: 12 }}>
 							Maximize TPS
 						</ToggleButton>
@@ -469,6 +483,19 @@ export default function ConfigCard({
 							Solver maximizes armor-mitigated Effective HP directly. Stat
 							weights below are unused in this mode, but kept for when you
 							switch back.
+						</Typography>
+					)}
+					{config.objectiveMode === "hardAvoidance" && (
+						<Typography
+							variant="body2"
+							color="text.secondary"
+							fontStyle="italic"
+						>
+							Solver maximizes Dodge + Parry + Miss chance directly (Block
+							excluded). The Avoidance floor constraint below is disabled in
+							this mode, since holding a Block-inclusive floor while maximizing
+							this would be redundant. Stat weights and Avoidance floor are
+							unused here but kept for when you switch back.
 						</Typography>
 					)}
 					{(config.objectiveMode === "tps" ||
@@ -537,6 +564,7 @@ export default function ConfigCard({
 						resistanceFloors={config.resistanceFloors}
 						onUpdateConstraints={onUpdateConstraints}
 						onUpdateResistanceFloors={onUpdateResistanceFloors}
+						avoidanceFloorDisabled={config.objectiveMode === "hardAvoidance"}
 					/>
 				</ConfigBand>
 				{config.objectiveMode !== "tps" &&

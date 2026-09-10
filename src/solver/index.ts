@@ -34,7 +34,14 @@ interface SolveOptions {
 	uncrushabilitySetting: number;
 	uncritabilitySetting: number;
 	optimizeStats: Stat[];
-	objectiveMode?: "stats" | "ehp" | "tps" | "dtps" | "tmi" | "balanced";
+	objectiveMode?:
+		| "stats"
+		| "ehp"
+		| "hardAvoidance"
+		| "tps"
+		| "dtps"
+		| "tmi"
+		| "balanced";
 	balance?: number;
 	survivabilityMetric?: "tmi" | "dtps";
 	enabledCalibrationStats?: StatName[];

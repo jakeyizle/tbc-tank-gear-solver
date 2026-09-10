@@ -12,6 +12,7 @@ interface ConstraintsSectionProps {
 		uncrushabilitySetting: number,
 	) => void;
 	onUpdateResistanceFloors: (floors: ResistanceFloor[]) => void;
+	avoidanceFloorDisabled?: boolean;
 }
 
 const CRIT_OPTIONS = [
@@ -32,6 +33,7 @@ export default function ConstraintsSection({
 	resistanceFloors,
 	onUpdateConstraints,
 	onUpdateResistanceFloors,
+	avoidanceFloorDisabled = false,
 }: ConstraintsSectionProps) {
 	return (
 		<Stack spacing={2}>
@@ -52,6 +54,7 @@ export default function ConstraintsSection({
 					options={UNCRUSHABLE_OPTIONS}
 					value={uncrushabilitySetting}
 					onChange={(val) => onUpdateConstraints(uncritabilitySetting, val)}
+					disabled={avoidanceFloorDisabled}
 				/>
 			</Stack>
 			<ResistanceFloors

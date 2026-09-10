@@ -234,7 +234,7 @@ export interface ConsumableItem {
 	wowheadId: number;
 }
 
-type HandType = "TwoHand" | "OneHand" | "OffHand" | "MainHand";
+export type HandType = "TwoHand" | "OneHand" | "OffHand" | "MainHand";
 
 export interface Enchant {
 	name: string;

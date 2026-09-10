@@ -6,7 +6,12 @@ import { getBaseStats } from "#/data/baseStats";
 import { convertStatToPercentageOrSkill } from "#/helpers/convertStat";
 import { buildStatInputs } from "#/helpers/resultStats";
 import { calculateStatValue } from "#/helpers/stats";
-import { STAT_LABELS, type LPItem, type ModifierSource, type Stat } from "#/solver/types";
+import {
+	type LPItem,
+	type ModifierSource,
+	STAT_LABELS,
+	type Stat,
+} from "#/solver/types";
 import type { SimMetricsSnapshot } from "#/types/SimCalibrationProfile";
 import type { BaseConfig, SolverConfiguration } from "#/types/SolverConfig";
 import StatsGroup from "./StatsGroup";
@@ -56,16 +61,32 @@ export default function StatsSummary({
 		statName: Parameters<typeof calculateStatValue>[0]["statName"],
 	) => calculateStatValue({ items, modifierSources, baseStats, statName });
 
-	const headlineStats = [
-		{ name: "Avoidance", value: stat("Avoidance") },
-		{ name: "Shear", value: stat("ShearAvoidance") },
-		{ name: "Uncrit", value: stat("Uncritability") },
-	];
-
 	const defenseRating = stat("Defense");
 	const dodgeRating = stat("Dodge");
 	const parryRating = stat("Parry");
 	const blockRating = stat("Block");
+
+	// Dodge% + Parry% + Miss% - the subset of avoidance that counts toward uncrushable, excluding
+	// Block (see solveEHP.ts's solveConfigForHardAvoidance, which optimizes exactly this). Reuses
+	// dodgeRating/parryRating (also used below for the Mitigation group's Dodge/Parry rows) and the
+	// same roundRating=true conversion, so this headline number always matches what those rows show.
+	const hardAvoidance =
+		convertStatToPercentageOrSkill(
+			{ name: "Dodge", value: dodgeRating, type: "flat" },
+			true,
+		) +
+		convertStatToPercentageOrSkill(
+			{ name: "Parry", value: parryRating, type: "flat" },
+			true,
+		) +
+		stat("Miss");
+
+	const headlineStats = [
+		{ name: "Avoidance", value: stat("Avoidance") },
+		{ name: "Shear", value: stat("ShearAvoidance") },
+		{ name: "Hard Avoidance", value: hardAvoidance },
+		{ name: "Uncrit", value: stat("Uncritability") },
+	];
 	const resilienceRating = calculateStatValue({
 		items,
 		modifierSources,
@@ -83,7 +104,11 @@ export default function StatsSummary({
 	// armor/(armor+K) curve alone would only approach 100% asymptotically.
 	const armorDR =
 		Math.min(
-			convertStatToPercentageOrSkill({ name: "Armor", value: armorValue, type: "flat" }),
+			convertStatToPercentageOrSkill({
+				name: "Armor",
+				value: armorValue,
+				type: "flat",
+			}),
 			0.75,
 		) * 100;
 
@@ -177,12 +202,10 @@ export default function StatsSummary({
 		{ name: "Spirit", value: stat("Spirit") },
 	];
 
-	const showSimMetrics =
-		(solverConfig.objectiveMode === "tps" ||
-			solverConfig.objectiveMode === "dtps" ||
-			solverConfig.objectiveMode === "tmi" ||
-			solverConfig.objectiveMode === "balanced") &&
-		simMetrics != null;
+	// simMetrics is now measured for every objective mode (see solver.worker.ts), so this just
+	// waits for it to be present - e.g. still-in-flight solves, or old cached results from
+	// before this was added.
+	const showSimMetrics = simMetrics != null;
 	const simMetricStats = showSimMetrics
 		? [
 				{ name: "TPS", value: simMetrics.tps },
@@ -205,7 +228,14 @@ export default function StatsSummary({
 				sx={{
 					display: "grid",
 					gridTemplateColumns: `repeat(${headlineStats.length}, 1fr)`,
-					gap: 1,
+					// Labels/values are placed on their own explicit grid rows (rather than each
+					// stat being its own independent label-over-value column) so a longer label
+					// like "Hard Avoidance" can wrap to two lines without pushing just its own
+					// value down - every value still starts on the same row 2 grid line, so the
+					// numbers stay aligned across all headline stats regardless of label length.
+					gridTemplateRows: "auto auto",
+					columnGap: 2,
+					rowGap: 0.25,
 					borderRadius: 1,
 					bgcolor: "background.paper",
 					border: 1,
@@ -213,37 +243,78 @@ export default function StatsSummary({
 					p: 1.25,
 				}}
 			>
-				{headlineStats.map((s) => (
-					<Box key={s.name} sx={{ minWidth: 0 }}>
-						<Typography
-							variant="overline"
-							color="text.secondary"
-							sx={{ lineHeight: 1.5, whiteSpace: "nowrap" }}
-						>
-							{s.name}
-						</Typography>
-						<Typography
-							variant="h5"
-							color="primary.light"
-							fontWeight={700}
-							sx={{ whiteSpace: "nowrap" }}
-						>
-							{s.value.toLocaleString(undefined, {
-								minimumFractionDigits: s.value % 1 === 0 ? 0 : 2,
-								maximumFractionDigits: s.value % 1 === 0 ? 0 : 2,
-							})}
-						</Typography>
-					</Box>
+				{headlineStats.slice(1).map((s, i) => (
+					<Box
+						key={`${s.name}-divider`}
+						sx={{
+							gridColumn: i + 2,
+							gridRow: "1 / 3",
+							justifySelf: "start",
+							ml: -1,
+							borderLeft: 1,
+							borderColor: "divider",
+						}}
+					/>
+				))}
+				{headlineStats.map((s, i) => (
+					<Typography
+						key={`${s.name}-label`}
+						variant="overline"
+						color="text.secondary"
+						sx={{
+							lineHeight: 1.3,
+							gridColumn: i + 1,
+							gridRow: 1,
+							alignSelf: "end",
+							minWidth: 0,
+						}}
+					>
+						{s.name}
+					</Typography>
+				))}
+				{headlineStats.map((s, i) => (
+					<Typography
+						key={`${s.name}-value`}
+						variant="h5"
+						color="primary.light"
+						fontWeight={700}
+						sx={{
+							whiteSpace: "nowrap",
+							gridColumn: i + 1,
+							gridRow: 2,
+							minWidth: 0,
+						}}
+					>
+						{s.value.toLocaleString(undefined, {
+							minimumFractionDigits: s.value % 1 === 0 ? 0 : 2,
+							maximumFractionDigits: s.value % 1 === 0 ? 0 : 2,
+						})}
+					</Typography>
 				))}
 			</Box>
 
 			{includeBuffsConsumables && (
-				<Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-					<Typography variant="overline" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+				<Box
+					sx={{
+						display: "flex",
+						alignItems: "center",
+						gap: 1,
+						flexWrap: "wrap",
+					}}
+				>
+					<Typography
+						variant="overline"
+						color="text.secondary"
+						sx={{ lineHeight: 1.5 }}
+					>
 						Buffs included
 					</Typography>
 					{buffSources.length === 0 ? (
-						<Typography variant="body2" color="text.secondary" fontStyle="italic">
+						<Typography
+							variant="body2"
+							color="text.secondary"
+							fontStyle="italic"
+						>
 							None
 						</Typography>
 					) : (

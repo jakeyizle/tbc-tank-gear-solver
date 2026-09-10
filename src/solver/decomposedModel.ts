@@ -8,6 +8,7 @@ import type {
 	DecomposableItem,
 	Enchant,
 	Gem,
+	HandType,
 	LPItem,
 	ProcessedItemType,
 	ResistanceFloor,
@@ -26,11 +27,14 @@ export interface SubjectTo {
 }
 
 // item-level binary identity shared by fixed LPItems and decomposable item headers -
-// enough for constraints that only care "is this item equipped" (slot/base-item/consumable)
+// enough for constraints that only care "is this item equipped" (slot/base-item/consumable),
+// plus handType so a "Weapon"-slot constraint can tell a two-hander apart from a one-hander
+// (see makeWeaponShieldConstraint in solveConfig.ts)
 export interface ItemHeader {
 	uniqueId: string;
 	id: string;
 	type: ProcessedItemType;
+	handType?: HandType;
 }
 
 export const allItemHeaders = (
@@ -41,11 +45,13 @@ export const allItemHeaders = (
 		uniqueId: item.uniqueId,
 		id: item.id,
 		type: item.type,
+		handType: item.handType,
 	})),
 	...decomposableItems.map((item) => ({
 		uniqueId: item.uniqueId,
 		id: item.base.id,
 		type: item.processedType,
+		handType: item.base.handType,
 	})),
 ];
 

@@ -34,6 +34,7 @@ function legacyConfigPatch(
 		mode === "tmi" ||
 		mode === "balanced" ||
 		mode === "ehp" ||
+		mode === "hardAvoidance" ||
 		mode === "stats"
 	) {
 		return { objectiveMode: mode };

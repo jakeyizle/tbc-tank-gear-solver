@@ -71,9 +71,10 @@ self.onmessage = async (e) => {
 			});
 			return;
 		}
-		// Plain "stats"/"ehp" solves don't go through solveConfigForSimMetric (which resets/logs
-		// its own trace), so do the same bookkeeping here - solveConfig.ts's instrumentation
-		// (prepareItemCandidates/GLPK/runLPModel spans) benefits these solve modes too.
+		// Plain "stats"/"ehp"/"hardAvoidance" solves don't go through solveConfigForSimMetric
+		// (which resets/logs its own trace), so do the same bookkeeping here - solveConfig.ts's
+		// instrumentation (prepareItemCandidates/GLPK/runLPModel spans) benefits these solve
+		// modes too.
 		perfTrace.reset();
 		result = await solveGearSet(items, options, (progress) =>
 			postMessage({ type: "progress", ...progress }),
@@ -81,7 +82,34 @@ self.onmessage = async (e) => {
 		perfTrace.log("solve");
 		postMessage({ type: "perf", summary: perfTrace.summary() });
 
-		postMessage({ type: "result", items: result });
+		// These modes never calibrate against the sim, but the finished gear is exactly what
+		// measureFinalSimMetrics needs - run the same one-shot "finalize and measure" step the
+		// sim-backed branch above uses (see its own comment) so TPS/DTPS/TMI-5 display for every
+		// objective mode, not just the sim-backed ones. Dynamically imported for the same reason
+		// as above: src/solver/ (the generic LP core) must never statically import src/sim/.
+		const [
+			{ splitGearAndConsumables },
+			{ measureFinalSimMetrics },
+			{ loadTbcDatabase },
+			{ DEFAULT_SIM_CALIBRATION_PROFILE },
+		] = await Promise.all([
+			import("#/sim/resolveGearAndConsumables"),
+			import("#/sim/calibrateWeights"),
+			import("#/sim/simDatabaseClient"),
+			import("#/types/SimCalibrationProfile"),
+		]);
+		const db = await loadTbcDatabase();
+		const { gear, consumables } = splitGearAndConsumables(result);
+		const profile = options.simCalibrationProfile ?? DEFAULT_SIM_CALIBRATION_PROFILE;
+		const simMetrics = await measureFinalSimMetrics(gear, db, {
+			...profile,
+			raidProfile: {
+				...profile.raidProfile,
+				consumables: { ...profile.raidProfile.consumables, ...consumables },
+			},
+		});
+
+		postMessage({ type: "result", items: result, simMetrics });
 	} catch (error) {
 		console.error(error);
 		postMessage({

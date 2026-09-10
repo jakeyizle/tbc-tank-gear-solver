@@ -171,7 +171,18 @@ export default function ConfigManager({
 							onUpdateConstraints={updateConstraints}
 							onUpdateOptimizeStats={updateOptimizeStats}
 							onUpdateObjectiveMode={(mode) =>
-								updateConfig(config.id, { objectiveMode: mode })
+								updateConfig(config.id, {
+									objectiveMode: mode,
+									// Solving for hard avoidance while also holding it to the
+									// (Block-inclusive) Avoidance floor is redundant and the
+									// solver ignores that floor in this mode - see
+									// solveConfigForHardAvoidance - so reset it here too, to
+									// avoid a stale setting the UI shows as active but that no
+									// longer does anything.
+									...(mode === "hardAvoidance"
+										? { uncrushabilitySetting: 0 }
+										: {}),
+								})
 							}
 							onUpdateBalance={(balance) =>
 								updateConfig(config.id, { balance })

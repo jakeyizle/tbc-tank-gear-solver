@@ -20,14 +20,24 @@ export interface SolverConfiguration {
 	uncrushabilitySetting: number;
 	optimizeStats: Stat[];
 	// 'stats' = maximize the weighted sum in optimizeStats (default). 'ehp' = ignore
-	// optimizeStats and let the solver directly maximize armor-mitigated Effective HP. 'tps'/
-	// 'dtps'/'tmi' = sim-calibrated objective (Protection Paladin only for now) - see
+	// optimizeStats and let the solver directly maximize armor-mitigated Effective HP.
+	// 'hardAvoidance' = ignore optimizeStats and maximize Dodge% + Parry% + Miss% (excludes
+	// Block); also force-disables the Avoidance floor constraint, since holding hard avoidance to
+	// a Block-inclusive floor while maximizing it is redundant - see solveConfigForHardAvoidance.
+	// 'tps'/'dtps'/'tmi' = sim-calibrated objective (Protection Paladin only for now) - see
 	// docs/plans/sim-backed-objectives.md - purely maximizing (tps) or minimizing (dtps/tmi) that
 	// one metric, no blend with anything else. 'balanced' = a weighted blend of tps against
 	// whichever metric `survivabilityMetric` names, per `balance` - see
 	// calibrateWeights.ts's metricRatiosForBalance. Like 'ehp', all of these ignore
 	// optimizeStats; the solver recalibrates its own weight vector via a real combat sim instead.
-	objectiveMode: "stats" | "ehp" | "tps" | "dtps" | "tmi" | "balanced";
+	objectiveMode:
+		| "stats"
+		| "ehp"
+		| "hardAvoidance"
+		| "tps"
+		| "dtps"
+		| "tmi"
+		| "balanced";
 	// A single 0 (pure Survivability) .. 1 (pure Threat) dial for 'balanced' mode - see
 	// calibrateWeights.ts's metricRatiosForBalance. Unused (but always present) in other modes.
 	balance: number;

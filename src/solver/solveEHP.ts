@@ -8,7 +8,7 @@ import {
 	type SolveProgress,
 	solveConfig,
 } from "./solveConfig";
-import type { InputItem, LPItem } from "./types";
+import type { InputItem, LPItem, Stat } from "./types";
 
 // Same armor mitigation constant used by convertStat.ts's Armor conversion (EHP = Health / (1 - armor/(armor+K))).
 const ARMOR_MITIGATION_K = 11960;
@@ -145,6 +145,37 @@ export const solveConfigForEHP = async (
 	return { items: result, effectiveHP, ehpIterations: ehpIteration, converged };
 };
 
+// Hard avoidance (Dodge% + Parry% + Miss%, excluding Block) is what actually counts toward
+// uncrushable. Unlike EHP's armor curve, dodge/parry/miss convert from rating to percent via
+// fixed linear divisors in this TBC-era ruleset (see convertStat.ts) - no diminishing returns -
+// so this is a genuinely linear objective and needs no SLP-style iteration, just a single
+// weighted-stat solve with these three stats weighted equally.
+const HARD_AVOIDANCE_STATS: Stat[] = [
+	{ name: "Dodge", value: 1, type: "flat" },
+	{ name: "Parry", value: 1, type: "flat" },
+	{ name: "Miss", value: 1, type: "flat" },
+];
+
+// Maximizing hard avoidance while also holding it to the Avoidance-floor constraint (uncrushable/
+// Illidan Shear, which is Block-inclusive and means something different from this objective) is
+// redundant and would fight the objective, so that constraint is force-disabled here regardless
+// of the caller's uncrushabilitySetting. Uncritability/resistance floors are untouched.
+export const solveConfigForHardAvoidance = async (
+	items: InputItem[],
+	options: Omit<SolveOptions, "optimizeStats">,
+	onProgress?: (progress: SolveProgress) => void,
+): Promise<LPItem[]> => {
+	return solveConfig(
+		items,
+		{
+			...options,
+			optimizeStats: HARD_AVOIDANCE_STATS,
+			uncrushabilitySetting: 0,
+		},
+		onProgress,
+	);
+};
+
 // Single entry point shared by solver.worker.ts and tests that need to exercise objectiveMode
 // dispatch without a real Worker: routes to the EHP solve or the plain stat-weight solve based
 // on options.objectiveMode, always resolving to the plain LPItem[] shape solveAll/the UI expect.
@@ -156,6 +187,9 @@ export const solveGearSet = async (
 	if (options.objectiveMode === "ehp") {
 		const result = await solveConfigForEHP(items, options, onProgress);
 		return result.items;
+	}
+	if (options.objectiveMode === "hardAvoidance") {
+		return solveConfigForHardAvoidance(items, options, onProgress);
 	}
 	return solveConfig(items, options, onProgress);
 };

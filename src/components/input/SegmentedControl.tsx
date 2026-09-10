@@ -10,6 +10,7 @@ interface SegmentedControlProps {
 	options: SegmentedControlOption[];
 	value: number;
 	onChange: (value: number) => void;
+	disabled?: boolean;
 }
 
 export default function SegmentedControl({
@@ -17,6 +18,7 @@ export default function SegmentedControl({
 	options,
 	value,
 	onChange,
+	disabled = false,
 }: SegmentedControlProps) {
 	return (
 		<Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
@@ -40,6 +42,7 @@ export default function SegmentedControl({
 					borderRadius: 1,
 					overflow: "hidden",
 					width: "fit-content",
+					opacity: disabled ? 0.5 : 1,
 				}}
 			>
 				{options.map((option, i) => {
@@ -48,12 +51,12 @@ export default function SegmentedControl({
 						<Box
 							key={option.value}
 							component="span"
-							onClick={() => onChange(option.value)}
+							onClick={disabled ? undefined : () => onChange(option.value)}
 							sx={{
 								px: 1.5,
 								py: 0.75,
 								fontSize: 13,
-								cursor: "pointer",
+								cursor: disabled ? "not-allowed" : "pointer",
 								whiteSpace: "nowrap",
 								borderLeft: i === 0 ? 0 : 1,
 								borderColor: "divider",
