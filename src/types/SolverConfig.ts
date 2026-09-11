@@ -2,7 +2,6 @@ import { CONSUMABLES } from "#/data/consumables";
 import { SIM_CALIBRATION_STAT_NAMES } from "#/sim/statTranslation";
 import type {
 	LPItem,
-	ModifierSource,
 	ResistanceFloor,
 	Stat,
 	StatName,
@@ -49,8 +48,6 @@ export interface SolverConfiguration {
 	// present) in 'stats'/'ehp' mode.
 	enabledCalibrationStats: StatName[];
 	resistanceFloors: ResistanceFloor[];
-	abilities: ModifierSource[];
-	talents: ModifierSource[];
 	enabledConsumableIds: string[];
 }
 
@@ -75,6 +72,17 @@ export interface SolveResult {
 	// (see src/sim/measureCharacterStats.ts). Set for every objective mode. Optional only
 	// because results persisted before this existed do not carry it.
 	characterStats?: CharacterStatsSnapshot;
+	/**
+	 * Non-stat physical damage reduction for this gear's character - today only Improved
+	 * Righteous Fury (2% per rank). It is a multiplier, not a stat, so it appears in no
+	 * computeStats vector and has to be carried alongside them.
+	 *
+	 * Captured at solve time from the LinearStatModel the solver actually used, rather than
+	 * recomputed for display, so the panel's Effective HP can never disagree with the number
+	 * the EHP objective optimized against. Optional only because results persisted before this
+	 * existed do not carry it.
+	 */
+	physicalDamageTakenMultiplier?: number;
 }
 
 export interface BaseConfig {
@@ -89,8 +97,6 @@ export interface BaseConfig {
 	phase: number;
 	raceId: string;
 	classId: string;
-	abilitySources: ModifierSource[];
-	talentSources: ModifierSource[];
 	// Global (not per-solver-config) sim calibration inputs for "Weighted Sim Metrics" - one
 	// character fights one encounter, so this lives alongside race/class/phase rather than
 	// being duplicated per config. See src/types/SimCalibrationProfile.ts.
@@ -112,8 +118,6 @@ export function createEmptyConfig(
 		survivabilityMetric: "tmi",
 		enabledCalibrationStats: [...SIM_CALIBRATION_STAT_NAMES],
 		resistanceFloors: [],
-		abilities: [],
-		talents: [],
 		enabledConsumableIds: CONSUMABLES.map((consumable) => consumable.id),
 	};
 }

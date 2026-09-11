@@ -158,7 +158,7 @@ describe("parseCharacterExport", () => {
 		expect(parseCharacterExport("28825, 29011")).toBeNull();
 	});
 
-	it("extracts class/race/name/spec and decodes ranks for the modeled Paladin talents", () => {
+	it("extracts class/race/name/spec and passes the talent string through verbatim", () => {
 		const character = parseCharacterExport(FULL_CHARACTER_EXPORT);
 		expect(character).toEqual({
 			name: "Peevo",
@@ -167,28 +167,24 @@ describe("parseCharacterExport", () => {
 			raceName: "Human",
 			raceId: "1",
 			spec: "protection",
-			talentRanks: {
-				toughness: 5,
-				anticipation: 5,
-				"sacred-duty": 2,
-				"holy-shield": 1,
-				"combat-expertise": 5,
-				"avengers-shield": 0,
-				"improved-righteous-fury": 3,
-				deflection: 5,
-				"sanctity-aura": 1,
-			},
+			// Verbatim, not decoded: this string goes straight to the raid profile, which is
+			// what the simulator reads. Decoding into per-talent ranks belonged to the deleted
+			// stat engine; src/data/talentString.ts still does it for the callers that need it.
+			talentsString:
+				"00000000000000000000-0530503050000132521050-0520502030030100000000",
 			supported: true,
 		});
 	});
 
-	it("marks an unsupported class as such and skips talent parsing", () => {
+	it("marks an unsupported class as such but still carries its talent string", () => {
 		const character = parseCharacterExport(
 			'{"class":"Warrior","race":"Human","talents":"5500000-0000000-0000000"}',
 		);
 		expect(character?.supported).toBe(false);
 		expect(character?.classId).toBeUndefined();
-		expect(character?.talentRanks).toEqual({});
+		// The string is passed through verbatim regardless of class - it is the simulator's own
+		// input format, and nothing here needs to decode it any more.
+		expect(character?.talentsString).toBe("5500000-0000000-0000000");
 	});
 });
 

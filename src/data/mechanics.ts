@@ -14,7 +14,8 @@ export const CHARACTER_LEVEL = 70;
 
 // Rating -> percent divisors, from vendor/tbc-sim/sim/core/base_stats_auto_gen.go:12-22.
 //
-// helpers/convertStat.ts carries rounded copies of these, which Phase 2 deletes:
+// The deleted helpers/convertStat.ts carried rounded copies of these, which is why the values
+// here are the vendor's exact ones:
 //   Parry 23.6538 / Dodge 18.9231 / Block 7.8846  - truncated, ~2e-6 relative error
 //   SpellCrit 22.1 / SpellHit 12.6 / SpellHaste 15.8 - rounded to 3 s.f., up to 0.2% off
 //   Defense 2.3654 - truncated, and the one that can actually bite: defense SKILL is
@@ -94,8 +95,8 @@ export const baseCrushChance = (attackerLevel: number) =>
  * vendor/tbc-sim/sim/core/spell_resistances.go:133.
  *
  * Depends on the ATTACKER's level, which is why a single hardcoded constant is wrong:
- * 11960 at level 73 (a boss) but 11492.5 at level 72 - the discrepancy TODO.md records
- * against helpers/convertStat.ts:48.
+ * 11960 at level 73 (a boss) but 11492.5 at level 72 - the discrepancy TODO.md recorded
+ * against the hardcoded constant in the deleted helpers/convertStat.ts.
  */
 export const armorConstant = (attackerLevel: number) =>
 	attackerLevel * 467.5 - 22167.5;

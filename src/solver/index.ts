@@ -25,7 +25,6 @@ import type {
 import type {
 	InputItem,
 	LPItem,
-	ModifierSource,
 	ResistanceFloor,
 	Stat,
 	StatName,
@@ -55,8 +54,6 @@ interface SolveOptions {
 	phase: number;
 	raceId: string;
 	classId: string;
-	talentSources: ModifierSource[];
-	abilitySources: ModifierSource[];
 	enabledConsumableIds: string[];
 }
 
@@ -88,6 +85,7 @@ type WorkerMessage =
 			perMetricStatWeightStdevs?: Record<"tps" | "dtps" | "tmi", Stat[]>;
 			round1StatWeights?: CalibratedWeights;
 			characterStats?: CharacterStatsSnapshot;
+			physicalDamageTakenMultiplier?: number;
 	  }
 	| { type: "error"; message: string }
 	// Investigative timing breakdown for where a solve spent its time - see
@@ -141,6 +139,7 @@ export const solve = async (
 		perMetricStatWeights?: Record<"tps" | "dtps" | "tmi", Stat[]>;
 		perMetricStatWeightStdevs?: Record<"tps" | "dtps" | "tmi", Stat[]>;
 		characterStats?: CharacterStatsSnapshot;
+		physicalDamageTakenMultiplier?: number;
 	}) => void,
 ): Promise<LPItem[]> => {
 	return new Promise((resolve, reject) => {
@@ -197,6 +196,7 @@ export const solve = async (
 					perMetricStatWeights: data.perMetricStatWeights,
 					perMetricStatWeightStdevs: data.perMetricStatWeightStdevs,
 					characterStats: data.characterStats,
+					physicalDamageTakenMultiplier: data.physicalDamageTakenMultiplier,
 				});
 			}
 			if (round1CacheKey && data.round1StatWeights) {
@@ -297,6 +297,7 @@ export const solveAll = async (
 			| Record<"tps" | "dtps" | "tmi", Stat[]>
 			| undefined;
 		let characterStats: CharacterStatsSnapshot | undefined;
+		let physicalDamageTakenMultiplier: number | undefined;
 		try {
 			items = await solveFn(
 				currentInputItems,
@@ -317,6 +318,8 @@ export const solveAll = async (
 					perMetricStatWeights = result.perMetricStatWeights;
 					perMetricStatWeightStdevs = result.perMetricStatWeightStdevs;
 					characterStats = result.characterStats;
+					physicalDamageTakenMultiplier =
+						result.physicalDamageTakenMultiplier;
 				},
 			);
 		} catch (error) {
@@ -329,6 +332,7 @@ export const solveAll = async (
 			perMetricStatWeights,
 			perMetricStatWeightStdevs,
 			characterStats,
+			physicalDamageTakenMultiplier,
 			id: solverConfig.id,
 			name: solverConfig.name,
 			baseConfig,

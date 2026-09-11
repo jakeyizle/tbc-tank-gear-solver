@@ -52,6 +52,7 @@ export default function ResultsPanel({
 		perMetricStatWeights: activeResult.perMetricStatWeights,
 		perMetricStatWeightStdevs: activeResult.perMetricStatWeightStdevs,
 		characterStats: activeResult.characterStats,
+		physicalDamageTakenMultiplier: activeResult.physicalDamageTakenMultiplier,
 	};
 
 	const handleCopy = () => {
@@ -195,6 +196,9 @@ export default function ResultsPanel({
 								perMetricStatWeights={displayed.perMetricStatWeights}
 								perMetricStatWeightStdevs={displayed.perMetricStatWeightStdevs}
 								characterStats={displayed.characterStats}
+								physicalDamageTakenMultiplier={
+									displayed.physicalDamageTakenMultiplier
+								}
 							/>
 						</Box>
 					</Box>

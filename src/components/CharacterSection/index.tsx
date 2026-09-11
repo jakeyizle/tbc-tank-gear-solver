@@ -1,29 +1,23 @@
-import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
-import Popover from "@mui/material/Popover";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { memo, useState } from "react";
-import type { ModifierSource } from "#/solver/types";
+import { memo } from "react";
 import ClassSelect from "./ClassSelect";
 import RaceSelect from "./RaceSelect";
-import { TalentSection } from "./TalentSection";
 
 interface CharacterSectionProps {
 	classValue: string;
 	setClassValue: (value: string) => void;
 	raceValue: string;
 	setRaceValue: (value: string) => void;
-	talents: ModifierSource[];
-	setTalents: (talents: ModifierSource[]) => void;
 }
 
-function talentSummary(talents: ModifierSource[]): string {
-	const spent = talents.filter((t) => (t.rank || 0) > 0);
-	if (spent.length === 0) return "No talents selected";
-	return spent.map((t) => `${t.name} ${t.rank}`).join(" · ");
-}
-
+// The talent summary and its "Edit talents" popover lived here. Talents are no longer modeled as
+// per-rank stat effects - the simulator is the stat authority, and it reads the character's
+// talents from the raid profile's talentsString (see src/data/talentString.ts). The talent
+// surface belongs with the rest of the sim-shaped character fields; RaidProfileFields moves here
+// later in this phase.
+//
 // Memoized so a parent re-render that doesn't change these props (e.g. routes/index.tsx's
 // solveProgress ticks during a solve) skips reconciling this section entirely - see
 // useSolverConfigs.ts's note on why fresh handler identities would otherwise defeat this.
@@ -32,11 +26,7 @@ function CharacterSection({
 	setClassValue,
 	raceValue,
 	setRaceValue,
-	talents,
-	setTalents,
 }: CharacterSectionProps) {
-	const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-
 	return (
 		<Paper
 			variant="outlined"
@@ -63,39 +53,7 @@ function CharacterSection({
 			>
 				<ClassSelect value={classValue} onChange={setClassValue} />
 				<RaceSelect value={raceValue} onChange={setRaceValue} />
-				<Typography
-					variant="body2"
-					color="text.secondary"
-					sx={{
-						overflow: "hidden",
-						textOverflow: "ellipsis",
-						whiteSpace: "nowrap",
-					}}
-				>
-					{talentSummary(talents)}
-				</Typography>
 			</Stack>
-
-			<Typography
-				variant="body2"
-				color="primary"
-				sx={{ cursor: "pointer", flexShrink: 0 }}
-				onClick={(e) => setAnchorEl(e.currentTarget)}
-			>
-				Edit talents
-			</Typography>
-
-			<Popover
-				open={Boolean(anchorEl)}
-				anchorEl={anchorEl}
-				onClose={() => setAnchorEl(null)}
-				anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-				transformOrigin={{ vertical: "top", horizontal: "right" }}
-			>
-				<Box sx={{ p: 2, maxWidth: 480 }}>
-					<TalentSection talents={talents} setTalents={setTalents} />
-				</Box>
-			</Popover>
 		</Paper>
 	);
 }

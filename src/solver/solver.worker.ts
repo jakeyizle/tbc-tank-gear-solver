@@ -103,6 +103,8 @@ self.onmessage = async (e) => {
 				perMetricStatWeightStdevs: simResult.finalPerMetricStatWeightStdevs,
 				round1StatWeights: simResult.round1StatWeights,
 				characterStats,
+				physicalDamageTakenMultiplier:
+					linearModel.physicalDamageTakenMultiplier,
 			});
 			return;
 		}
@@ -139,7 +141,13 @@ self.onmessage = async (e) => {
 		// unmerged profile - not the one measureFinalSimMetrics was handed above.
 		const characterStats = await measureCharacterStats(result, db, profile);
 
-		postMessage({ type: "result", items: result, simMetrics, characterStats });
+		postMessage({
+			type: "result",
+			items: result,
+			simMetrics,
+			characterStats,
+			physicalDamageTakenMultiplier: linearModel.physicalDamageTakenMultiplier,
+		});
 	} catch (error) {
 		console.error(error);
 		postMessage({

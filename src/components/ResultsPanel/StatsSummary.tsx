@@ -11,7 +11,6 @@ import {
 	pseudo as simPseudo,
 	stat as simStat,
 } from "#/helpers/characterStatsDisplay";
-import { improvedRighteousFuryMultiplier } from "#/helpers/resultStats";
 import type { LPItem, Stat } from "#/solver/types";
 import type { CharacterStatsSnapshot } from "#/types/CharacterStats";
 import type { SimMetricsSnapshot } from "#/types/SimCalibrationProfile";
@@ -28,6 +27,11 @@ interface StatsSummaryProps {
 	perMetricStatWeightStdevs?: Record<"tps" | "dtps" | "tmi", Stat[]>;
 	/** The simulator's own stats for this gear. Absent only for pre-existing saved results. */
 	characterStats?: CharacterStatsSnapshot;
+	/**
+	 * Non-stat physical damage reduction (Improved Righteous Fury), captured at solve time - see
+	 * SolveResult.physicalDamageTakenMultiplier. Absent only for pre-existing saved results.
+	 */
+	physicalDamageTakenMultiplier?: number;
 }
 
 /** Class id for Paladin, per #/data/classes.ts. Gates Holy Shield's block bonus. */
@@ -41,6 +45,7 @@ export default function StatsSummary({
 	perMetricStatWeights,
 	perMetricStatWeightStdevs,
 	characterStats,
+	physicalDamageTakenMultiplier,
 }: StatsSummaryProps) {
 	if (!rawItems || rawItems.length === 0) {
 		return null;
@@ -98,9 +103,9 @@ export default function StatsSummary({
 	const spellCritRating = simStat(view, STAT.SpellCrit);
 
 	const mitigation = mitigationInfo(view, {
-		physicalDamageTakenMultiplier: improvedRighteousFuryMultiplier(
-			baseConfig.talentSources,
-		),
+		// 1 for results saved before the solver recorded this, which under-reports Effective HP
+		// rather than inventing a reduction the solve may not have had.
+		physicalDamageTakenMultiplier: physicalDamageTakenMultiplier ?? 1,
 	});
 
 	const mitigationStats = [

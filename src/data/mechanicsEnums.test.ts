@@ -89,7 +89,7 @@ describe("tbcDatabase enum tables match the generated protobuf enums", () => {
 
 describe("mechanics constants", () => {
 	it("reproduces the armor constant this repo had hardcoded for a boss", () => {
-		// helpers/convertStat.ts:48 hardcodes 11960; that is the level-73 value specifically.
+		// The deleted helpers/convertStat.ts hardcoded 11960; that is the level-73 value only.
 		expect(armorConstant(BOSS_LEVEL)).toBeCloseTo(11960, 6);
 		expect(armorConstant(72)).toBeCloseTo(11492.5, 6);
 	});

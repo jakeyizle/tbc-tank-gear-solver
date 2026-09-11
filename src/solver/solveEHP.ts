@@ -169,7 +169,7 @@ export const solveConfigForEHP = async (
 
 // Hard avoidance (Dodge% + Parry% + Miss%, excluding Block) is what actually counts toward
 // uncrushable. Unlike EHP's armor curve, dodge/parry/miss convert from rating to percent via
-// fixed linear divisors in this TBC-era ruleset (see convertStat.ts) - no diminishing returns -
+// fixed linear divisors in this TBC-era ruleset (see src/data/mechanics.ts) - no diminishing returns -
 // so this is a genuinely linear objective and needs no SLP-style iteration, just a single
 // weighted-stat solve with these three stats weighted equally.
 const HARD_AVOIDANCE_STATS: Stat[] = [

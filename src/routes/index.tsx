@@ -9,8 +9,6 @@ import ItemInputSection from "#/components/ItemInputSection";
 import ResultsPanel from "#/components/ResultsPanel";
 import SimCalibrationPanel from "#/components/SimCalibrationPanel";
 import SolveButton from "#/components/SolveButton";
-import { getAbilities } from "#/data/abilities";
-import { getTalentsByClass } from "#/data/talents";
 import type { DetectedCharacter } from "#/helpers/parseItemInput";
 import { analyzeItemInput, parseItemInput } from "#/helpers/parseItemInput";
 import { loadAppState, saveAppState } from "#/helpers/persistence";
@@ -20,7 +18,6 @@ import { useSimCalibrationProfile } from "#/hooks/useSimCalibrationProfile";
 import { useSolverConfigs } from "#/hooks/useSolverConfigs";
 import type { SolveAllProgress } from "#/solver";
 import { solveAll } from "#/solver";
-import type { ModifierSource } from "#/solver/types";
 import type { SolveResult } from "#/types/SolverConfig";
 export const Route = createFileRoute("/")({ component: App });
 
@@ -30,13 +27,6 @@ function App() {
 	const [itemInput, setItemInput] = useState(() => _saved?.itemInput ?? "");
 	const [classValue, setClassValue] = useState(() => _saved?.classValue ?? "2");
 	const [raceValue, setRaceValue] = useState(() => _saved?.raceValue ?? "1");
-	const [talents, setTalents] = useState<ModifierSource[]>(() => {
-		if (_saved?.talents) return _saved.talents;
-		return getTalentsByClass(_saved?.classValue ?? "2").map((talent) => ({
-			...talent,
-			rank: talent.maxRank,
-		}));
-	});
 	const [areEnchantsGemsLocked, setAreEnchantsGemsLocked] = useState(
 		() => _saved?.areEnchantsGemsLocked ?? false,
 	);
@@ -97,7 +87,6 @@ function App() {
 			itemInput,
 			classValue,
 			raceValue,
-			talents,
 			areEnchantsGemsLocked,
 			excludeUniqueGems,
 			excludeJewelcraftingItems,
@@ -118,14 +107,17 @@ function App() {
 		(character: DetectedCharacter) => {
 			if (character.classId) setClassValue(character.classId);
 			if (character.raceId) setRaceValue(character.raceId);
-			if (Object.keys(character.talentRanks).length > 0) {
-				setTalents((prev) =>
-					prev.map((talent) =>
-						talent.id in character.talentRanks
-							? { ...talent, rank: character.talentRanks[talent.id] }
-							: talent,
-					),
-				);
+			// The export's talent string goes straight to the raid profile, which is what the
+			// simulator actually reads. Before this, the imported character's talents were
+			// decoded into ranks for the deleted stat engine and never reached the sim at all.
+			if (character.talentsString) {
+				updateSimCalibrationProfile({
+					...simCalibrationProfile,
+					raidProfile: {
+						...simCalibrationProfile.raidProfile,
+						talentsString: character.talentsString,
+					},
+				});
 			}
 		},
 		[],
@@ -171,8 +163,6 @@ function App() {
 			const newResults = new Map<string, SolveResult>();
 			let firstResultId: string | null = null;
 
-			const abilitySources = getAbilities(classValue);
-
 			const items = parseItemInput(itemInput);
 
 			const baseConfig = {
@@ -184,8 +174,6 @@ function App() {
 				excludeEnchantingItems,
 				independentConfigs,
 				phase,
-				talentSources: talents,
-				abilitySources,
 				simCalibrationProfile,
 			};
 
@@ -193,8 +181,6 @@ function App() {
 			updateCharacterConfig({
 				classId: classValue,
 				raceId: raceValue,
-				talentSources: talents,
-				abilitySources,
 			});
 
 			const solverResults = await solveAll(
@@ -223,8 +209,7 @@ function App() {
 				itemInput,
 				classValue,
 				raceValue,
-				talents,
-				areEnchantsGemsLocked,
+					areEnchantsGemsLocked,
 				excludeUniqueGems,
 				excludeJewelcraftingItems,
 				excludeEnchantingItems,
@@ -263,8 +248,6 @@ function App() {
 						setClassValue={setClassValue}
 						raceValue={raceValue}
 						setRaceValue={setRaceValue}
-						talents={talents}
-						setTalents={setTalents}
 					/>
 
 					<ItemInputSection

@@ -1,4 +1,3 @@
-import type { ModifierSource } from "#/solver/types";
 import type { SimCalibrationProfile } from "#/types/SimCalibrationProfile";
 import type { SolveResult, SolverConfiguration } from "#/types/SolverConfig";
 
@@ -10,7 +9,6 @@ export interface PersistedState {
 	itemInput: string;
 	classValue: string;
 	raceValue: string;
-	talents: ModifierSource[];
 	areEnchantsGemsLocked: boolean;
 	excludeUniqueGems: boolean;
 	// Optional - absent for saves from before these settings existed; loadAppState's caller

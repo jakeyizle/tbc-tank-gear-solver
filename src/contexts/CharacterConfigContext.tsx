@@ -1,11 +1,8 @@
 import { createContext, type ReactNode, useState } from "react";
-import type { ModifierSource } from "#/solver/types";
 
 interface CharacterConfigValue {
 	classId: string;
 	raceId: string;
-	talentSources: ModifierSource[];
-	abilitySources: ModifierSource[];
 }
 
 interface CharacterConfigContextType {

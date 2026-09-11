@@ -4,7 +4,6 @@
 
 import { CLASS_NAME_TO_ID } from "#/data/classes";
 import { RACE_NAME_TO_ID } from "#/data/races";
-import { parseTalentsString } from "#/data/talentString";
 import type { SolverItemDatabase } from "#/solver/itemDatabase";
 import { groupItemsBySlot, SLOT_ORDER } from "#/solver/itemSlots";
 import type { InputItem, LPItem } from "#/solver/types";
@@ -59,7 +58,13 @@ export interface DetectedCharacter {
 	raceName?: string;
 	raceId?: string;
 	spec?: string;
-	talentRanks: Record<string, number>;
+	/**
+	 * The export's raw WowSims talent string, passed through verbatim - it is exactly what the
+	 * simulator consumes (raidProfile.talentsString). This used to be decoded into per-talent
+	 * ranks here and the string discarded, back when talents were modeled as stat effects; the
+	 * sim is the stat authority now, so the string itself is the useful artifact.
+	 */
+	talentsString?: string;
 	// false when the export's class doesn't resolve to a class/spec this app models
 	// (currently Protection Paladin only) - class/race/talents shouldn't be applied.
 	supported: boolean;
@@ -89,9 +94,6 @@ export const parseCharacterExport = (
 		? CLASS_NAME_TO_ID[normalize(className)]
 		: undefined;
 	const raceId = raceName ? RACE_NAME_TO_ID[normalize(raceName)] : undefined;
-	const talentRanks =
-		classId && talentsStr ? parseTalentsString(classId, talentsStr) : {};
-
 	return {
 		name: typeof data.name === "string" ? data.name : undefined,
 		className,
@@ -99,7 +101,7 @@ export const parseCharacterExport = (
 		raceName,
 		raceId,
 		spec: typeof data.spec === "string" ? data.spec : undefined,
-		talentRanks,
+		talentsString: talentsStr,
 		supported: classId != null,
 	};
 };

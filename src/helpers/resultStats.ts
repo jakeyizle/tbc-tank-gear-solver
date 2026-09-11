@@ -19,17 +19,20 @@ import {
 const PALADIN_CLASS_ID = "2";
 
 /**
- * Improved Righteous Fury reduces damage taken by 2% per rank. It is a damage multiplier, not
- * a stat, so it never appears in computeStats output and still has to be read off the talent
- * list. It moves to the raid profile's talent string with the config-model collapse.
+ * Non-stat physical damage reduction (today only Improved Righteous Fury), as captured on the
+ * result at solve time from the LinearStatModel the solver actually used - see
+ * SolveResult.physicalDamageTakenMultiplier.
+ *
+ * This used to be recomputed here from baseConfig.talentSources, which meant two independent
+ * implementations (the other in deriveLinearModel.ts) that could - and did - disagree, since one
+ * read the imported character's talents and the other the raid profile's talent string. Reading
+ * the solver's own number instead makes disagreement impossible.
+ *
+ * Falls back to 1 for results persisted before the field existed, which under-reports Effective
+ * HP rather than inventing a reduction the solve may not have had.
  */
-export function improvedRighteousFuryMultiplier(
-	talentSources: { id: string; rank?: number }[] | undefined,
-): number {
-	const rank =
-		talentSources?.find((source) => source.id === "improved-righteous-fury")
-			?.rank ?? 0;
-	return 1 - rank * 0.02;
+export function damageTakenMultiplier(result: SolveResult): number {
+	return result.physicalDamageTakenMultiplier ?? 1;
 }
 
 interface HeadlineStat {
@@ -70,9 +73,7 @@ export function getHeadlineStats(
 		),
 	});
 	const mitigation = mitigationInfo(view, {
-		physicalDamageTakenMultiplier: improvedRighteousFuryMultiplier(
-			result.baseConfig.talentSources,
-		),
+		physicalDamageTakenMultiplier: damageTakenMultiplier(result),
 	});
 
 	return [
