@@ -220,3 +220,46 @@ describe("solveConfigForEHP", () => {
 	}, 60000);
 });
 
+// A "stats" config with nothing weighted has an identically-zero objective: every feasible set
+// ties and glpk returns an arbitrary one. Under dependent configs (solveAll's default) those
+// arbitrary picks are then locked into every later config carrying their gems, so a config that
+// expressed no preference silently dictates the gemming for the ones that did - and any pool
+// change reshuffles the tie-break. See assertObjectiveIsWeighted in solveEHP.ts.
+describe("zero-objective guard", () => {
+	it("refuses a stats-mode solve with nothing weighted", async () => {
+		await expect(
+			solveGearSet(testItemPool, {
+				...baseOptions(),
+				optimizeStats: [],
+				objectiveMode: "stats",
+			}),
+		).rejects.toThrow(/No stats are weighted/);
+	});
+
+	it("refuses when every weight is zero", async () => {
+		await expect(
+			solveGearSet(testItemPool, {
+				...baseOptions(),
+				optimizeStats: [{ name: "Stamina", value: 0, type: "flat" }],
+				objectiveMode: "stats",
+			}),
+		).rejects.toThrow(/No stats are weighted/);
+	});
+
+	it("treats a missing objectiveMode as stats mode", async () => {
+		await expect(
+			solveGearSet(testItemPool, { ...baseOptions(), optimizeStats: [] }),
+		).rejects.toThrow(/No stats are weighted/);
+	});
+
+	it("does not fire for modes that compute their own weights", async () => {
+		// ehp/hardAvoidance/tps/... all ignore optimizeStats entirely, so an empty one is normal
+		// and must not be rejected - this is exactly how the UI submits an EHP config.
+		const result = await solveGearSet(testItemPool, {
+			...baseOptions(),
+			optimizeStats: [],
+			objectiveMode: "ehp",
+		});
+		expect(result.length).toBeGreaterThan(0);
+	}, 60000);
+});

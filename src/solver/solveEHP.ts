@@ -198,6 +198,31 @@ export const solveConfigForHardAvoidance = async (
 	);
 };
 
+// A "stats" config with nothing weighted is not expressing a weak preference - its objective is
+// identically zero, so every feasible gear set ties and glpk returns whichever one branch-and-
+// bound happens to reach first. That is bad enough on its own, but it is genuinely harmful under
+// dependent configs (solveAll's default): each config's picks are locked into the next one's pool
+// carrying their gems, because an item is one physical object and cannot be gemmed two ways. So a
+// config that expressed no preference still dictates the gemming for every item it arbitrarily
+// grabbed - and because the tie-break is arbitrary, adding ANY item to the pool can reshuffle it
+// and silently move every later config's result. Diagnosed from exactly that symptom: an 18-item
+// pool scoring worse than its own 17-item subset.
+//
+// Only "stats" mode is checked. Every other objective mode ignores optimizeStats and computes its
+// own weights (see SolverConfiguration.objectiveMode's doc comment).
+const assertObjectiveIsWeighted = (options: SolveOptions): void => {
+	if (options.objectiveMode !== undefined && options.objectiveMode !== "stats") {
+		return;
+	}
+	const hasWeight = options.optimizeStats.some((stat) => stat.value !== 0);
+	if (!hasWeight) {
+		throw new Error(
+			"No stats are weighted, so every gear set scores the same. Weight at least one stat, " +
+				"or pick a different objective mode.",
+		);
+	}
+};
+
 // Single entry point shared by solver.worker.ts and tests that need to exercise objectiveMode
 // dispatch without a real Worker: routes to the EHP solve or the plain stat-weight solve based
 // on options.objectiveMode, always resolving to the plain LPItem[] shape solveAll/the UI expect.
@@ -206,6 +231,7 @@ export const solveGearSet = async (
 	options: SolveOptions,
 	onProgress?: (progress: SolveProgress) => void,
 ): Promise<LPItem[]> => {
+	assertObjectiveIsWeighted(options);
 	if (options.objectiveMode === "ehp") {
 		const result = await solveConfigForEHP(items, options, onProgress);
 		return result.items;
