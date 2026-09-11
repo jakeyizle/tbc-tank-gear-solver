@@ -22,7 +22,7 @@ interface CalibrationStatsSectionProps {
 
 // Chip-toggle list for which stats get a +/- perturbation sim during calibration (see
 // SolverConfiguration.enabledCalibrationStats) - structurally identical to
-// ConsumablesSection/BuffSection (same "label + wrapped row of small Chips" pattern), only
+// ConsumablesSection (same "label + wrapped row of small Chips" pattern), only
 // rendered for sim-backed objective modes (see ConfigCard.tsx).
 export default function CalibrationStatsSection({
 	stats,

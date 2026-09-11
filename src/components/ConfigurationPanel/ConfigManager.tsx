@@ -3,7 +3,6 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { getBuffs } from "#/data/buffs";
 import { CONSUMABLES } from "#/data/consumables";
 import {
 	ALWAYS_INCLUDED_CALIBRATION_STATS,
@@ -18,7 +17,6 @@ import {
 import type { SolverConfiguration } from "#/types/SolverConfig";
 import ConfigCard from "./ConfigCard";
 
-const BUFFS = getBuffs();
 
 interface ConfigManagerProps {
 	configs: SolverConfiguration[];
@@ -54,25 +52,6 @@ export default function ConfigManager({
 	updateConfig,
 	independentConfigs,
 }: ConfigManagerProps) {
-	const EXCLUSIVE_BUFF_GROUPS = [
-		["mark-of-the-wild", "improved-mark-of-the-wild"],
-	];
-
-	const handleBuffChange = (config: SolverConfiguration, buffId: string) => {
-		const toggledOn = !config.buffs.find((buff) => buff.id === buffId)?.checked;
-		const exclusiveGroup = EXCLUSIVE_BUFF_GROUPS.find((group) =>
-			group.includes(buffId),
-		);
-
-		const newBuffs = config.buffs.map((buff) => {
-			if (buff.id === buffId) return { ...buff, checked: toggledOn };
-			if (toggledOn && exclusiveGroup?.includes(buff.id))
-				return { ...buff, checked: false };
-			return buff;
-		});
-		updateConfig(config.id, { buffs: newBuffs });
-	};
-
 	const handleConsumableChange = (
 		config: SolverConfiguration,
 		consumableId: string,
@@ -130,10 +109,6 @@ export default function ConfigManager({
 
 			<Stack spacing={1}>
 				{configs.map((config, index) => {
-					const displayBuffs = BUFFS.map((buff) => ({
-						...buff,
-						checked: !!config.buffs.find((b) => b.id === buff.id)?.checked,
-					}));
 					const displayConsumables = CONSUMABLES.map((consumable) => ({
 						...consumable,
 						checked: config.enabledConsumableIds.includes(consumable.id),
@@ -160,7 +135,6 @@ export default function ConfigManager({
 							index={index}
 							isExpanded={config.id === activeConfigId}
 							canDelete={configs.length > 1}
-							displayBuffs={displayBuffs}
 							displayConsumables={displayConsumables}
 							displayCalibrationStats={displayCalibrationStats}
 							onSelect={() => onSelectConfig(config.id)}
@@ -191,7 +165,6 @@ export default function ConfigManager({
 								updateConfig(config.id, { survivabilityMetric })
 							}
 							onUpdateResistanceFloors={updateResistanceFloors}
-							onBuffChange={(buffId) => handleBuffChange(config, buffId)}
 							onConsumableChange={(consumableId) =>
 								handleConsumableChange(config, consumableId)
 							}

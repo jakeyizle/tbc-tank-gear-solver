@@ -56,7 +56,6 @@ interface SolveOptions {
 	raceId: string;
 	classId: string;
 	talentSources: ModifierSource[];
-	buffs: ModifierSource[];
 	abilitySources: ModifierSource[];
 	enabledConsumableIds: string[];
 }

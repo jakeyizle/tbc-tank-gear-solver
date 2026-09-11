@@ -1,8 +1,6 @@
-import { getBuffs } from "#/data/buffs";
 import { CONSUMABLES } from "#/data/consumables";
 import { SIM_CALIBRATION_STAT_NAMES } from "#/sim/statTranslation";
 import type {
-	Buff,
 	LPItem,
 	ModifierSource,
 	ResistanceFloor,
@@ -53,7 +51,6 @@ export interface SolverConfiguration {
 	resistanceFloors: ResistanceFloor[];
 	abilities: ModifierSource[];
 	talents: ModifierSource[];
-	buffs: Buff[];
 	enabledConsumableIds: string[];
 }
 
@@ -117,7 +114,6 @@ export function createEmptyConfig(
 		resistanceFloors: [],
 		abilities: [],
 		talents: [],
-		buffs: getBuffs(),
 		enabledConsumableIds: CONSUMABLES.map((consumable) => consumable.id),
 	};
 }

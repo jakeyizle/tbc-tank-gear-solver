@@ -14,7 +14,6 @@ import Typography from "@mui/material/Typography";
 import type { DragEvent, ReactNode } from "react";
 import { useState } from "react";
 import {
-	type Buff,
 	type ConsumableItem,
 	type ResistanceFloor,
 	STAT_LABELS,
@@ -23,7 +22,6 @@ import {
 } from "#/solver/types";
 import { monoFontFamily } from "#/theme";
 import type { SolverConfiguration } from "#/types/SolverConfig";
-import BuffSection from "./BuffSection";
 import CalibrationStatsSection from "./CalibrationStatsSection";
 import ConstraintsSection from "./ConstraintsSection";
 import ConsumablesSection from "./ConsumablesSection";
@@ -62,7 +60,6 @@ interface ConfigCardProps {
 	index: number;
 	isExpanded: boolean;
 	canDelete: boolean;
-	displayBuffs: Buff[];
 	displayConsumables: (ConsumableItem & { checked: boolean })[];
 	displayCalibrationStats: {
 		name: StatName;
@@ -90,7 +87,6 @@ interface ConfigCardProps {
 	onUpdateBalance: (balance: number) => void;
 	onUpdateSurvivabilityMetric: (metric: "tmi" | "dtps") => void;
 	onUpdateResistanceFloors: (floors: ResistanceFloor[]) => void;
-	onBuffChange: (buffId: string) => void;
 	onConsumableChange: (consumableId: string) => void;
 	onCalibrationStatChange: (statName: StatName) => void;
 	onDropReorder: (draggedId: string) => void;
@@ -168,7 +164,6 @@ export default function ConfigCard({
 	index,
 	isExpanded,
 	canDelete,
-	displayBuffs,
 	displayConsumables,
 	displayCalibrationStats,
 	onSelect,
@@ -182,7 +177,6 @@ export default function ConfigCard({
 	onUpdateBalance,
 	onUpdateSurvivabilityMetric,
 	onUpdateResistanceFloors,
-	onBuffChange,
 	onConsumableChange,
 	onCalibrationStatChange,
 	onDropReorder,
@@ -567,20 +561,6 @@ export default function ConfigCard({
 						avoidanceFloorDisabled={config.objectiveMode === "hardAvoidance"}
 					/>
 				</ConfigBand>
-				{config.objectiveMode !== "tps" &&
-					config.objectiveMode !== "dtps" &&
-					config.objectiveMode !== "tmi" &&
-					config.objectiveMode !== "balanced" && (
-						<ConfigBand
-							accent="rgba(255,255,255,0.3)"
-							titleColor="rgba(255,255,255,0.85)"
-							tint="rgba(255,255,255,0.025)"
-							title="Assumptions"
-							description="added stats, not solved for"
-						>
-							<BuffSection buffs={displayBuffs} onBuffChange={onBuffChange} />
-						</ConfigBand>
-					)}
 			</Box>
 		</Box>
 	);
