@@ -75,6 +75,47 @@ describe("persistence", () => {
 		expect(loadAppState()).toEqual({ itemInput: "30125\n30007" });
 	});
 
+	// The real v1 shape, as written by the build before the sim-as-source-of-truth refactor:
+	// per-config `abilities`/`talents`/`buffs`, a top-level `talents`, and slug-keyed
+	// `enabledConsumableIds`. None of that can be read as a v2 config, and there is deliberately
+	// no migration (see CURRENT_VERSION's comment) - so this must salvage rather than load a
+	// half-converted shape the UI would then crash on.
+	it("salvages the gear pool from a real v1 blob", () => {
+		store.set(
+			"appState",
+			JSON.stringify({
+				version: 1,
+				itemInput: "30125\n30007",
+				classValue: "2",
+				raceValue: "1",
+				talents: [{ id: "toughness", rank: 5 }],
+				areEnchantsGemsLocked: false,
+				excludeUniqueGems: false,
+				independentConfigs: false,
+				phase: 5,
+				configs: [
+					{
+						id: "a",
+						name: "A",
+						uncritabilitySetting: 2,
+						uncrushabilitySetting: 1,
+						optimizeStats: [],
+						objectiveMode: "stats",
+						resistanceFloors: [],
+						abilities: [],
+						talents: [],
+						buffs: [{ id: "blessing-of-kings", checked: true }],
+						enabledConsumableIds: ["flask-of-fortification"],
+					},
+				],
+				activeConfigId: "a",
+				solveResults: [],
+				activeResultId: null,
+			}),
+		);
+		expect(loadAppState()).toEqual({ itemInput: "30125\n30007" });
+	});
+
 	it("returns null for corrupt JSON", () => {
 		store.set("appState", "{not json");
 		expect(loadAppState()).toBeNull();

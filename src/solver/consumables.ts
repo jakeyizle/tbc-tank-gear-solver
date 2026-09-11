@@ -4,14 +4,16 @@ import type { LPItem } from "./types";
 
 export const getConsumableLPItems = (
 	config: SolverConfiguration,
-	enabledConsumableIds: string[],
+	enabledConsumableIds: number[],
 ): LPItem[] => {
 	return CONSUMABLES.filter((consumable) =>
 		enabledConsumableIds.includes(consumable.id),
 	).map((consumable) => {
 		const scores = config.calculateScoresForStats(consumable.stats);
+		// LPItem ids are strings across the board (gear ids are strings), so the numeric
+		// consumable id is stringified here and read back with Number() where the sim needs it.
 		return {
-			id: consumable.id,
+			id: String(consumable.id),
 			name: consumable.name,
 			type: consumable.type,
 			stats: consumable.stats,
@@ -20,7 +22,7 @@ export const getConsumableLPItems = (
 			enchant: { name: "", id: "", effectID: "", type: "Ranged", stats: [] },
 			gems: [],
 			gemSlots: [],
-			uniqueId: consumable.id,
+			uniqueId: String(consumable.id),
 			locked: false,
 			avoidanceScore: scores.avoidanceScore,
 			objectiveScore: scores.objectiveScore,

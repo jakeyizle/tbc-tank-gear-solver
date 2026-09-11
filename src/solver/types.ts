@@ -236,13 +236,11 @@ export type ProcessedItemType =
 type ConsumableType = "Flask" | "BattleElixir" | "GuardianElixir";
 
 export interface ConsumableItem {
-	id: string;
+	/** The real game item id, which is also the wowhead item id and the id db.consumables uses. */
+	id: number;
 	name: string;
 	type: ConsumableType;
 	stats: Stat[];
-	// numeric wowhead item id, e.g. 22861 for https://www.wowhead.com/tbc/item=22861/flask-of-blinding-light
-	// placeholder 0 until filled in via a separate data pass
-	wowheadId: number;
 }
 
 export type HandType = "TwoHand" | "OneHand" | "OffHand" | "MainHand";

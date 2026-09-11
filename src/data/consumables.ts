@@ -1,15 +1,19 @@
 import type { ConsumableItem } from "../solver/types";
 
-// wowheadId doubles as the real tbc-new/game item ID (a wowhead item URL's numeric id is the
-// same id the game/sim use) - cross-checked against vendor/tbc-sim/assets/database/db.json's
-// entries for each of these exact names/stats, and (for Flask of Blinding Light) against
+// `id` is the real tbc-new/game item id (a wowhead item URL's numeric id is the same id the game
+// and the sim use) - cross-checked against vendor/tbc-sim/assets/database/db.json's entries for
+// each of these exact names/stats, and (for Flask of Blinding Light) against
 // protPaladinProfile.ts's own hardcoded PROT_PALADIN_CONSUMABLES.flaskId comment.
+//
+// These entries used to be keyed by a hand-written slug ("flask-of-fortification") with the game
+// id alongside. Keying on the game id instead means this list and db.consumables address the
+// same things the same way, so replacing this file with db.consumables later is a data swap
+// rather than an id-space migration through persistence, the UI and resolveGearAndConsumables.
 export const CONSUMABLES: ConsumableItem[] = [
 	{
-		id: "flask-of-blinding-light",
+		id: 22861,
 		name: "Flask of Blinding Light",
 		type: "Flask",
-		wowheadId: 22861,
 		stats: [
 			{
 				name: "SpellPower",
@@ -19,10 +23,9 @@ export const CONSUMABLES: ConsumableItem[] = [
 		],
 	},
 	{
-		id: "flask-of-fortification",
+		id: 22851,
 		name: "Flask of Fortification",
 		type: "Flask",
-		wowheadId: 22851,
 		stats: [
 			{
 				name: "Health",
@@ -37,10 +40,9 @@ export const CONSUMABLES: ConsumableItem[] = [
 		],
 	},
 	{
-		id: "elixir-of-major-defense",
+		id: 22834,
 		name: "Elixir of Major Defense",
 		type: "GuardianElixir",
-		wowheadId: 22834,
 		stats: [
 			{
 				name: "Armor",
@@ -50,10 +52,9 @@ export const CONSUMABLES: ConsumableItem[] = [
 		],
 	},
 	{
-		id: "elixir-of-major-fortitude",
+		id: 32062,
 		name: "Elixir of Major Fortitude",
 		type: "GuardianElixir",
-		wowheadId: 32062,
 		stats: [
 			{
 				name: "Health",
@@ -63,10 +64,9 @@ export const CONSUMABLES: ConsumableItem[] = [
 		],
 	},
 	{
-		id: "greater-arcane-elixir",
+		id: 13454,
 		name: "Greater Arcane Elixir",
 		type: "BattleElixir",
-		wowheadId: 13454,
 		stats: [
 			{
 				name: "SpellPower",
@@ -76,10 +76,9 @@ export const CONSUMABLES: ConsumableItem[] = [
 		],
 	},
 	{
-		id: "elixir-of-major-agility",
+		id: 22831,
 		name: "Elixir of Major Agility",
 		type: "BattleElixir",
-		wowheadId: 22831,
 		stats: [
 			{
 				name: "Agility",

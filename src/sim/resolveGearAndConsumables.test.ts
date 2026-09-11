@@ -36,9 +36,9 @@ describe("splitGearAndConsumables", () => {
 	it("excludes consumable-type items from the gear array", () => {
 		const head = item({ id: "2", type: "Head", uniqueId: "head" });
 		const flask = item({
-			id: "flask-of-blinding-light",
+			id: "22861",
 			type: "Flask",
-			uniqueId: "flask-of-blinding-light",
+			uniqueId: "22861",
 		});
 		const { gear } = splitGearAndConsumables([flask, head]);
 		expect(gear).toHaveLength(1);
@@ -55,11 +55,11 @@ describe("splitGearAndConsumables", () => {
 		});
 	});
 
-	it("resolves a chosen flask to its wowheadId, leaving elixir ids at 0", () => {
+	it("resolves a chosen flask to its game item id, leaving elixir ids at 0", () => {
 		const flask = item({
-			id: "flask-of-blinding-light",
+			id: "22861",
 			type: "Flask",
-			uniqueId: "flask-of-blinding-light",
+			uniqueId: "22861",
 		});
 		const { consumables } = splitGearAndConsumables([flask]);
 		expect(consumables).toEqual({
@@ -71,14 +71,14 @@ describe("splitGearAndConsumables", () => {
 
 	it("resolves a chosen battle+guardian elixir combo, leaving flaskId at 0", () => {
 		const battle = item({
-			id: "elixir-of-major-agility",
+			id: "22831",
 			type: "BattleElixir",
-			uniqueId: "elixir-of-major-agility",
+			uniqueId: "22831",
 		});
 		const guardian = item({
-			id: "elixir-of-major-defense",
+			id: "22834",
 			type: "GuardianElixir",
-			uniqueId: "elixir-of-major-defense",
+			uniqueId: "22834",
 		});
 		const { consumables } = splitGearAndConsumables([battle, guardian]);
 		expect(consumables).toEqual({

@@ -48,7 +48,7 @@ export interface SolverConfiguration {
 	// present) in 'stats'/'ehp' mode.
 	enabledCalibrationStats: StatName[];
 	resistanceFloors: ResistanceFloor[];
-	enabledConsumableIds: string[];
+	enabledConsumableIds: number[];
 }
 
 export interface SolveResult {

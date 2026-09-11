@@ -2,7 +2,20 @@ import type { SimCalibrationProfile } from "#/types/SimCalibrationProfile";
 import type { SolveResult, SolverConfiguration } from "#/types/SolverConfig";
 
 const STORAGE_KEY = "appState";
-const CURRENT_VERSION = 1;
+// v2: the sim-as-source-of-truth refactor. Configs lost `abilities`/`talents`/`buffs`, the saved
+// blob lost `talents`, and `enabledConsumableIds` changed from hand-written slugs to real game
+// item ids - so a v1 config cannot be read as a v2 one.
+//
+// There is deliberately NO migration. Losing saved configs and results is acceptable here (they
+// are a few clicks and one solve away), and MIGRATIONS having no entry for v1 is exactly what
+// makes migrate() return null and loadAppState fall through to salvage() - which keeps the one
+// thing the user cannot trivially recreate, the pasted gear pool, and defaults everything else.
+//
+// Writing a migration would be the riskier choice, not the safer one: one that returns a
+// malformed config shape makes migrate() return something truthy, so salvage() never runs, the
+// bad state loads, and the app crashes on render or solve - then persists and reloads into the
+// same crash. Omitting it cannot do that.
+const CURRENT_VERSION = 2;
 
 export interface PersistedState {
 	version: number;

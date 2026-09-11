@@ -47,13 +47,13 @@ export default function ConsumablesRow({ items }: ConsumablesRowProps) {
 			) : (
 				<Stack spacing={0.5}>
 					{items.map((item) => {
-						const consumable = CONSUMABLES.find((c) => c.id === item.id);
+						const consumable = CONSUMABLES.find((c) => String(c.id) === item.id);
 						const href = getConsumableWowheadUrl(
-							consumable?.wowheadId ?? 0,
-							consumable?.id ?? item.id,
+							consumable?.id ?? Number(item.id),
+							consumable?.name ?? item.name,
 						);
 						const tooltip = ItemTooltips.find(
-							(t) => t.id === String(consumable?.wowheadId),
+							(t) => t.id === item.id,
 						)?.icon;
 
 						return (

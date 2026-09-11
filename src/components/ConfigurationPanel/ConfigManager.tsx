@@ -54,7 +54,7 @@ export default function ConfigManager({
 }: ConfigManagerProps) {
 	const handleConsumableChange = (
 		config: SolverConfiguration,
-		consumableId: string,
+		consumableId: number,
 	) => {
 		const isEnabled = config.enabledConsumableIds.includes(consumableId);
 		const newEnabledIds = isEnabled

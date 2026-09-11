@@ -75,7 +75,7 @@ export interface SolveOptions {
 	 * this and `linearModel` are assembled in the Worker, never sent across postMessage.
 	 */
 	itemDatabase: SolverItemDatabase;
-	enabledConsumableIds: string[];
+	enabledConsumableIds: number[];
 	// Lets a caller that doesn't need this solve's final gear-picking precision (e.g.
 	// measureMetricAchievableScale - see its own doc comment) trade some of it for speed.
 	// Omitted entirely for every ordinary solve, which gets the global defaults - see

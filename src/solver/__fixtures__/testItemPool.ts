@@ -42,10 +42,11 @@ export const TEST_GEM_IDS = {
 	uniqueOrange: "30565", // Assassin's Fire Opal (MeleeCrit, Dodge) - Unique-Equipped
 } as const;
 
+// Real game item ids, matching src/data/consumables.ts (and db.consumables).
 export const TEST_CONSUMABLE_IDS = {
-	flask: "flask-of-fortification", // Health, Defense
-	guardianElixir: "elixir-of-major-defense", // Armor
-	battleElixir: "greater-arcane-elixir", // SpellPower
+	flask: 22851, // Flask of Fortification - Health, Defense
+	guardianElixir: 22834, // Elixir of Major Defense - Armor
+	battleElixir: 13454, // Greater Arcane Elixir - SpellPower
 } as const;
 
 const item = (id: string): InputItem => ({ id, gems: [] });

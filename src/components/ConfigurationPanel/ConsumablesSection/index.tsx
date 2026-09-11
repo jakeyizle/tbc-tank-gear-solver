@@ -7,7 +7,7 @@ type DisplayConsumable = ConsumableItem & { checked: boolean };
 
 interface ConsumablesSectionProps {
 	consumables: DisplayConsumable[];
-	onConsumableChange: (consumableId: string) => void;
+	onConsumableChange: (consumableId: number) => void;
 }
 
 export default function ConsumablesSection({

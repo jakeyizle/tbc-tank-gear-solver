@@ -54,7 +54,7 @@ interface SolveOptions {
 	phase: number;
 	raceId: string;
 	classId: string;
-	enabledConsumableIds: string[];
+	enabledConsumableIds: number[];
 }
 
 // Every worker progress message carries at least iteration/maxIterations (the avoidance-

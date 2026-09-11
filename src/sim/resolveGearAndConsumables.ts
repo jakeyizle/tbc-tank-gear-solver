@@ -4,7 +4,6 @@
 // elixir ids it picked - see solveSimMetric.ts for why this split matters (the wasm sim's
 // equipment array is positionally indexed by ItemSlot, so leaving consumables mixed into it
 // misaligns every later slot).
-import { CONSUMABLES } from "#/data/consumables";
 import { groupItemsBySlot, SLOT_ORDER } from "#/solver/itemSlots";
 import type { LPItem } from "#/solver/types";
 import type { GearPiece } from "./toTbcItemSpec";
@@ -24,18 +23,21 @@ export function splitGearAndConsumables(items: LPItem[]): {
 		(item): item is LPItem => item != null,
 	);
 
-	// A consumable LPItem's own `id` is the CONSUMABLES slug (e.g. "flask-of-blinding-light"),
-	// not the real game item id - see consumables.ts's getConsumableLPItems - so it has to be
-	// looked back up to get the wowheadId the sim actually wants.
-	const wowheadIdFor = (item?: LPItem) =>
-		item ? (CONSUMABLES.find((c) => c.id === item.id)?.wowheadId ?? 0) : 0;
+	// A consumable LPItem's `id` IS the real game item id (stringified - see
+	// getConsumableLPItems), which is exactly what the sim wants, so this is just a parse.
+	// Anything unparseable resolves to 0 ("no consumable") rather than NaN, which the sim would
+	// take as a garbage item id.
+	const gameIdFor = (item?: LPItem) => {
+		const id = item ? Number(item.id) : 0;
+		return Number.isFinite(id) ? id : 0;
+	};
 
 	return {
 		gear,
 		consumables: {
-			flaskId: wowheadIdFor(bySlot.Flask),
-			battleElixirId: wowheadIdFor(bySlot.BattleElixir),
-			guardianElixirId: wowheadIdFor(bySlot.GuardianElixir),
+			flaskId: gameIdFor(bySlot.Flask),
+			battleElixirId: gameIdFor(bySlot.BattleElixir),
+			guardianElixirId: gameIdFor(bySlot.GuardianElixir),
 		},
 	};
 }

@@ -87,7 +87,7 @@ interface ConfigCardProps {
 	onUpdateBalance: (balance: number) => void;
 	onUpdateSurvivabilityMetric: (metric: "tmi" | "dtps") => void;
 	onUpdateResistanceFloors: (floors: ResistanceFloor[]) => void;
-	onConsumableChange: (consumableId: string) => void;
+	onConsumableChange: (consumableId: number) => void;
 	onCalibrationStatChange: (statName: StatName) => void;
 	onDropReorder: (draggedId: string) => void;
 }
