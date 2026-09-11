@@ -17,6 +17,7 @@ import { CLASS_LABELS } from "#/data/classes";
 import { RACE_LABELS } from "#/data/races";
 import type { DetectedCharacter } from "#/helpers/parseItemInput";
 import { analyzeItemInput } from "#/helpers/parseItemInput";
+import { useSolverItemDatabase } from "#/hooks/useSolverItemDatabase";
 
 const PHASE_OPTIONS = [1, 2, 3, 4, 5];
 
@@ -127,7 +128,12 @@ function ItemInputSection({
 	setPhase,
 	onCharacterDetected,
 }: ItemInputSectionProps) {
-	const analysis = useMemo(() => analyzeItemInput(itemInput), [itemInput]);
+	// undefined until db.json lands; analyzeItemInput skips id checking until then.
+	const itemDatabase = useSolverItemDatabase();
+	const analysis = useMemo(
+		() => analyzeItemInput(itemInput, itemDatabase),
+		[itemInput, itemDatabase],
+	);
 	const isValid = analysis.status === "valid" || analysis.status === "warning";
 	const character =
 		analysis.status === "valid" || analysis.status === "warning"
@@ -166,13 +172,13 @@ function ItemInputSection({
 				!containerRef.current.contains(e.target as Node)
 			) {
 				setFocused(false);
-				if (analyzeItemInput(itemInput).status === "valid")
+				if (analyzeItemInput(itemInput, itemDatabase).status === "valid")
 					setManualEdit(false);
 			}
 		};
 		document.addEventListener("mousedown", handlePointerDown);
 		return () => document.removeEventListener("mousedown", handlePointerDown);
-	}, [focused, itemInput]);
+	}, [focused, itemInput, itemDatabase]);
 
 	const handlePasteFromClipboard = async () => {
 		setTextareaOpen(true);
@@ -501,9 +507,7 @@ function ItemInputSection({
 								<Switch
 									size="small"
 									checked={!excludeEnchantingItems}
-									onChange={(e) =>
-										setExcludeEnchantingItems(!e.target.checked)
-									}
+									onChange={(e) => setExcludeEnchantingItems(!e.target.checked)}
 								/>
 							}
 							label={

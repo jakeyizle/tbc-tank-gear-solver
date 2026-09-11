@@ -3,17 +3,11 @@
 // ({ items: [...] }).
 
 import { CLASS_NAME_TO_ID } from "#/data/classes";
-import Enchants from "#/data/enchants.json";
-import Gems from "#/data/gems.json";
-import Items from "#/data/items.json";
 import { RACE_NAME_TO_ID } from "#/data/races";
 import { parseTalentsString } from "#/data/talents";
+import type { SolverItemDatabase } from "#/solver/itemDatabase";
 import { groupItemsBySlot, SLOT_ORDER } from "#/solver/itemSlots";
 import type { InputItem, LPItem } from "#/solver/types";
-
-const knownItemIds = new Set(Items.map((i) => i.id));
-const knownGemIds = new Set(Gems.map((g) => g.id));
-const knownEnchantIds = new Set(Enchants.flatMap((e) => [e.id, e.effectID]));
 
 const looksLikeJson = (input: string) => {
 	const trimmed = input.trim();
@@ -130,8 +124,18 @@ const INVALID_EXPORT_MESSAGE =
 // WowSims export, not an unknown id.
 const isEmptySlot = (id: string | undefined) => !id || id === "0";
 
-// Non-throwing analysis used to give the user live feedback as they type/paste.
-export const analyzeItemInput = (input: string): ItemInputAnalysis => {
+/**
+ * Non-throwing analysis used to give the user live feedback as they type/paste.
+ *
+ * `db` is the fetched item pool (see src/solver/itemDatabase.ts). It arrives asynchronously,
+ * so callers pass `undefined` until it lands - in which case ids are not checked and the input
+ * is reported as valid-if-parseable. Flagging every id as unknown while the database is still
+ * downloading would be worse than saying nothing.
+ */
+export const analyzeItemInput = (
+	input: string,
+	db?: SolverItemDatabase,
+): ItemInputAnalysis => {
 	const trimmed = input.trim();
 	if (!trimmed) return { status: "empty" };
 
@@ -154,14 +158,23 @@ export const analyzeItemInput = (input: string): ItemInputAnalysis => {
 		const unknownItemIds = new Set<string>();
 		const unknownGemIds = new Set<string>();
 		const unknownEnchantIds = new Set<string>();
-		for (const item of items) {
-			if (!knownItemIds.has(item.id)) unknownItemIds.add(item.id);
-			for (const gem of item.gems) {
-				if (!isEmptySlot(gem) && !knownGemIds.has(gem)) unknownGemIds.add(gem);
-			}
-			const { enchant } = item;
-			if (enchant && !isEmptySlot(enchant) && !knownEnchantIds.has(enchant)) {
-				unknownEnchantIds.add(enchant);
+		if (db) {
+			for (const item of items) {
+				if (!db.itemsById.has(item.id)) unknownItemIds.add(item.id);
+				for (const gem of item.gems) {
+					if (!isEmptySlot(gem) && !db.gemsById.has(gem)) {
+						unknownGemIds.add(gem);
+					}
+				}
+				const { enchant } = item;
+				if (
+					enchant &&
+					!isEmptySlot(enchant) &&
+					!db.enchantsById.has(enchant) &&
+					!db.enchantsByEffectId.has(enchant)
+				) {
+					unknownEnchantIds.add(enchant);
+				}
 			}
 		}
 

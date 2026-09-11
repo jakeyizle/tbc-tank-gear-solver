@@ -1,7 +1,4 @@
-import Enchants from "../data/enchants.json";
-import Gems from "../data/gems.json";
-import Items from "../data/items.json";
-import { overrideItem } from "./itemOverride";
+import type { SolverItemDatabase } from "./itemDatabase";
 import type { SolverConfiguration } from "./SolverConfiguration";
 import { gemsSatisfySocketBonus } from "./socketBonus";
 import type {
@@ -50,13 +47,14 @@ const createEmptyEnchant = (): Enchant => {
 export const prepareItemCandidates = (
 	inputItems: InputItem[],
 	config: SolverConfiguration,
+	db: SolverItemDatabase,
 ): { fixedItems: LPItem[]; decomposableItems: DecomposableItem[] } => {
 	const items = inputItems
-		.map((item) => getItem(item))
+		.map((item) => getItem(item, db))
 		.filter((item): item is ItemVariation => !!item);
 
-	const enchants = getEnchants(config);
-	const gems = getGems(config);
+	const enchants = getEnchants(config, db);
+	const gems = getGems(config, db);
 	const filteredGems = gems.filter((gem) => gem.color !== "Meta");
 	const metaGems = gems.filter((gem) => gem.color === "Meta");
 
@@ -144,10 +142,11 @@ export const prepareItemCandidates = (
 	return { fixedItems, decomposableItems };
 };
 
-const getEnchants = (config: SolverConfiguration) => {
-	let enchants = Enchants as Enchant[];
+const getEnchants = (config: SolverConfiguration, db: SolverItemDatabase) => {
+	let enchants = db.enchants;
 	enchants = enchants.filter(
-		(enchant) => !enchant.profession || !isProfessionExcluded(enchant.profession, config),
+		(enchant) =>
+			!enchant.profession || !isProfessionExcluded(enchant.profession, config),
 	);
 	enchants = enchants.filter(
 		(enchant) => !enchant.classes || enchant.classes.includes(config.classId),
@@ -159,8 +158,8 @@ const getEnchants = (config: SolverConfiguration) => {
 	return enchants;
 };
 
-const getGem = (id: string) => {
-	const gemToReturn = Gems.find((g) => g.id === id);
+const getGem = (id: string, db: SolverItemDatabase) => {
+	const gemToReturn = db.gemsById.get(id);
 	if (!gemToReturn) {
 		console.error(`Gem not found: ${id}`);
 		return undefined;
@@ -168,9 +167,13 @@ const getGem = (id: string) => {
 	return gemToReturn;
 };
 
-const getEnchant = (idOrEffectID: string | undefined): Enchant | undefined => {
-	let enchantToReturn = Enchants.find((e) => e.id === idOrEffectID);
-	enchantToReturn ||= Enchants.find((e) => e.effectID === idOrEffectID);
+const getEnchant = (
+	idOrEffectID: string | undefined,
+	db: SolverItemDatabase,
+): Enchant | undefined => {
+	if (idOrEffectID === undefined) return createEmptyEnchant();
+	let enchantToReturn = db.enchantsById.get(idOrEffectID);
+	enchantToReturn ||= db.enchantsByEffectId.get(idOrEffectID);
 	if (!enchantToReturn) {
 		if (idOrEffectID) {
 			console.error(`Enchant not found, id or effectID: ${idOrEffectID}`);
@@ -260,8 +263,8 @@ function pruneDominatedGems(gems: Gem[], config: SolverConfiguration): Gem[] {
 	return kept;
 }
 
-const getGems = (config: SolverConfiguration) => {
-	let gems = Gems as Gem[];
+const getGems = (config: SolverConfiguration, db: SolverItemDatabase) => {
+	let gems = db.gems;
 	gems = gems.filter((gem) => Number(gem.phase) <= config.phase);
 	if (config.excludeUniqueGems) {
 		gems = gems.filter((gem) => gem.isUnique !== "true");
@@ -274,18 +277,17 @@ const getGems = (config: SolverConfiguration) => {
 	return pruneDominatedGems(gems, config);
 };
 
-export const getItem = (inputItem: InputItem) => {
-	const items = Items as Item[];
-	let baseItem = items.find((i) => i.id === inputItem.id);
+export const getItem = (inputItem: InputItem, db: SolverItemDatabase) => {
+	// Already overridden at index time - see indexItemDatabase.
+	const baseItem = db.itemsById.get(inputItem.id);
 	if (!baseItem) {
 		console.error(`Item not found: ${inputItem.id}`);
 		return undefined;
 	}
-	baseItem = overrideItem(baseItem);
 	const gems = inputItem.gems
-		.map((gem) => getGem(gem))
+		.map((gem) => getGem(gem, db))
 		.filter((gem) => !!gem) as Gem[];
-	const enchant = getEnchant(inputItem.enchant);
+	const enchant = getEnchant(inputItem.enchant, db);
 
 	// preserve the user-supplied gem positions ("0"/empty for a skipped socket)
 	// instead of the compacted `gems` list, so re-exporting a locked item keeps

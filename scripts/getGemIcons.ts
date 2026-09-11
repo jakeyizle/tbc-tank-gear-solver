@@ -1,9 +1,15 @@
 import fs from "node:fs";
-import Gems from "../src/data/gems.json" with { type: "json" };;
 import { XMLParser } from "fast-xml-parser";
-// Fetches gem icons from wowhead, then writes them to data directory
+// Fetches gem icons from wowhead, then writes them to data directory.
+//
+// Reads gem ids from the vendored database, since src/data/gems.json was deleted in favour of
+// it. NOTE: db.json carries an `icon` for every gem already, so the only reason to run this is
+// if wowhead's icon names are wanted specifically - see src/data/gem-tooltips.json.
+const db = JSON.parse(
+    fs.readFileSync("./vendor/tbc-sim/assets/database/db.json", "utf8"),
+) as { gems: { id: number }[] };
 
-const gemIds = Gems.map((gem) => gem.id);
+const gemIds = db.gems.map((gem) => String(gem.id));
 
 const fetchGemIcon = async (id: string) => {
     const resp = await fetch(`https://www.wowhead.com/tbc/item=${id}&xml`)
