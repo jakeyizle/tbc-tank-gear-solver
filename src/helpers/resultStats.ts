@@ -1,69 +1,84 @@
-import { getBaseStats } from "#/data/baseStats";
-import { calculateStatValue } from "#/helpers/stats";
-import { raidProfileToModifierSources } from "#/sim/raidProfileToModifierSources";
-import { CONSUMABLE_TYPES } from "#/solver/itemSlots";
-import type { LPItem, ModifierSource } from "#/solver/types";
-import type { BaseConfig, SolveResult, SolverConfiguration } from "#/types/SolverConfig";
+// The four numbers the compare view puts side by side for two solve results.
+//
+// Reads the simulator's own stats (SolveResult.characterStats, produced by
+// src/sim/measureCharacterStats.ts) rather than recomputing anything. The previous version of
+// this file existed almost entirely to reconcile two config models - a `buildStatInputs` that
+// picked between the formula-mode buff list and the raid profile depending on objective mode -
+// and that reconciliation has no subject left now that the sim is the only stat authority.
+import type { CharacterStatsSnapshot } from "#/types/CharacterStats";
+import type { SolveResult } from "#/types/SolverConfig";
+import {
+	avoidanceInfo,
+	LIBRAM_OF_REPENTANCE_ID,
+	mitigationInfo,
+	STAT,
+	stat,
+} from "./characterStatsDisplay";
 
-const SIM_OBJECTIVE_MODES = new Set<SolverConfiguration["objectiveMode"]>([
-	"tps",
-	"dtps",
-	"tmi",
-	"balanced",
-]);
+/** Class id for Paladin, per #/data/classes.ts. Gates Holy Shield's block bonus. */
+const PALADIN_CLASS_ID = "2";
+
+/**
+ * Improved Righteous Fury reduces damage taken by 2% per rank. It is a damage multiplier, not
+ * a stat, so it never appears in computeStats output and still has to be read off the talent
+ * list. It moves to the raid profile's talent string with the config-model collapse.
+ */
+export function improvedRighteousFuryMultiplier(
+	talentSources: { id: string; rank?: number }[] | undefined,
+): number {
+	const rank =
+		talentSources?.find((source) => source.id === "improved-righteous-fury")
+			?.rank ?? 0;
+	return 1 - rank * 0.02;
+}
 
 interface HeadlineStat {
 	name: string;
 	value: number;
 }
 
-export function buildStatInputs(
-	items: LPItem[],
-	baseConfig: BaseConfig,
-	solverConfig: SolverConfiguration,
+/**
+ * The snapshot matching the "include buffs & consumables" toggle, or undefined for results
+ * saved before the sim measured them. Callers render a prompt to re-solve in that case rather
+ * than a fabricated number.
+ */
+export function viewForResult(
+	characterStats: CharacterStatsSnapshot | undefined,
 	includeBuffsConsumables: boolean,
-): {
-	items: LPItem[];
-	modifierSources: ModifierSource[];
-	buffSources: ModifierSource[];
-} {
-	const filteredItems = includeBuffsConsumables
-		? items
-		: items.filter((item) => !CONSUMABLE_TYPES.includes(item.type));
-	// Sim objective modes configure buffs via the raid profile, not the formula-mode buffs list
-	// (which stays hidden and stuck at its all-unchecked default whenever a sim objective mode is
-	// active - see ConfigCard.tsx) - so the buffed-stats display must derive its modifier sources
-	// from the raid profile instead for those modes.
-	const buffModifierSources = SIM_OBJECTIVE_MODES.has(solverConfig.objectiveMode)
-		? raidProfileToModifierSources(baseConfig.simCalibrationProfile.raidProfile)
-		: solverConfig.buffs;
-	const buffSources = includeBuffsConsumables ? buffModifierSources : [];
-	const modifierSources = [
-		...baseConfig.abilitySources,
-		...baseConfig.talentSources,
-		...buffSources,
-	];
-	return { items: filteredItems, modifierSources, buffSources };
+) {
+	if (!characterStats) return undefined;
+	return includeBuffsConsumables
+		? characterStats.buffed.final
+		: characterStats.unbuffed.final;
 }
 
 export function getHeadlineStats(
 	result: SolveResult,
 	includeBuffsConsumables: boolean,
 ): HeadlineStat[] {
-	const baseStats = getBaseStats(result.baseConfig.raceId, result.baseConfig.classId);
-	const { items, modifierSources } = buildStatInputs(
-		result.items,
-		result.baseConfig,
-		result.solverConfig,
-		includeBuffsConsumables,
-	);
-	const calc = (statName: Parameters<typeof calculateStatValue>[0]["statName"]) =>
-		calculateStatValue({ items, modifierSources, baseStats, statName });
+	const view = viewForResult(result.characterStats, includeBuffsConsumables);
+	if (!view) return [];
+
+	const avoidance = avoidanceInfo(view, {
+		// Debuffs are raid-supplied, so they belong to the buffed view only.
+		debuffs: includeBuffsConsumables
+			? result.baseConfig.simCalibrationProfile?.raidProfile?.debuffs
+			: undefined,
+		isProtectionPaladin: result.baseConfig.classId === PALADIN_CLASS_ID,
+		hasLibramOfRepentance: result.items.some(
+			(item) => item.id === LIBRAM_OF_REPENTANCE_ID,
+		),
+	});
+	const mitigation = mitigationInfo(view, {
+		physicalDamageTakenMultiplier: improvedRighteousFuryMultiplier(
+			result.baseConfig.talentSources,
+		),
+	});
 
 	return [
-		{ name: "Avoidance", value: calc("Avoidance") },
-		{ name: "Shear Avoidance", value: calc("ShearAvoidance") },
-		{ name: "Effective HP", value: calc("Effective HP") },
-		{ name: "Spell Power", value: calc("SpellPower") },
+		{ name: "Avoidance", value: avoidance.total },
+		{ name: "Shear Avoidance", value: avoidance.shear },
+		{ name: "Effective HP", value: mitigation.effectiveHealth },
+		{ name: "Spell Power", value: stat(view, STAT.SpellDamage) },
 	];
 }

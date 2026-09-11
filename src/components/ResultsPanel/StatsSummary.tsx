@@ -1,205 +1,185 @@
 import Box from "@mui/material/Box";
-import Chip from "@mui/material/Chip";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import { getBaseStats } from "#/data/baseStats";
-import { convertStatToPercentageOrSkill } from "#/helpers/convertStat";
-import { buildStatInputs } from "#/helpers/resultStats";
-import { calculateStatValue } from "#/helpers/stats";
 import {
-	type LPItem,
-	type ModifierSource,
-	STAT_LABELS,
-	type Stat,
-} from "#/solver/types";
+	avoidanceInfo,
+	critImmunityInfo,
+	defenseSkill,
+	LIBRAM_OF_REPENTANCE_ID,
+	mitigationInfo,
+	PSEUDO,
+	STAT,
+	pseudo as simPseudo,
+	stat as simStat,
+} from "#/helpers/characterStatsDisplay";
+import { improvedRighteousFuryMultiplier } from "#/helpers/resultStats";
+import type { LPItem, Stat } from "#/solver/types";
+import type { CharacterStatsSnapshot } from "#/types/CharacterStats";
 import type { SimMetricsSnapshot } from "#/types/SimCalibrationProfile";
-import type { BaseConfig, SolverConfiguration } from "#/types/SolverConfig";
+import type { BaseConfig } from "#/types/SolverConfig";
 import StatsGroup from "./StatsGroup";
 import StatWeightTabs from "./StatWeightTabs";
-
-function buffTooltip(buff: ModifierSource): string {
-	return buff.stats
-		.map((s) =>
-			s.type === "multiplier"
-				? `${STAT_LABELS[s.name]} +${(s.value * 100).toLocaleString()}%`
-				: `${STAT_LABELS[s.name]} +${s.value.toLocaleString()}`,
-		)
-		.join(", ");
-}
 
 interface StatsSummaryProps {
 	items: LPItem[];
 	baseConfig: BaseConfig;
-	solverConfig: SolverConfiguration;
 	includeBuffsConsumables: boolean;
 	simMetrics?: SimMetricsSnapshot;
 	perMetricStatWeights?: Record<"tps" | "dtps" | "tmi", Stat[]>;
 	perMetricStatWeightStdevs?: Record<"tps" | "dtps" | "tmi", Stat[]>;
+	/** The simulator's own stats for this gear. Absent only for pre-existing saved results. */
+	characterStats?: CharacterStatsSnapshot;
 }
+
+/** Class id for Paladin, per #/data/classes.ts. Gates Holy Shield's block bonus. */
+const PALADIN_CLASS_ID = "2";
 
 export default function StatsSummary({
 	items: rawItems,
 	baseConfig,
-	solverConfig,
 	includeBuffsConsumables,
 	simMetrics,
 	perMetricStatWeights,
 	perMetricStatWeightStdevs,
+	characterStats,
 }: StatsSummaryProps) {
 	if (!rawItems || rawItems.length === 0) {
 		return null;
 	}
-	const baseStats = getBaseStats(baseConfig.raceId, baseConfig.classId);
-	const { items, modifierSources, buffSources } = buildStatInputs(
-		rawItems,
-		baseConfig,
-		solverConfig,
-		includeBuffsConsumables,
-	);
 
-	const stat = (
-		statName: Parameters<typeof calculateStatValue>[0]["statName"],
-	) => calculateStatValue({ items, modifierSources, baseStats, statName });
+	// Every number below is the simulator's own, via computeStats (see
+	// src/sim/measureCharacterStats.ts). There is deliberately no fallback: the hand-written
+	// stat engine that used to back this panel is gone, and inventing numbers for a result
+	// saved before the sim measured them would be worse than saying so.
+	const view = includeBuffsConsumables
+		? characterStats?.buffed.final
+		: characterStats?.unbuffed.final;
+	if (!view) {
+		return (
+			<Box sx={{ p: 1.75, borderRadius: 1, bgcolor: "action.hover" }}>
+				<Typography variant="body2" color="text.secondary">
+					This result was saved before stats were measured by the simulator.
+					Re-run the solve to see them.
+				</Typography>
+			</Box>
+		);
+	}
 
-	const defenseRating = stat("Defense");
-	const dodgeRating = stat("Dodge");
-	const parryRating = stat("Parry");
-	const blockRating = stat("Block");
+	const defenseRating = simStat(view, STAT.DefenseRating);
+	const dodgeRating = simStat(view, STAT.DodgeRating);
+	const parryRating = simStat(view, STAT.ParryRating);
+	const blockRating = simStat(view, STAT.BlockRating);
 
-	// Dodge% + Parry% + Miss% - the subset of avoidance that counts toward uncrushable, excluding
-	// Block (see solveEHP.ts's solveConfigForHardAvoidance, which optimizes exactly this). Reuses
-	// dodgeRating/parryRating (also used below for the Mitigation group's Dodge/Parry rows) and the
-	// same roundRating=true conversion, so this headline number always matches what those rows show.
-	const hardAvoidance =
-		convertStatToPercentageOrSkill(
-			{ name: "Dodge", value: dodgeRating, type: "flat" },
-			true,
-		) +
-		convertStatToPercentageOrSkill(
-			{ name: "Parry", value: parryRating, type: "flat" },
-			true,
-		) +
-		stat("Miss");
+	// Debuffs are raid-supplied, so they belong to the "include buffs & consumables" view
+	// only - Insect Swarm's 2% miss is no more the character's own than Blessing of Kings is.
+	const displayDebuffs = includeBuffsConsumables
+		? baseConfig.simCalibrationProfile?.raidProfile?.debuffs
+		: undefined;
+	const avoidance = avoidanceInfo(view, {
+		debuffs: displayDebuffs,
+		isProtectionPaladin: baseConfig.classId === PALADIN_CLASS_ID,
+		hasLibramOfRepentance: rawItems.some(
+			(item) => item.id === LIBRAM_OF_REPENTANCE_ID,
+		),
+	});
+	const critImmunity = critImmunityInfo(view);
 
 	const headlineStats = [
-		{ name: "Avoidance", value: stat("Avoidance") },
-		{ name: "Shear", value: stat("ShearAvoidance") },
-		{ name: "Hard Avoidance", value: hardAvoidance },
-		{ name: "Uncrit", value: stat("Uncritability") },
+		{ name: "Avoidance", value: avoidance.total },
+		{ name: "Shear", value: avoidance.shear },
+		// Dodge% + Parry% + Miss% - the subset of avoidance that counts toward uncrushable,
+		// excluding Block (see solveEHP.ts's solveConfigForHardAvoidance, which optimizes
+		// exactly this).
+		{ name: "Hard Avoidance", value: avoidance.hard },
+		{ name: "Uncrit", value: critImmunity.total },
 	];
-	const resilienceRating = calculateStatValue({
-		items,
-		modifierSources,
-		baseStats,
-		statName: "Resilience",
-		roundDefenseAndResilience: true,
-	});
-	const spellHitRating = stat("SpellHit");
-	const spellCritRating = stat("SpellCrit");
 
-	const armorValue = stat("Armor");
-	// The 75% cap is a display-only clamp (matches the reference WeakAura, which caps the shown
-	// dr% but computes Effective HP - see calculateEffectiveHP in stats.ts - from the uncapped
-	// value): true in-game physical damage reduction can never exceed 75%, even though the
-	// armor/(armor+K) curve alone would only approach 100% asymptotically.
-	const armorDR =
-		Math.min(
-			convertStatToPercentageOrSkill({
-				name: "Armor",
-				value: armorValue,
-				type: "flat",
-			}),
-			0.75,
-		) * 100;
+	const resilienceRating = simStat(view, STAT.Resilience);
+	const spellHitRating = simStat(view, STAT.SpellHit);
+	const spellCritRating = simStat(view, STAT.SpellCrit);
+
+	const mitigation = mitigationInfo(view, {
+		physicalDamageTakenMultiplier: improvedRighteousFuryMultiplier(
+			baseConfig.talentSources,
+		),
+	});
 
 	const mitigationStats = [
-		{ name: "Health", value: stat("TotalHealth") },
-		{ name: "Armor", value: armorValue },
-		{ name: "Armor DR", value: armorDR, unit: "%" as const },
-		{ name: "Effective HP", value: Math.trunc(stat("Effective HP")) },
+		{ name: "Health", value: simStat(view, STAT.Health) },
+		{ name: "Armor", value: mitigation.armor },
+		{
+			name: "Armor DR",
+			value: mitigation.displayedArmorReduction * 100,
+			unit: "%" as const,
+		},
+		{ name: "Effective HP", value: Math.trunc(mitigation.effectiveHealth) },
 		{
 			name: "Defense",
-			value:
-				350 +
-				convertStatToPercentageOrSkill(
-					{ name: "Defense", value: defenseRating, type: "flat" },
-					true,
-				),
+			value: defenseSkill(view),
 			rating: defenseRating,
 		},
 		{
 			name: "Dodge",
-			value: convertStatToPercentageOrSkill(
-				{ name: "Dodge", value: dodgeRating, type: "flat" },
-				true,
-			),
+			value: avoidance.dodge,
 			unit: "%" as const,
 			rating: dodgeRating,
 		},
 		{
 			name: "Parry",
-			value: convertStatToPercentageOrSkill(
-				{ name: "Parry", value: parryRating, type: "flat" },
-				true,
-			),
+			value: avoidance.parry,
 			unit: "%" as const,
 			rating: parryRating,
 		},
 		{
 			name: "Block",
-			value: convertStatToPercentageOrSkill(
-				{ name: "Block", value: blockRating, type: "flat" },
-				true,
-			),
+			value: avoidance.block,
 			unit: "%" as const,
 			rating: blockRating,
 		},
-		{ name: "Block Value", value: stat("BlockValue") },
-		{ name: "Miss", value: stat("Miss"), unit: "%" as const },
+		// Total block value, including the portion derived from Strength. wowsims' own panel
+		// omits that portion; a tank wants the number that actually reduces a blocked hit.
+		{ name: "Block Value", value: simStat(view, STAT.BlockValue) },
+		{ name: "Miss", value: avoidance.miss, unit: "%" as const },
 		{
 			name: "Resilience",
-			value: convertStatToPercentageOrSkill(
-				{ name: "Resilience", value: resilienceRating, type: "flat" },
-				true,
-			),
+			value: critImmunity.resilience,
 			unit: "%" as const,
 			rating: resilienceRating,
 		},
 	];
 
 	const threatStats = [
-		{ name: "Spell Power", value: stat("SpellPower") },
+		{ name: "Spell Power", value: simStat(view, STAT.SpellDamage) },
+		// Raw character attack power. wowsims' panel instead folds in debuff-derived AP
+		// (Improved Hunter's Mark, Expose Weakness) using an assumed hunter agility, which
+		// makes the number shift with raid composition rather than with this character's gear.
+		{ name: "Attack Power", value: simStat(view, STAT.AttackPower) },
 		{
 			name: "Spell Hit",
-			value: convertStatToPercentageOrSkill({
-				name: "SpellHit",
-				value: spellHitRating,
-				type: "flat",
-			}),
+			// The percent, not rating/divisor: the pseudo-stat carries talent- and
+			// buff-supplied hit that never existed as rating (character.go:735).
+			value: simPseudo(view, PSEUDO.SpellHitPercent),
 			unit: "%" as const,
 			rating: spellHitRating,
 		},
 		{
 			name: "Spell Crit",
-			value: convertStatToPercentageOrSkill({
-				name: "SpellCrit",
-				value: spellCritRating,
-				type: "flat",
-			}),
+			// Likewise - and this one is visibly wrong without it, since a Paladin's spell crit
+			// is mostly Intellect-derived (mana.go:47) and so carries no rating at all.
+			value: simPseudo(view, PSEUDO.SpellCritPercent),
 			unit: "%" as const,
 			rating: spellCritRating,
 		},
-		{ name: "Mana", value: stat("TotalMana") },
+		{ name: "Mana", value: simStat(view, STAT.Mana) },
 	];
 
-	const staminaValue = stat("Stamina");
-	const intellectValue = stat("Intellect");
+	const staminaValue = simStat(view, STAT.Stamina);
+	const intellectValue = simStat(view, STAT.Intellect);
 	const baseStatRows = [
-		{ name: "Strength", value: stat("Strength") },
-		{ name: "Agility", value: stat("Agility") },
+		{ name: "Strength", value: simStat(view, STAT.Strength) },
+		{ name: "Agility", value: simStat(view, STAT.Agility) },
 		{ name: "Stamina", value: staminaValue },
 		{ name: "Intellect", value: intellectValue },
-		{ name: "Spirit", value: stat("Spirit") },
+		{ name: "Spirit", value: simStat(view, STAT.Spirit) },
 	];
 
 	// simMetrics is now measured for every objective mode (see solver.worker.ts), so this just
@@ -293,39 +273,13 @@ export default function StatsSummary({
 				))}
 			</Box>
 
-			{includeBuffsConsumables && (
-				<Box
-					sx={{
-						display: "flex",
-						alignItems: "center",
-						gap: 1,
-						flexWrap: "wrap",
-					}}
-				>
-					<Typography
-						variant="overline"
-						color="text.secondary"
-						sx={{ lineHeight: 1.5 }}
-					>
-						Buffs included
-					</Typography>
-					{buffSources.length === 0 ? (
-						<Typography
-							variant="body2"
-							color="text.secondary"
-							fontStyle="italic"
-						>
-							None
-						</Typography>
-					) : (
-						buffSources.map((buff) => (
-							<Tooltip key={buff.id} title={buffTooltip(buff)} arrow>
-								<Chip label={buff.name} size="small" variant="outlined" />
-							</Tooltip>
-						))
-					)}
-				</Box>
-			)}
+			{/*
+			 * The "Buffs included" chip row used to sit here. It listed the formula engine's
+			 * buff objects, which described neither what the sim applied nor what the user had
+			 * enabled once the raid profile became the real source - so it was removed rather
+			 * than ported. Its replacement is owed by the config-model collapse (Phase 4),
+			 * which is where a single authoritative list of active buffs will exist.
+			 */}
 
 			{showSimMetrics && (
 				<Box
@@ -377,7 +331,9 @@ export default function StatsSummary({
 				header="Base Stats"
 				stats={baseStatRows}
 				defaultExpanded={false}
-				collapsedSummary={`${Math.round(staminaValue).toLocaleString()} sta · ${Math.round(intellectValue).toLocaleString()} int`}
+				collapsedSummary={`${Math.round(staminaValue).toLocaleString()} sta · ${Math.round(
+					intellectValue,
+				).toLocaleString()} int`}
 			/>
 		</Box>
 	);

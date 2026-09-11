@@ -79,13 +79,20 @@ export default function CompareView({
 	const differingCount = differing.length + (consumablesDiff.equal ? 0 : 1);
 	const rows = showAll ? slotDiffs : differing;
 
-	const statsA = getHeadlineStats(resultA, includeBuffsConsumables);
-	const statsB = getHeadlineStats(resultB, includeBuffsConsumables);
+	// Empty when a result predates the sim-measured character stats. Both sides have to be
+	// present for a diff to mean anything, so one missing drops the whole row - the same rule
+	// the sim-metrics rows below already follow.
+	const rawStatsA = getHeadlineStats(resultA, includeBuffsConsumables);
+	const rawStatsB = getHeadlineStats(resultB, includeBuffsConsumables);
+	const comparable =
+		rawStatsA.length > 0 && rawStatsA.length === rawStatsB.length;
+	const statsA = comparable ? rawStatsA : [];
+	const statsB = comparable ? rawStatsB : [];
 
 	// Only meaningful when both sides are "Weighted Sim Metrics" results - a diff against a
 	// stats/ehp result (which has no simMetrics) would misleadingly show one side as a bare 0,
 	// so it's skipped entirely rather than fabricating a partial comparison.
-	if (resultA.simMetrics && resultB.simMetrics) {
+	if (comparable && resultA.simMetrics && resultB.simMetrics) {
 		statsA.push(
 			{ name: "TPS", value: resultA.simMetrics.tps },
 			{ name: "DTPS", value: resultA.simMetrics.dtps },
@@ -166,64 +173,66 @@ export default function CompareView({
 				</Box>
 			</Stack>
 
-			<Box
-				sx={{
-					display: "flex",
-					border: 1,
-					borderColor: "divider",
-					borderRadius: 1,
-					overflow: "hidden",
-					bgcolor: "background.default",
-				}}
-			>
-				{statsA.map((stat, i) => {
-					const other = statsB[i].value;
-					const delta = stat.value - other;
-					const positive = delta >= 0;
-					return (
-						<Box
-							key={stat.name}
-							sx={{
-								flex: 1,
-								p: 1.5,
-								display: "flex",
-								flexDirection: "column",
-								gap: 0.375,
-								borderRight: i < statsA.length - 1 ? 1 : 0,
-								borderColor: "divider",
-							}}
-						>
-							<Typography
-								variant="caption"
-								color="text.disabled"
-								sx={{ textTransform: "uppercase", letterSpacing: "0.06em" }}
+			{statsA.length > 0 && (
+				<Box
+					sx={{
+						display: "flex",
+						border: 1,
+						borderColor: "divider",
+						borderRadius: 1,
+						overflow: "hidden",
+						bgcolor: "background.default",
+					}}
+				>
+					{statsA.map((stat, i) => {
+						const other = statsB[i].value;
+						const delta = stat.value - other;
+						const positive = delta >= 0;
+						return (
+							<Box
+								key={stat.name}
+								sx={{
+									flex: 1,
+									p: 1.5,
+									display: "flex",
+									flexDirection: "column",
+									gap: 0.375,
+									borderRight: i < statsA.length - 1 ? 1 : 0,
+									borderColor: "divider",
+								}}
 							>
-								{stat.name}
-							</Typography>
-							<Stack direction="row" spacing={1} alignItems="baseline">
-								<Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-									{stat.value.toFixed(2)}
+								<Typography
+									variant="caption"
+									color="text.disabled"
+									sx={{ textTransform: "uppercase", letterSpacing: "0.06em" }}
+								>
+									{stat.name}
 								</Typography>
-								{Math.abs(delta) > 0.005 && (
-									<Typography
-										variant="body2"
-										sx={{
-											color: positive ? "#7fd07f" : "#e08a8a",
-											fontWeight: 500,
-										}}
-									>
-										{positive ? "+" : ""}
-										{delta.toFixed(2)}
+								<Stack direction="row" spacing={1} alignItems="baseline">
+									<Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+										{stat.value.toFixed(2)}
 									</Typography>
-								)}
-							</Stack>
-							<Typography variant="caption" color="text.disabled">
-								{resultB.name} {other.toFixed(2)}
-							</Typography>
-						</Box>
-					);
-				})}
-			</Box>
+									{Math.abs(delta) > 0.005 && (
+										<Typography
+											variant="body2"
+											sx={{
+												color: positive ? "#7fd07f" : "#e08a8a",
+												fontWeight: 500,
+											}}
+										>
+											{positive ? "+" : ""}
+											{delta.toFixed(2)}
+										</Typography>
+									)}
+								</Stack>
+								<Typography variant="caption" color="text.disabled">
+									{resultB.name} {other.toFixed(2)}
+								</Typography>
+							</Box>
+						);
+					})}
+				</Box>
+			)}
 
 			<Stack spacing={0}>
 				{(showAll || !consumablesDiff.equal) && (

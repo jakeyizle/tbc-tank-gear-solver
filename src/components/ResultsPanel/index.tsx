@@ -51,6 +51,7 @@ export default function ResultsPanel({
 		simMetrics: activeResult.simMetrics,
 		perMetricStatWeights: activeResult.perMetricStatWeights,
 		perMetricStatWeightStdevs: activeResult.perMetricStatWeightStdevs,
+		characterStats: activeResult.characterStats,
 	};
 
 	const handleCopy = () => {
@@ -189,11 +190,11 @@ export default function ResultsPanel({
 							<StatsSummary
 								items={displayed.items}
 								baseConfig={activeResult.baseConfig}
-								solverConfig={activeResult.solverConfig}
 								includeBuffsConsumables={includeBuffsConsumables}
 								simMetrics={displayed.simMetrics}
 								perMetricStatWeights={displayed.perMetricStatWeights}
 								perMetricStatWeightStdevs={displayed.perMetricStatWeightStdevs}
+								characterStats={displayed.characterStats}
 							/>
 						</Box>
 					</Box>
