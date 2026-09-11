@@ -6,7 +6,7 @@ const STORAGE_KEY = "appState";
 const CURRENT_VERSION = 1;
 
 export interface PersistedState {
-	version: typeof CURRENT_VERSION;
+	version: number;
 	itemInput: string;
 	classValue: string;
 	raceValue: string;
@@ -33,6 +33,51 @@ export interface PersistedState {
 	simCalibrationProfile?: SimCalibrationProfile;
 }
 
+type StoredState = Record<string, unknown> & { version?: number };
+
+/**
+ * Upgrades a saved blob one version at a time, keyed by the version being upgraded FROM.
+ * Empty today (CURRENT_VERSION is 1); the sim-as-source-of-truth work adds `1: migrateV1ToV2`.
+ *
+ * A migration must be total: it receives whatever shape that version wrote and returns the
+ * next version's shape, defaulting anything it cannot carry over. It must never throw for
+ * merely-unexpected input - loadAppState treats a throw as "unreadable" and falls back to
+ * salvage, which costs the user everything except their pasted gear pool.
+ */
+const MIGRATIONS: Record<number, (state: StoredState) => StoredState> = {};
+
+function migrate(state: StoredState): StoredState | null {
+	let current = state;
+	let version = typeof current.version === "number" ? current.version : 0;
+
+	// A blob written by a NEWER build than this one cannot be downgraded; salvage instead.
+	if (version > CURRENT_VERSION) return null;
+
+	while (version < CURRENT_VERSION) {
+		const step = MIGRATIONS[version];
+		if (!step) return null;
+		current = step(current);
+		version += 1;
+		current.version = version;
+	}
+	return current;
+}
+
+/**
+ * The one piece of persisted state the user cannot trivially recreate. Everything else
+ * (configs, results) is a few clicks or one solve away, so when a blob is unreadable or
+ * unmigratable it is still worth handing back just this.
+ */
+function salvage(state: unknown): Omit<PersistedState, "version"> | null {
+	if (state && typeof state === "object") {
+		const itemInput = (state as StoredState).itemInput;
+		if (typeof itemInput === "string" && itemInput.length > 0) {
+			return { itemInput } as Omit<PersistedState, "version">;
+		}
+	}
+	return null;
+}
+
 export function saveAppState(state: Omit<PersistedState, "version">): void {
 	try {
 		localStorage.setItem(
@@ -45,17 +90,22 @@ export function saveAppState(state: Omit<PersistedState, "version">): void {
 }
 
 export function loadAppState(): Omit<PersistedState, "version"> | null {
+	let parsed: StoredState | undefined;
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
 		if (raw) {
-			const parsed = JSON.parse(raw) as PersistedState;
-			if (parsed.version !== CURRENT_VERSION) return null;
-			return parsed;
+			parsed = JSON.parse(raw) as StoredState;
+			const migrated = migrate(parsed);
+			if (migrated)
+				return migrated as unknown as Omit<PersistedState, "version">;
+			// Unmigratable (no path, or written by a newer build) - keep the gear pool.
+			return salvage(parsed);
 		}
 		const legacy = localStorage.getItem("itemInput");
 		if (legacy) return { itemInput: legacy } as Omit<PersistedState, "version">;
 	} catch {
-		// corrupt JSON
+		// corrupt JSON, or a migration that threw despite the contract above
+		return salvage(parsed);
 	}
 	return null;
 }

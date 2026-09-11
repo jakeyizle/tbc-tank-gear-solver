@@ -1,16 +1,12 @@
 // Lazily fetches and caches vendor/tbc-sim/assets/database/db.json, staged at build time by
-// scripts/sim/buildWasm.mjs into public/sim/db.json (same lazy-load treatment as lib.wasm -
-// only downloaded once a sim-backed objective is actually used, not part of the main bundle).
-import { perfTrace } from "#/helpers/perfTrace";
+// scripts/sim/buildWasm.mjs into public/sim/db.json.
+//
+// The fetch + module-level cache now live in #/data/tbcDatabase, which also adapts the same
+// records into this repo's solver domain types. This module stays as the sim-side view of
+// that one shared promise, so the 3.1MB database is never fetched twice.
+import { loadRawTbcDatabase } from "#/data/tbcDatabase";
 import type { TbcUiDatabase } from "./buildStatWeightsRequest";
 
-let dbPromise: Promise<TbcUiDatabase> | undefined;
-
 export function loadTbcDatabase(): Promise<TbcUiDatabase> {
-	if (!dbPromise) {
-		dbPromise = perfTrace.timeAsync("loadTbcDatabase", () =>
-			fetch("/sim/db.json").then((res) => res.json()),
-		);
-	}
-	return dbPromise;
+	return loadRawTbcDatabase() as unknown as Promise<TbcUiDatabase>;
 }

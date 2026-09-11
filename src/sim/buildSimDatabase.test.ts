@@ -106,4 +106,35 @@ describe("buildSimDatabase against the real vendored database", () => {
 			expect(result.gems).toHaveLength(expectedGems.size);
 		},
 	);
+
+	// Regression guard. The Go sim resolves flask/food/potion/elixir STATS out of
+	// SimDatabase.consumables (sim/core/database.go:60 -> ConsumablesByID, read by
+	// sim/core/consumes.go:33-91). Naming an id in ConsumesSpec without shipping its record
+	// makes the consumable a silent no-op - no error, just missing stats. That went unnoticed
+	// long enough to skew every stat-weight calibration the app produced.
+	it.skipIf(!fs.existsSync(dbPath))(
+		"includes database records for the consumables a request names",
+		() => {
+			const db = JSON.parse(fs.readFileSync(dbPath, "utf8"));
+
+			const result = buildSimDatabase(db, [{ id: 30125 }], {
+				flaskId: 22861, // Flask of Blinding Light
+				foodId: 27657, // Blackened Basilisk
+				potId: 22839, // Destruction Potion
+			});
+
+			const ids = (result.consumables as { id: number }[])
+				.map((c) => c.id)
+				.sort();
+			// Note there is deliberately no weapon imbue here: registerStaticImbue resolves
+			// those from a hardcoded switch in Go, and Superior Wizard Oil (28017) has no
+			// db.json record at all.
+			expect(ids).toEqual([22839, 22861, 27657].sort());
+		},
+	);
+
+	it("returns no consumable records when none are requested", () => {
+		const result = buildSimDatabase(fakeDb, [{ id: 1 }]);
+		expect(result.consumables).toEqual([]);
+	});
 });

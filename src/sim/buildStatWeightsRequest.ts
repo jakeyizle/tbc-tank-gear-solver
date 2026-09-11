@@ -6,22 +6,13 @@
 // `spec` key).
 import type { StatName } from "#/solver/types";
 import type { SimCalibrationProfile } from "#/types/SimCalibrationProfile";
-import { buildSimDatabase, type GearItemRef } from "./buildSimDatabase";
-import {
-	buildReferenceTargetStats,
-	PROT_PALADIN_REFERENCE_ENCOUNTER,
-	PROT_PALADIN_REFERENCE_TANKS,
-} from "./protPaladinEncounter";
-import {
-	PROT_PALADIN_CLASS_OPTIONS,
-	PROT_PALADIN_PLAYER_DEFAULTS,
-} from "./protPaladinProfile";
-import { buildProtPaladinRotation } from "./protPaladinSimpleRotation";
+import { buildEncounter, buildPlayer } from "./buildSimPlayer";
+import { PROT_PALADIN_REFERENCE_TANKS } from "./protPaladinEncounter";
 import {
 	STAT_NAME_TO_TBC_STAT,
 	TBC_EP_REFERENCE_STAT,
 } from "./statTranslation";
-import { type GearPiece, toTbcItemSpec } from "./toTbcItemSpec";
+import type { GearPiece } from "./toTbcItemSpec";
 
 export interface TbcUiDatabase {
 	items: Record<string, unknown>[];
@@ -56,63 +47,18 @@ export function buildStatWeightsRequest(
 	profile: SimCalibrationProfile,
 	seedOverride?: string,
 ) {
-	const gearRefs: GearItemRef[] = gear.map((item) => ({
-		id: Number(item.id),
-		// item.enchant is always a defined object (EMPTY_ENCHANT when unenchanted, id: "").
-		enchant: item.enchant.id ? Number(item.enchant.id) : undefined,
-		gems: item.gemSlots.map(Number).filter((id) => id !== 0),
-	}));
-
 	const tbcStatsToWeigh = statsToWeigh
 		.map((name) => STAT_NAME_TO_TBC_STAT[name])
 		.filter((s): s is string => s != null);
 
 	const { raidProfile } = profile;
 
-	const encounter = {
-		...PROT_PALADIN_REFERENCE_ENCOUNTER,
-		duration: profile.encounter.duration,
-		durationVariation: profile.encounter.durationVariation,
-		targets: [
-			{
-				...PROT_PALADIN_REFERENCE_ENCOUNTER.targets[0],
-				stats: buildReferenceTargetStats(
-					profile.encounter.bossArmor,
-					profile.encounter.bossHealth,
-				),
-				minBaseDamage: profile.encounter.minBaseDamage,
-				damageSpread: profile.encounter.damageSpread,
-				swingSpeed: profile.encounter.swingSpeed,
-			},
-		],
-	};
-
 	return {
-		player: {
-			...PROT_PALADIN_PLAYER_DEFAULTS,
-			healingModel: profile.healingModel,
-			name: "Player",
-			class: "ClassPaladin",
-			equipment: { items: gear.map(toTbcItemSpec) },
-			database: buildSimDatabase(db, gearRefs),
-			talentsString: raidProfile.talentsString,
-			buffs: raidProfile.individualBuffs,
-			consumables: raidProfile.consumables,
-			// A proto3 JSON oneof is flattened onto its parent message, never nested under
-			// its group name ("spec") — see the plan doc's Phase 0 execution log for the bug
-			// this caused the first time around.
-			protectionPaladin: PROT_PALADIN_CLASS_OPTIONS,
-			// The Go/wasm sim only understands a precompiled APL, never the simple-rotation
-			// booleans directly - see protPaladinSimpleRotation.ts's header comment.
-			rotation: buildProtPaladinRotation(
-				raidProfile.simpleRotation,
-				raidProfile.talentsString,
-			),
-		},
+		player: buildPlayer(gear, db, profile),
 		raidBuffs: raidProfile.raidBuffs,
 		partyBuffs: raidProfile.partyBuffs,
 		debuffs: raidProfile.debuffs,
-		encounter,
+		encounter: buildEncounter(profile),
 		tanks: PROT_PALADIN_REFERENCE_TANKS,
 		// int64 proto fields must be JSON strings, not numbers/bigints (see plan doc).
 		simOptions: { iterations, randomSeed: seedOverride ?? String(Date.now()) },

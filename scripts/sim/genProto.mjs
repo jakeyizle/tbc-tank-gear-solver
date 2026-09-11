@@ -28,6 +28,12 @@ execFileSync(
 		protoDir,
 		`--plugin=protoc-gen-ts=${pluginBin}`,
 		path.join(protoDir, "api.proto"),
+		// ui.proto is NOT reachable from api.proto's import graph, so it has to be named
+		// explicitly. It defines UIItem/UIGem/UIEnchant/UIDatabase - the exact shapes
+		// public/sim/db.json is a dump of, which src/data/tbcDatabase.ts adapts - and is the
+		// authoritative source for the ItemType/GemColor/Profession enum values that module
+		// would otherwise hardcode.
+		path.join(protoDir, "ui.proto"),
 	],
 	{ stdio: "inherit", shell: process.platform === "win32" },
 );
