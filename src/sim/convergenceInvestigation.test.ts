@@ -29,9 +29,10 @@ import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 import { describe, expect, it, vi } from "vitest";
-import { getBuffs } from "#/data/buffs";
 import { CONSUMABLES } from "#/data/consumables";
 import { parseItemInput } from "#/helpers/parseItemInput";
+import { TEST_ITEM_DATABASE } from "#/solver/__fixtures__/testItemDatabase";
+import { TEST_LINEAR_MODEL } from "#/solver/__fixtures__/testLinearModel";
 import type { SolveOptions } from "#/solver/solveConfig";
 import { DEFAULT_SIM_CALIBRATION_PROFILE } from "#/types/SimCalibrationProfile";
 
@@ -134,11 +135,9 @@ const baseOptions: Omit<SolveOptions, "optimizeStats" | "objectiveMode"> = {
 	excludeJewelcraftingItems: false,
 	excludeEnchantingItems: false,
 	phase: 3,
-	raceId: "1",
 	classId: "2",
-	talentSources: [],
-	buffs: getBuffs(),
-	abilitySources: [],
+	linearModel: TEST_LINEAR_MODEL,
+	itemDatabase: TEST_ITEM_DATABASE,
 	enabledConsumableIds: CONSUMABLES.map((c) => c.id),
 };
 

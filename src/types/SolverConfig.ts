@@ -9,6 +9,7 @@ import type {
 	Stat,
 	StatName,
 } from "#/solver/types";
+import type { CharacterStatsSnapshot } from "#/types/CharacterStats";
 import type {
 	SimCalibrationProfile,
 	SimMetricsSnapshot,
@@ -73,6 +74,10 @@ export interface SolveResult {
 	// Per-stat uncertainty on perMetricStatWeights (see solveSimMetric.ts's
 	// finalPerMetricStatWeightStdevs) - only set for a "tps"/"dtps"/"tmi"/"balanced" solve.
 	perMetricStatWeightStdevs?: Record<"tps" | "dtps" | "tmi", Stat[]>;
+	// Authoritative character stats for this gear, straight from the sim's own computeStats
+	// (see src/sim/measureCharacterStats.ts). Set for every objective mode. Optional only
+	// because results persisted before this existed do not carry it.
+	characterStats?: CharacterStatsSnapshot;
 }
 
 export interface BaseConfig {

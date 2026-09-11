@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { TEST_ITEM_DATABASE } from "./__fixtures__/testItemDatabase";
 import {
 	TEST_CLASS_ID,
 	TEST_ITEM_IDS,
-	TEST_RACE_ID,
 	testItemPool,
 } from "./__fixtures__/testItemPool";
+import { TEST_LINEAR_MODEL } from "./__fixtures__/testLinearModel";
 import { validateSolution } from "./__test-helpers__/validateSolution";
 import { SolverConfiguration } from "./SolverConfiguration";
 import { type SolveOptions, solveConfig } from "./solveConfig";
@@ -41,11 +42,9 @@ const baseOptions = (overrides: Partial<SolveOptions> = {}): SolveOptions => ({
 	excludeJewelcraftingItems: false,
 	excludeEnchantingItems: false,
 	phase: 3,
-	raceId: TEST_RACE_ID,
 	classId: TEST_CLASS_ID,
-	talentSources: [],
-	buffs: [],
-	abilitySources: [],
+	linearModel: TEST_LINEAR_MODEL,
+	itemDatabase: TEST_ITEM_DATABASE,
 	enabledConsumableIds: [],
 	...overrides,
 });

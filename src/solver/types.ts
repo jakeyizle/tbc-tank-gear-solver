@@ -95,6 +95,10 @@ export const STAT_NAMES = [
 	"HealingPower",
 	"SpellCrit",
 	"Armor",
+	// Armor from rings/cloaks/trinkets and "+N Armor" enchants, which the game and the sim
+	// track separately from item base armor because it does NOT scale with armor multipliers
+	// (Toughness, Devotion Aura). See sim/core/stats/stats.go's Armor vs BonusArmor.
+	"BonusArmor",
 	"Resilience",
 	"Defense",
 	"AttackPower",
@@ -150,6 +154,7 @@ export const STAT_LABELS: Record<StatName, string> = {
 	HealingPower: "Healing Power",
 	SpellCrit: "Spell Crit",
 	Armor: "Armor",
+	BonusArmor: "Bonus Armor",
 	Resilience: "Resilience",
 	Defense: "Defense Rating",
 	AttackPower: "Attack Power",
@@ -262,7 +267,18 @@ export interface Enchant {
 export interface Gem {
 	name: string;
 	id: string;
-	color: "Red" | "Blue" | "Yellow" | "Orange" | "Purple" | "Green" | "Meta";
+	// "Prismatic" covers the two all-resistance spheres (22459 Void Sphere, 22460 Prismatic
+	// Sphere), which fit a socket of any colour. NOTE: socketBonus.ts's gemColorMatches has
+	// no Prismatic entry, so these currently never satisfy a socket bonus - see its comment.
+	color:
+		| "Red"
+		| "Blue"
+		| "Yellow"
+		| "Orange"
+		| "Purple"
+		| "Green"
+		| "Meta"
+		| "Prismatic";
 	phase: string;
 	stats: Stat[];
 	isUnique?: string;

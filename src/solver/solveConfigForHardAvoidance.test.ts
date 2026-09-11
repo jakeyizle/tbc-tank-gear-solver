@@ -1,25 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { calculateStatValue } from "#/helpers/stats";
-import {
-	TEST_CLASS_ID,
-	TEST_RACE_ID,
-	testItemPool,
-} from "./__fixtures__/testItemPool";
+import { TEST_ITEM_DATABASE } from "./__fixtures__/testItemDatabase";
+import { TEST_CLASS_ID, testItemPool } from "./__fixtures__/testItemPool";
+import { TEST_LINEAR_MODEL } from "./__fixtures__/testLinearModel";
 import { validateSolution } from "./__test-helpers__/validateSolution";
 import { SolverConfiguration } from "./SolverConfiguration";
+import { scoreItemSet } from "./scores";
 import { type SolveOptions, solveConfig } from "./solveConfig";
 import { solveConfigForHardAvoidance } from "./solveEHP";
-import type { ModifierSource, Stat } from "./types";
-
-const TEST_AVOIDANCE_BUFF: ModifierSource = {
-	id: "test-avoidance-buff",
-	name: "Test Avoidance Buff",
-	type: "buff",
-	stats: [
-		{ name: "Dodge", value: 20, type: "flat" },
-		{ name: "Defense", value: 40, type: "flat" },
-	],
-};
+import type { Stat } from "./types";
 
 const baseOptions = (
 	overrides: Partial<Omit<SolveOptions, "optimizeStats">> = {},
@@ -32,39 +20,26 @@ const baseOptions = (
 	excludeJewelcraftingItems: false,
 	excludeEnchantingItems: false,
 	phase: 3,
-	raceId: TEST_RACE_ID,
 	classId: TEST_CLASS_ID,
-	talentSources: [],
-	buffs: [],
-	abilitySources: [],
+	linearModel: TEST_LINEAR_MODEL,
+	itemDatabase: TEST_ITEM_DATABASE,
 	enabledConsumableIds: [],
 	...overrides,
 });
 
+// The gear's own contribution to Dodge/Parry/Miss - the same three stats
+// HARD_AVOIDANCE_STATS weights, re-derived from the stat model rather than read off the
+// solver's internal per-item scores.
 const hardAvoidanceScore = (
 	items: Awaited<ReturnType<typeof solveConfigForHardAvoidance>>,
 	config: SolverConfiguration,
 ) => {
-	const modifierSources = [
-		...config.flatModifierSources,
-		...config.multiplierModifierSources,
-	];
-	const baseStats = config.baseStats;
-	return (
-		calculateStatValue({
-			items,
-			modifierSources,
-			baseStats,
-			statName: "Dodge",
-		}) +
-		calculateStatValue({
-			items,
-			modifierSources,
-			baseStats,
-			statName: "Parry",
-		}) +
-		calculateStatValue({ items, modifierSources, baseStats, statName: "Miss" })
-	);
+	const totals = scoreItemSet(items, config.linearModel, [
+		"Dodge",
+		"Parry",
+		"Miss",
+	]);
+	return (totals.Dodge ?? 0) + (totals.Parry ?? 0) + (totals.Miss ?? 0);
 };
 
 describe("solveConfigForHardAvoidance", () => {
@@ -140,7 +115,6 @@ describe("solveConfigForHardAvoidance", () => {
 	it("still respects uncritability and resistance floors while maximizing hard avoidance", async () => {
 		const options = baseOptions({
 			uncritabilitySetting: 1,
-			buffs: [TEST_AVOIDANCE_BUFF],
 			resistanceFloors: [{ stat: "ShadowResistance", value: 10 }],
 		});
 		const result = await solveConfigForHardAvoidance(testItemPool, options);
@@ -148,12 +122,11 @@ describe("solveConfigForHardAvoidance", () => {
 
 		expect(validateSolution(result, config)).toEqual([]);
 
-		const resistance = calculateStatValue({
-			items: result,
-			modifierSources: config.multiplierModifierSources,
-			baseStats: config.baseStats,
-			statName: "ShadowResistance",
-		});
-		expect(resistance).toBeGreaterThanOrEqual(10);
+		const resistance =
+			scoreItemSet(result, config.linearModel, ["ShadowResistance"])
+				.ShadowResistance ?? 0;
+		expect(resistance).toBeGreaterThanOrEqual(
+			config.resistanceTargets[0].target,
+		);
 	}, 60000);
 });

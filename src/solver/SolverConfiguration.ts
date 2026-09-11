@@ -1,25 +1,35 @@
-import { getBaseStats } from "#/data/baseStats";
-import { calculateStatValue } from "#/helpers/stats";
+import type { LinearStatModel } from "#/types/LinearStatModel";
 import {
 	calculateAvoidanceTarget,
 	calculateUncritabilityTarget,
 } from "./avoidance";
+import type { SolverItemDatabase } from "./itemDatabase";
 import { calculateScores } from "./scores";
-import type { ModifierSource, ResistanceFloor, Stat } from "./types";
+import type { ResistanceFloor, ScoreSet, Stat } from "./types";
 
 /**
  * Centralized configuration object that encapsulates all solver settings
  * and provides derived calculations. Eliminates the need to pass multiple
  * parameters through function call chains.
+ *
+ * The game math it used to do itself - base stats per race/class, and the flat/multiplier
+ * split over talents, buffs and abilities - is now a `LinearStatModel` measured from the
+ * simulator (src/sim/deriveLinearModel.ts). This class only decides targets and delegates
+ * scoring, which is why `calculateScoresForStats` kept its exact signature through the
+ * change: decomposedModel.ts and solveConfig.ts never saw it.
  */
 export class SolverConfiguration {
 	readonly uncrushabilitySetting: number;
 	readonly uncritabilitySetting: number;
 	readonly optimizeStats: Stat[];
 	readonly resistanceFloors: ResistanceFloor[];
-	readonly baseStats: Stat[];
-	readonly flatModifierSources: ModifierSource[];
-	readonly multiplierModifierSources: ModifierSource[];
+	readonly linearModel: LinearStatModel;
+	/**
+	 * The pool of items/gems/enchants this solve draws from. Held here for the same reason as
+	 * `linearModel`: it is part of the world a configuration is solving in, and every function
+	 * that needs it already has a `config` in hand.
+	 */
+	readonly itemDatabase: SolverItemDatabase;
 	readonly avoidanceStatName: "Avoidance" | "ShearAvoidance";
 	readonly excludeUniqueGems: boolean;
 	readonly excludeJewelcraftingItems: boolean;
@@ -43,10 +53,8 @@ export class SolverConfiguration {
 		uncritabilitySetting: number;
 		optimizeStats: Stat[];
 		resistanceFloors?: ResistanceFloor[];
-		talentSources: ModifierSource[];
-		buffs: ModifierSource[];
-		abilitySources: ModifierSource[];
-		raceId: string;
+		linearModel: LinearStatModel;
+		itemDatabase: SolverItemDatabase;
 		classId: string;
 		excludeUniqueGems: boolean;
 		excludeJewelcraftingItems: boolean;
@@ -64,67 +72,28 @@ export class SolverConfiguration {
 		this.avoidanceStatName =
 			options.uncrushabilitySetting === 2 ? "ShearAvoidance" : "Avoidance";
 		this.optimizeStats = options.optimizeStats;
-		this.baseStats = getBaseStats(options.raceId, options.classId);
-		const modifierSources = [
-			...options.talentSources,
-			...options.buffs,
-			...options.abilitySources,
-		];
-		// flat sources are applied against the base targets
-		// EX: a flat 5% to dodge means that the uncrushability target is reduced by 5%
-		this.flatModifierSources = modifierSources.reduce((result, source) => {
-			const flatStats = source.stats.filter((x) => x.type === "flat");
-			if (flatStats.length > 0) {
-				result.push({ ...source, stats: flatStats });
-			}
-			return result;
-		}, [] as ModifierSource[]);
+		this.linearModel = options.linearModel;
+		this.itemDatabase = options.itemDatabase;
 
-		// multiplier sources are applied against item/enchant/gem stats
-		// EX: kings is a 10% increase to certain stats, so items/enchants/gems that give those stats are increased by 10%
-		this.multiplierModifierSources = modifierSources.reduce(
-			(result, source) => {
-				const flatStats = source.stats.filter((x) => x.type === "multiplier");
-				if (flatStats.length > 0) {
-					result.push({ ...source, stats: flatStats });
-				}
-				return result;
-			},
-			[] as ModifierSource[],
-		);
-
-		// Calculate derived values once during construction
-		this.baseAvoidance = calculateStatValue({
-			items: [],
-			modifierSources: this.flatModifierSources,
-			baseStats: this.baseStats,
-			statName: this.avoidanceStatName,
-		});
+		// The base vector is the character with NO gear on: race, talents, buffs, debuffs and
+		// consumables, straight from computeStats. A 102.4% uncrushable floor therefore becomes
+		// a constraint of 102.4 - baseAvoidance on the items the LP is choosing.
+		this.baseAvoidance = this.linearModel.base[this.avoidanceStatName] ?? 0;
 		this.avoidanceTarget = calculateAvoidanceTarget(
 			this.uncrushabilitySetting,
 			this.baseAvoidance,
 		);
 
-		this.baseUncritability = calculateStatValue({
-			items: [],
-			modifierSources: this.flatModifierSources,
-			baseStats: this.baseStats,
-			statName: "Uncritability",
-		});
+		this.baseUncritability = this.linearModel.base.Uncritability ?? 0;
 		this.uncritabilityTarget = calculateUncritabilityTarget(
 			this.uncritabilitySetting,
 			this.baseUncritability,
 		);
 
-		this.resistanceTargets = this.resistanceFloors.map((floor) => {
-			const baseResistance = calculateStatValue({
-				items: [],
-				modifierSources: this.flatModifierSources,
-				baseStats: this.baseStats,
-				statName: floor.stat,
-			});
-			return { stat: floor.stat, target: floor.value - baseResistance };
-		});
+		this.resistanceTargets = this.resistanceFloors.map((floor) => ({
+			stat: floor.stat,
+			target: floor.value - (this.linearModel.base[floor.stat] ?? 0),
+		}));
 	}
 
 	hasRelevantStats(stats: Stat[]): boolean {
@@ -147,16 +116,11 @@ export class SolverConfiguration {
 		);
 	}
 
-	calculateScoresForStats(stats: Stat[]): {
-		avoidanceScore: number;
-		uncritabilityScore: number;
-		objectiveScore: number;
-		resistanceScores: Partial<Record<ResistanceFloor["stat"], number>>;
-	} {
+	calculateScoresForStats(stats: Stat[]): ScoreSet {
 		return calculateScores(
 			stats,
 			this.optimizeStats,
-			this.multiplierModifierSources,
+			this.linearModel,
 			this.avoidanceStatName,
 			this.resistanceFloors.map((floor) => floor.stat),
 		);

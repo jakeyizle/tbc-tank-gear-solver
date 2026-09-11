@@ -36,7 +36,13 @@ const STORAGE_KEY = "round1WeightsCache";
 // crit-immunity floor) is now forced to 0 rather than really simmed, so without a version bump a
 // stale entry computed before this field existed could be reused for a config where it matters,
 // silently reporting a real calibrated Resilience weight where 0 is now correct (or vice versa).
-const CACHE_VERSION = 3;
+//
+// Bumped 3 -> 4: the vendored sim was patched so defense rating grants miss chance in combat,
+// not just dodge/parry/block (vendor/tbc-sim/sim/core/unit.go's
+// GetTotalChanceToBeMissedAsDefender). That changes DTPS/TMI for every gear set and re-prices
+// Defense Rating, so every weight cached before the patch is wrong. Nothing in the cache KEY
+// changes when the simulator itself changes behaviour, so only a version bump can evict them.
+const CACHE_VERSION = 4;
 // Bounds growth as a user experiments with different profiles/ratios over a long session,
 // without needing a TTL - oldest-savedAt entries are evicted first on write.
 const MAX_ENTRIES = 20;

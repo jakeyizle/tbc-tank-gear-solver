@@ -1,3 +1,23 @@
+// The last surviving fragment of the hand-written stat engine.
+//
+// Percent/skill conversion and the armor mitigation curve are gone - src/sim/deriveLinearModel.ts
+// measures those from the simulator now, and src/data/mechanics.ts holds the few constants that
+// still have to be stated. What remains is percent -> rating, which exists solely because
+// src/data/talents.ts and src/data/abilities.ts author a handful of effects as percentages
+// ("+5% dodge") while the rest of the pipeline works in rating.
+//
+// Both of those files are deleted by the config-model collapse (Phase 4), and this goes with
+// them. Do not add callers.
+import {
+	BLOCK_RATING_PER_BLOCK_PERCENT,
+	DEFENSE_RATING_PER_DEFENSE_LEVEL,
+	DODGE_RATING_PER_DODGE_PERCENT,
+	PARRY_RATING_PER_PARRY_PERCENT,
+	RESILIENCE_RATING_PER_CRIT_REDUCTION_CHANCE,
+	SPELL_CRIT_RATING_PER_CRIT_PERCENT,
+	SPELL_HASTE_RATING_PER_HASTE_PERCENT,
+	SPELL_HIT_RATING_PER_HIT_PERCENT,
+} from "#/data/mechanics";
 import type { Stat } from "#/solver/types";
 
 type StatRatingName =
@@ -6,80 +26,24 @@ type StatRatingName =
 	| "Block"
 	| "Defense"
 	| "Resilience"
-	| "Armor"
 	| "SpellCrit"
 	| "SpellHit"
 	| "SpellHaste"
-	| "Miss"
-	| "Agility";
+	// Miss has no rating; the identity keeps callers from special-casing it.
+	| "Miss";
 
-type Conversion = {
-	toPercentageOrSkill: (value: number, roundRating?: boolean) => number;
-	toRating: (value: number) => number; // optional reverse
+const RATING_PER_POINT: Record<StatRatingName, number> = {
+	Parry: PARRY_RATING_PER_PARRY_PERCENT,
+	Dodge: DODGE_RATING_PER_DODGE_PERCENT,
+	Block: BLOCK_RATING_PER_BLOCK_PERCENT,
+	Defense: DEFENSE_RATING_PER_DEFENSE_LEVEL,
+	Resilience: RESILIENCE_RATING_PER_CRIT_REDUCTION_CHANCE,
+	SpellCrit: SPELL_CRIT_RATING_PER_CRIT_PERCENT,
+	SpellHit: SPELL_HIT_RATING_PER_HIT_PERCENT,
+	SpellHaste: SPELL_HASTE_RATING_PER_HASTE_PERCENT,
+	Miss: 1,
 };
 
-const statConversions: Record<StatRatingName, Conversion> = {
-	Parry: {
-		toPercentageOrSkill: (v) => v / 23.6538,
-		toRating: (v) => v * 23.6538,
-	},
-	Dodge: {
-		toPercentageOrSkill: (v) => v / 18.9231,
-		toRating: (v) => v * 18.9231,
-	},
-	Block: {
-		toPercentageOrSkill: (v) => v / 7.8846,
-		toRating: (v) => v * 7.8846,
-	},
-	Defense: {
-		toPercentageOrSkill: (v, roundRating) => {
-			const val = v / 2.3654;
-      return roundRating ? Math.floor(val) : val;
-    },
-		toRating: (v) => v * 2.3654,
-	},
-	Resilience: {
-		toPercentageOrSkill: (v) => v / 39.4231,
-		toRating: (v) => v * 39.4231,
-	},
-	Armor: {
-		// K = 467.5*AttackerLevel - 22167.5, for a level-73 attacker (a level-70 character's
-		// standard raid boss, +3) - matches the reference WeakAura's armor mitigation formula.
-		toPercentageOrSkill: (v) => v / (v + 11960),
-		toRating: () => {
-			throw new Error("Armor cannot be converted to rating");
-		},
-	},
-	SpellCrit: {
-		toPercentageOrSkill: (v) => v / 22.1,
-		toRating: (v) => v * 22.1,
-	},
-	SpellHit: {
-		toPercentageOrSkill: (v) => v / 12.6,
-		toRating: (v) => v * 12.6,
-	},
-	SpellHaste: {
-		toPercentageOrSkill: (v) => v / 15.8,
-		toRating: (v) => v * 15.8,
-	},
-	Miss: {
-		toPercentageOrSkill: (v) => v,
-		toRating: (v) => v,
-	},
-	// this converts agility to dodge
-	// TODO: this is based on class
-	Agility: {
-		toPercentageOrSkill: (v) => v / 25,
-		toRating: () => {
-			throw new Error("Cannot caluclate agility from dodge");
-		},
-	},
-};
-
-export const convertStatToPercentageOrSkill = (
-	stat: Stat & { name: StatRatingName },
-	roundRating = false,
-) => statConversions[stat.name].toPercentageOrSkill(stat.value, roundRating);
 export const convertStatToRating = (
-	stat: Stat & { name: Exclude<StatRatingName, "Armor"> },
-) => statConversions[stat.name].toRating(stat.value);
+	stat: Stat & { name: StatRatingName },
+): number => stat.value * RATING_PER_POINT[stat.name];

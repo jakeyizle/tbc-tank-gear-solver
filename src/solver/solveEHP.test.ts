@@ -1,31 +1,22 @@
 import { describe, expect, it } from "vitest";
+import { armorDamageReduction } from "#/data/mechanics";
 import { parseItemInput } from "#/helpers/parseItemInput";
-import { calculateStatValue } from "#/helpers/stats";
 import { DEFAULT_SIM_CALIBRATION_PROFILE } from "#/types/SimCalibrationProfile";
 import { EXAMPLE_GEAR_POOL_JSON } from "./__fixtures__/exampleGearPool";
+import { TEST_ITEM_DATABASE } from "./__fixtures__/testItemDatabase";
 import {
 	TEST_CLASS_ID,
 	TEST_RACE_ID,
 	testItemPool,
 } from "./__fixtures__/testItemPool";
+import { TEST_LINEAR_MODEL } from "./__fixtures__/testLinearModel";
 import { validateSolution } from "./__test-helpers__/validateSolution";
 import { type solve, solveAll } from "./index";
 import { SolverConfiguration } from "./SolverConfiguration";
+import { scoreItemSet } from "./scores";
 import { type SolveOptions, solveConfig } from "./solveConfig";
 import { solveConfigForEHP, solveGearSet } from "./solveEHP";
-import type { ModifierSource, Stat } from "./types";
-
-// representative of real talent/racial/buff avoidance contributions a character always has -
-// mirrors TEST_AVOIDANCE_BUFF in solveConfig.test.ts
-const TEST_AVOIDANCE_BUFF: ModifierSource = {
-	id: "test-avoidance-buff",
-	name: "Test Avoidance Buff",
-	type: "buff",
-	stats: [
-		{ name: "Dodge", value: 20, type: "flat" },
-		{ name: "Defense", value: 40, type: "flat" },
-	],
-};
+import type { LPItem, Stat } from "./types";
 
 const baseOptions = (
 	overrides: Partial<Omit<SolveOptions, "optimizeStats">> = {},
@@ -38,14 +29,29 @@ const baseOptions = (
 	excludeJewelcraftingItems: false,
 	excludeEnchantingItems: false,
 	phase: 3,
-	raceId: TEST_RACE_ID,
 	classId: TEST_CLASS_ID,
-	talentSources: [],
-	buffs: [],
-	abilitySources: [],
+	linearModel: TEST_LINEAR_MODEL,
+	itemDatabase: TEST_ITEM_DATABASE,
 	enabledConsumableIds: [],
 	...overrides,
 });
+
+// Effective HP for an assembled set, mirroring solveEHP.ts's own final calculation but derived
+// here so the test is not just re-reading the number under test.
+const effectiveHPOf = (
+	items: LPItem[],
+	config: SolverConfiguration,
+): number => {
+	const model = config.linearModel;
+	const totals = scoreItemSet(items, model, ["Armor", "Health"]);
+	const armor = (model.base.Armor ?? 0) + (totals.Armor ?? 0);
+	const health = (model.base.Health ?? 0) + (totals.Health ?? 0);
+	return (
+		health /
+		((1 - armorDamageReduction(armor, model.attackerLevel)) *
+			model.physicalDamageTakenMultiplier)
+	);
+};
 
 describe("solveConfigForEHP", () => {
 	it("produces a valid gear set and converges within the iteration cap", async () => {
@@ -75,12 +81,7 @@ describe("solveConfigForEHP", () => {
 			...options,
 			optimizeStats: staminaOnly,
 		});
-		const staminaEHP = calculateStatValue({
-			items: staminaResult,
-			modifierSources: staminaConfig.multiplierModifierSources,
-			baseStats: staminaConfig.baseStats,
-			statName: "Effective HP",
-		});
+		const staminaEHP = effectiveHPOf(staminaResult, staminaConfig);
 
 		const { effectiveHP: ehpOptimizedEHP } = await solveConfigForEHP(
 			testItemPool,
@@ -98,7 +99,6 @@ describe("solveConfigForEHP", () => {
 		const options = baseOptions({
 			uncrushabilitySetting: 1,
 			uncritabilitySetting: 1,
-			buffs: [TEST_AVOIDANCE_BUFF],
 			resistanceFloors: [{ stat: "ShadowResistance", value: 10 }],
 		});
 		const { items, converged } = await solveConfigForEHP(testItemPool, options);
@@ -107,13 +107,12 @@ describe("solveConfigForEHP", () => {
 		expect(validateSolution(items, config)).toEqual([]);
 		expect(converged).toBe(true);
 
-		const resistance = calculateStatValue({
-			items,
-			modifierSources: config.multiplierModifierSources,
-			baseStats: config.baseStats,
-			statName: "ShadowResistance",
-		});
-		expect(resistance).toBeGreaterThanOrEqual(10);
+		const resistance =
+			scoreItemSet(items, config.linearModel, ["ShadowResistance"])
+				.ShadowResistance ?? 0;
+		expect(resistance).toBeGreaterThanOrEqual(
+			config.resistanceTargets[0].target,
+		);
 	}, 60000);
 
 	it("converges on a large, real-world multi-candidate gear pool", async () => {
@@ -142,8 +141,18 @@ describe("solveConfigForEHP", () => {
 		// solveAll's real solve() spins up a Worker, unavailable under vitest - solveGearSet is
 		// the same objectiveMode-dispatch logic solver.worker.ts uses, so this exercises the exact
 		// routing a real solve would do (see solver.worker.ts)
+		// The real solve() runs in the Worker, which is where the stat model is derived (see
+		// solver.worker.ts); this stand-in supplies the committed fixture in its place.
 		const solveFnForTest: typeof solve = (items, options, onProgress) =>
-			solveGearSet(items, options, onProgress);
+			solveGearSet(
+				items,
+				{
+					...options,
+					linearModel: TEST_LINEAR_MODEL,
+					itemDatabase: TEST_ITEM_DATABASE,
+				},
+				onProgress,
+			);
 
 		const ehpConfig = {
 			id: "config-1",
@@ -196,6 +205,8 @@ describe("solveConfigForEHP", () => {
 		const validationConfig = new SolverConfiguration({
 			...baseConfig,
 			...statsConfig,
+			linearModel: TEST_LINEAR_MODEL,
+			itemDatabase: TEST_ITEM_DATABASE,
 		});
 		expect(validateSolution(results[0].items, validationConfig)).toEqual([]);
 		expect(validateSolution(results[1].items, validationConfig)).toEqual([]);
@@ -208,3 +219,4 @@ describe("solveConfigForEHP", () => {
 		expect(head2?.enchant.id).toEqual(head1?.enchant.id);
 	}, 60000);
 });
+

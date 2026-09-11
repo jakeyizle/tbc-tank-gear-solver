@@ -7,12 +7,17 @@ export type GemColor =
 	| "Yellow"
 	| "Purple"
 	| "Green"
-	| "Orange";
+	| "Orange"
+	| "Prismatic";
 
+// "Prismatic" (22459 Void Sphere, 22460 Prismatic Sphere - the two all-resistance gems)
+// satisfies a socket of any colour, so it appears in every list. Until the Gem colour union
+// gained the case, a prismatic gem fell through the gemCounts lookup as undefined and
+// silently satisfied nothing, mispricing any set built to clear a resistance floor.
 export const gemColorMatches: Record<SocketColor, GemColor[]> = {
-	Red: ["Red", "Purple", "Orange"],
-	Blue: ["Blue", "Purple", "Green"],
-	Yellow: ["Yellow", "Green", "Orange"],
+	Red: ["Red", "Purple", "Orange", "Prismatic"],
+	Blue: ["Blue", "Purple", "Green", "Prismatic"],
+	Yellow: ["Yellow", "Green", "Orange", "Prismatic"],
 };
 
 function generateValidSocketCombos(sockets: SocketColor[]): GemColor[][] {
@@ -50,6 +55,7 @@ export function gemsSatisfySocketBonus(
 		Purple: 0,
 		Green: 0,
 		Orange: 0,
+		Prismatic: 0,
 	};
 	for (const gem of gems) gemCounts[gem] = gemCounts[gem] + 1;
 

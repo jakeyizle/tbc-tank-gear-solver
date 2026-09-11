@@ -28,7 +28,6 @@ import {
 	resetSimEnvironment,
 	type SimMetric,
 } from "./calibrateWeights";
-import { raidProfileToModifierSources } from "./raidProfileToModifierSources";
 import {
 	type ConsumablesOverride,
 	splitGearAndConsumables,
@@ -120,11 +119,14 @@ export function exceedsHysteresisThreshold(
  */
 function scoreGearSet(gear: GearPiece[], config: SolverConfiguration): number {
 	return gear.reduce((sum, piece) => {
-		const item = getItem({
-			id: piece.id,
-			enchant: piece.enchant.id || undefined,
-			gems: piece.gemSlots,
-		});
+		const item = getItem(
+			{
+				id: piece.id,
+				enchant: piece.enchant.id || undefined,
+				gems: piece.gemSlots,
+			},
+			config.itemDatabase,
+		);
 		if (!item) return sum;
 		return sum + transformItem(item, config).objectiveScore;
 	}, 0);
@@ -421,12 +423,10 @@ export async function solveConfigForSimMetric(
 	const stopSolveConfigForSimMetric = perfTrace.mark("solveConfigForSimMetric");
 	const roundMsList: number[] = [];
 
-	// Sim objective modes configure buffs via the raid profile, not the formula-mode buffs list
-	// (BuffSection stays hidden and options.buffs stuck at its all-unchecked default whenever a
-	// sim objective mode is active - see ConfigCard.tsx) - so every solveConfig/SolverConfiguration
-	// call below must use the raid profile's translated buffs instead of whatever options.buffs
-	// was passed in.
-	options = { ...options, buffs: raidProfileToModifierSources(profile.raidProfile) };
+	// Buffs used to need translating out of the raid profile here, because the formula engine
+	// modelled them separately and would otherwise have scored items against an all-unchecked
+	// buff list. `options.linearModel` is measured with the raid profile already applied, so
+	// there is nothing left to reconcile - which was the point of the refactor.
 
 	const maxIterations = profile.calibration.maxRounds;
 	const stopFilterItems = perfTrace.mark("filterItemsForClass");

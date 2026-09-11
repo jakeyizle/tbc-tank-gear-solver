@@ -1,7 +1,9 @@
-import { calculateStatValue } from "#/helpers/stats";
+import { armorConstant, armorDamageReduction } from "#/data/mechanics";
+import type { LinearStatModel } from "#/types/LinearStatModel";
 import { getConsumableLPItems } from "./consumables";
 import { prepareItemCandidates } from "./items";
 import { SolverConfiguration } from "./SolverConfiguration";
+import { scoreItemSet } from "./scores";
 import {
 	runLPModelWithAvoidanceConvergence,
 	type SolveOptions,
@@ -10,8 +12,25 @@ import {
 } from "./solveConfig";
 import type { InputItem, LPItem, Stat } from "./types";
 
-// Same armor mitigation constant used by convertStat.ts's Armor conversion (EHP = Health / (1 - armor/(armor+K))).
-const ARMOR_MITIGATION_K = 11960;
+/**
+ * The character's total Armor and Health for a solved set: what the base already supplies
+ * plus what the chosen items add. Both are ordinary linear axes of the stat model, so this is
+ * just a lookup and an addition - the armor-from-agility and health-from-stamina conversions
+ * that used to live in helpers/stats.ts are inside the coefficients.
+ */
+const armorAndHealth = (
+	items: LPItem[],
+	model: LinearStatModel,
+): { armor: number; health: number } => {
+	// Armor alone, NOT Armor + BonusArmor: the sim folds bonus armor into the Armor stat
+	// (paladin.go:129's AddStatDependency), so the Armor axis is already the total and summing
+	// both would count every ring and cloak twice.
+	const totals = scoreItemSet(items, model, ["Armor", "Health"]);
+	return {
+		armor: (model.base.Armor ?? 0) + (totals.Armor ?? 0),
+		health: (model.base.Health ?? 0) + (totals.Health ?? 0),
+	};
+};
 
 // EHP = Health / (1 - D(Armor)), where D(Armor) = Armor / (Armor + K) is the (nonlinear,
 // diminishing-returns) armor mitigation curve. That makes EHP nonlinear in the decision
@@ -27,10 +46,16 @@ const ARMOR_MITIGATION_K = 11960;
 // d/dHealth [Health / (1-D)]            = 1 / (1-D)
 // d/dArmor  [Health / (1-D(Armor))]     = Health * D'(Armor) / (1-D)^2
 // D'(Armor) = K / (Armor+K)^2
-const linearizedEHPWeights = (armor: number, health: number) => {
-	const mitigation = armor / (armor + ARMOR_MITIGATION_K);
-	const mitigationDerivative =
-		ARMOR_MITIGATION_K / (armor + ARMOR_MITIGATION_K) ** 2;
+const linearizedEHPWeights = (
+	armor: number,
+	health: number,
+	attackerLevel: number,
+) => {
+	// K depends on the attacker's level, which is why the old hardcoded 11960 was wrong for
+	// anything but a level-73 boss. The model carries the level it was measured against.
+	const k = armorConstant(attackerLevel);
+	const mitigation = armorDamageReduction(armor, attackerLevel);
+	const mitigationDerivative = k / (armor + k) ** 2;
 
 	const healthWeight = 1 / (1 - mitigation);
 	const armorWeight = (health * mitigationDerivative) / (1 - mitigation) ** 2;
@@ -76,6 +101,7 @@ export const solveConfigForEHP = async (
 		const { healthWeight, armorWeight } = linearizedEHPWeights(
 			armorGuess,
 			healthGuess,
+			options.linearModel.attackerLevel,
 		);
 
 		config = new SolverConfiguration({
@@ -89,6 +115,7 @@ export const solveConfigForEHP = async (
 		const { fixedItems, decomposableItems } = prepareItemCandidates(
 			items,
 			config,
+			options.itemDatabase,
 		);
 		if (options.enabledConsumableIds.length > 0) {
 			fixedItems.push(
@@ -108,18 +135,10 @@ export const solveConfigForEHP = async (
 				}),
 		);
 
-		const newArmor = calculateStatValue({
-			items: result,
-			modifierSources: config.multiplierModifierSources,
-			baseStats: config.baseStats,
-			statName: "Armor",
-		});
-		const newHealth = calculateStatValue({
-			items: result,
-			modifierSources: config.multiplierModifierSources,
-			baseStats: config.baseStats,
-			statName: "TotalHealth",
-		});
+		const { armor: newArmor, health: newHealth } = armorAndHealth(
+			result,
+			config.linearModel,
+		);
 
 		if (Math.abs(newArmor - armorGuess) <= ARMOR_CONVERGENCE_TOLERANCE) {
 			armorGuess = newArmor;
@@ -135,12 +154,15 @@ export const solveConfigForEHP = async (
 
 	// biome-ignore lint/style/noNonNullAssertion: loop always runs at least once (MAX_EHP_ITERATIONS > 0)
 	const finalConfig = config!;
-	const effectiveHP = calculateStatValue({
-		items: result,
-		modifierSources: finalConfig.multiplierModifierSources,
-		baseStats: finalConfig.baseStats,
-		statName: "Effective HP",
-	});
+	const model = finalConfig.linearModel;
+	const { armor, health } = armorAndHealth(result, model);
+	// Improved Righteous Fury is a flat multiplier on damage taken, not a stat, so it stacks
+	// multiplicatively with armor mitigation rather than adding to it. The armor curve is
+	// asymptotic, so the denominator is always strictly positive.
+	const damageTaken =
+		(1 - armorDamageReduction(armor, model.attackerLevel)) *
+		model.physicalDamageTakenMultiplier;
+	const effectiveHP = health / damageTaken;
 
 	return { items: result, effectiveHP, ehpIterations: ehpIteration, converged };
 };

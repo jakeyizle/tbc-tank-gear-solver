@@ -1,6 +1,6 @@
 import GLPK, { type GLPK as GLPKType, type LP } from "glpk.js";
 import { perfTrace } from "#/helpers/perfTrace";
-import { calculateStatValue } from "#/helpers/stats";
+import type { LinearStatModel } from "#/types/LinearStatModel";
 import type { SimCalibrationProfile } from "#/types/SimCalibrationProfile";
 import { getConsumableLPItems } from "./consumables";
 import {
@@ -15,14 +15,15 @@ import {
 	resolveChosenDecomposableItems,
 	type SubjectTo,
 } from "./decomposedModel";
+import type { SolverItemDatabase } from "./itemDatabase";
 import { prepareItemCandidates, transformItem } from "./items";
 import { SolverConfiguration } from "./SolverConfiguration";
+import { scoreItemSet } from "./scores";
 import type {
 	DecomposableItem,
 	Enchant,
 	InputItem,
 	LPItem,
-	ModifierSource,
 	ProcessedItemType,
 	ResistanceFloor,
 	Stat,
@@ -62,11 +63,18 @@ export interface SolveOptions {
 	excludeJewelcraftingItems: boolean;
 	excludeEnchantingItems: boolean;
 	phase: number;
-	raceId: string;
 	classId: string;
-	talentSources: ModifierSource[];
-	buffs: ModifierSource[];
-	abilitySources: ModifierSource[];
+	/**
+	 * The measured stat model (src/sim/deriveLinearModel.ts). Carries race, talents, buffs,
+	 * debuffs and consumables implicitly - they are whatever the sim applied when it was
+	 * measured, which is why this file no longer takes raceId/talentSources/buffs.
+	 */
+	linearModel: LinearStatModel;
+	/**
+	 * The item/gem/enchant pool, built from the fetched db.json (see itemDatabase.ts). Both
+	 * this and `linearModel` are assembled in the Worker, never sent across postMessage.
+	 */
+	itemDatabase: SolverItemDatabase;
 	enabledConsumableIds: string[];
 	// Lets a caller that doesn't need this solve's final gear-picking precision (e.g.
 	// measureMetricAchievableScale - see its own doc comment) trade some of it for speed.
@@ -629,20 +637,16 @@ export const runLPModelWithAvoidanceConvergence = async (
 			);
 			runLPModelTotalMs += performance.now() - runLPModelStart;
 
-			const itemAvoidance = calculateStatValue({
-				items: result,
-				modifierSources: config.multiplierModifierSources,
-				baseStats: [],
-				statName: config.avoidanceStatName,
-				roundDefenseAndResilience: true,
-			});
-			const itemUncrit = calculateStatValue({
-				items: result,
-				modifierSources: config.multiplierModifierSources,
-				baseStats: [],
-				statName: "Uncritability",
-				roundDefenseAndResilience: true,
-			});
+			// The one place defense skill's floor is applied, and the reason per-item scores may
+			// never apply it - see scores.ts's header. This re-scores the ASSEMBLED set the way
+			// the game will, so the loop below can tighten the target when rounding leaves the
+			// real total short of it.
+			const rounded = scoreItemSet(result, config.linearModel, [
+				config.avoidanceStatName,
+				"Uncritability",
+			]);
+			const itemAvoidance = rounded[config.avoidanceStatName] ?? 0;
+			const itemUncrit = rounded.Uncritability ?? 0;
 
 			const isAvoidanceTargetMet = itemAvoidance >= originalAvoidanceTarget;
 			const isUncritTargetMet = itemUncrit >= originalUncritabilityTarget;
@@ -707,6 +711,7 @@ export const solveConfig = async (
 	const { fixedItems, decomposableItems } = prepareItemCandidates(
 		items,
 		config,
+		options.itemDatabase,
 	);
 	const prepareMs = stopPrepare();
 

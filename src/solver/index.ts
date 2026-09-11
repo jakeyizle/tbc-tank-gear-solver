@@ -11,6 +11,7 @@ import {
 	deadCalibrationStats,
 	resolveCalibrationStats,
 } from "#/sim/statTranslation";
+import type { CharacterStatsSnapshot } from "#/types/CharacterStats";
 import {
 	DEFAULT_SIM_CALIBRATION_PROFILE,
 	type SimCalibrationProfile,
@@ -87,6 +88,7 @@ type WorkerMessage =
 			perMetricStatWeights?: Record<"tps" | "dtps" | "tmi", Stat[]>;
 			perMetricStatWeightStdevs?: Record<"tps" | "dtps" | "tmi", Stat[]>;
 			round1StatWeights?: CalibratedWeights;
+			characterStats?: CharacterStatsSnapshot;
 	  }
 	| { type: "error"; message: string }
 	// Investigative timing breakdown for where a solve spent its time - see
@@ -139,6 +141,7 @@ export const solve = async (
 		simMetrics?: SimMetricsSnapshot;
 		perMetricStatWeights?: Record<"tps" | "dtps" | "tmi", Stat[]>;
 		perMetricStatWeightStdevs?: Record<"tps" | "dtps" | "tmi", Stat[]>;
+		characterStats?: CharacterStatsSnapshot;
 	}) => void,
 ): Promise<LPItem[]> => {
 	return new Promise((resolve, reject) => {
@@ -189,11 +192,12 @@ export const solve = async (
 				`[perf] main-thread solve() wall clock: ${(performance.now() - solveStartedAt).toFixed(1)}ms`,
 			);
 			worker.terminate();
-			if (data.simMetrics || data.perMetricStatWeights) {
+			if (data.simMetrics || data.perMetricStatWeights || data.characterStats) {
 				onSimResult?.({
 					simMetrics: data.simMetrics,
 					perMetricStatWeights: data.perMetricStatWeights,
 					perMetricStatWeightStdevs: data.perMetricStatWeightStdevs,
+					characterStats: data.characterStats,
 				});
 			}
 			if (round1CacheKey && data.round1StatWeights) {
@@ -293,6 +297,7 @@ export const solveAll = async (
 		let perMetricStatWeightStdevs:
 			| Record<"tps" | "dtps" | "tmi", Stat[]>
 			| undefined;
+		let characterStats: CharacterStatsSnapshot | undefined;
 		try {
 			items = await solveFn(
 				currentInputItems,
@@ -312,6 +317,7 @@ export const solveAll = async (
 					simMetrics = result.simMetrics;
 					perMetricStatWeights = result.perMetricStatWeights;
 					perMetricStatWeightStdevs = result.perMetricStatWeightStdevs;
+					characterStats = result.characterStats;
 				},
 			);
 		} catch (error) {
@@ -323,6 +329,7 @@ export const solveAll = async (
 			simMetrics,
 			perMetricStatWeights,
 			perMetricStatWeightStdevs,
+			characterStats,
 			id: solverConfig.id,
 			name: solverConfig.name,
 			baseConfig,

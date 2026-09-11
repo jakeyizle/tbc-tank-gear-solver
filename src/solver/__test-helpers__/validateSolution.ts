@@ -1,5 +1,6 @@
-import { calculateStatValue } from "#/helpers/stats";
+import type { LinearAxis } from "#/types/LinearStatModel";
 import type { SolverConfiguration } from "../SolverConfiguration";
+import { scoreItemSet } from "../scores";
 import type { LPItem, ProcessedItemType } from "../types";
 
 const MANDATORY_SLOTS: ProcessedItemType[] = [
@@ -25,59 +26,37 @@ interface AchievedStats {
 	resistances: Partial<Record<string, number>>;
 }
 
-// Independently recomputes achieved stats for a solved item set the same way the app's own
-// results display does (StatsSummary.tsx's calculateStatValue pattern), rather than trusting the
-// solver's internal per-item score fields - so this stays meaningful no matter how the solver
-// represents its internal solution.
+// Independently recomputes what a solved item set actually achieves, by re-scoring the whole
+// set from the stat model, rather than trusting the solver's internal per-item score fields -
+// so this stays meaningful no matter how the solver represents its internal solution.
+//
+// Figures are the ITEMS' contribution only, and are checked below against config's item-level
+// targets (which already have the character's base subtracted out). Defense skill's floor is
+// applied, because a whole set is where it belongs - see scores.ts.
 export const computeAchievedStats = (
 	items: LPItem[],
 	config: SolverConfiguration,
 ): AchievedStats => {
-	const modifierSources = [
-		...config.flatModifierSources,
-		...config.multiplierModifierSources,
+	const axes: LinearAxis[] = [
+		config.avoidanceStatName,
+		"Uncritability",
+		...config.optimizeStats.map((stat) => stat.name),
+		...config.resistanceTargets.map((target) => target.stat),
 	];
-	const baseStats = config.baseStats;
+	const totals = scoreItemSet(items, config.linearModel, axes);
 
-	const avoidance = calculateStatValue({
-		items,
-		modifierSources,
-		baseStats,
-		statName: config.avoidanceStatName,
-		roundDefenseAndResilience: true,
-	});
-	const uncritability = calculateStatValue({
-		items,
-		modifierSources,
-		baseStats,
-		statName: "Uncritability",
-		roundDefenseAndResilience: true,
-	});
 	const objective = config.optimizeStats.reduce(
-		(sum, stat) =>
-			sum +
-			calculateStatValue({
-				items,
-				modifierSources,
-				baseStats,
-				statName: stat.name,
-			}) *
-				stat.value,
+		(sum, stat) => sum + (totals[stat.name] ?? 0) * stat.value,
 		0,
 	);
 	const resistances: Partial<Record<string, number>> = {};
-	for (const floor of config.resistanceFloors) {
-		resistances[floor.stat] = calculateStatValue({
-			items,
-			modifierSources,
-			baseStats,
-			statName: floor.stat,
-		});
+	for (const target of config.resistanceTargets) {
+		resistances[target.stat] = totals[target.stat] ?? 0;
 	}
 
 	return {
-		avoidance,
-		uncritability,
+		avoidance: totals[config.avoidanceStatName] ?? 0,
+		uncritability: totals.Uncritability ?? 0,
 		objective,
 		resistances,
 	};
@@ -155,11 +134,11 @@ export const validateSolution = (
 			`uncrit floor not met: achieved ${achieved.uncritability}, target ${config.uncritabilityTarget}`,
 		);
 	}
-	for (const floor of config.resistanceFloors) {
-		const achievedValue = achieved.resistances[floor.stat] ?? 0;
-		if (achievedValue < floor.value) {
+	for (const target of config.resistanceTargets) {
+		const achievedValue = achieved.resistances[target.stat] ?? 0;
+		if (achievedValue < target.target) {
 			issues.push(
-				`resistance floor not met for ${floor.stat}: achieved ${achievedValue}, target ${floor.value}`,
+				`resistance floor not met for ${target.stat}: achieved ${achievedValue}, target ${target.target}`,
 			);
 		}
 	}

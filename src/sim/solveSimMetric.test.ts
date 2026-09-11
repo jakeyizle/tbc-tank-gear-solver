@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-	TEST_CLASS_ID,
-	TEST_RACE_ID,
-} from "#/solver/__fixtures__/testItemPool";
+import { TEST_ITEM_DATABASE } from "#/solver/__fixtures__/testItemDatabase";
+import { TEST_CLASS_ID } from "#/solver/__fixtures__/testItemPool";
+import { TEST_LINEAR_MODEL } from "#/solver/__fixtures__/testLinearModel";
 import { solveConfig } from "#/solver/solveConfig";
 import type { InputItem, LPItem, Stat, StatName } from "#/solver/types";
 import { DEFAULT_SIM_CALIBRATION_PROFILE } from "#/types/SimCalibrationProfile";
@@ -94,11 +93,9 @@ describe("measureMetricAchievableScale", () => {
 		excludeJewelcraftingItems: false,
 		excludeEnchantingItems: false,
 		phase: 3,
-		raceId: TEST_RACE_ID,
 		classId: TEST_CLASS_ID,
-		talentSources: [],
-		buffs: [],
-		abilitySources: [],
+		linearModel: TEST_LINEAR_MODEL,
+		itemDatabase: TEST_ITEM_DATABASE,
 		enabledConsumableIds: [],
 	};
 
@@ -117,13 +114,18 @@ describe("measureMetricAchievableScale", () => {
 			.mockResolvedValueOnce([fakeProposalItem("34400")]) // best: real Stamina 91
 			.mockResolvedValueOnce([fakeProposalItem("30007")]); // worst: real Stamina 40
 
-		// scale = 91 - 40 = 51.
+		// scale = (91 - 40) * the model's Stamina coefficient. That coefficient is 1.283, not 1:
+		// the raid profile's Blessing of Kings and Improved Gift of the Wild multiply Stamina,
+		// and the sim-measured model carries those multipliers so the LP scores an item's
+		// Stamina at what it is actually worth on this character.
 		const scale = await measureMetricAchievableScale(
 			rawVector,
 			eligibleItems,
 			baseOptions,
 		);
-		expect(scale).toBeCloseTo(51);
+		expect(scale).toBeCloseTo(
+			51 * (TEST_LINEAR_MODEL.coefficients.Stamina?.Stamina ?? 0),
+		);
 	});
 
 	it("returns undefined when the pool has no differentiable effect on the vector (best === worst)", async () => {
@@ -216,11 +218,9 @@ describe("isSignificantImprovement", () => {
 		excludeJewelcraftingItems: false,
 		excludeEnchantingItems: false,
 		phase: 3,
-		raceId: TEST_RACE_ID,
 		classId: TEST_CLASS_ID,
-		talentSources: [],
-		buffs: [],
-		abilitySources: [],
+		linearModel: TEST_LINEAR_MODEL,
+		itemDatabase: TEST_ITEM_DATABASE,
 		enabledConsumableIds: [],
 	};
 
@@ -301,11 +301,9 @@ describe("solveConfigForSimMetric", () => {
 		excludeJewelcraftingItems: false,
 		excludeEnchantingItems: false,
 		phase: 3,
-		raceId: TEST_RACE_ID,
 		classId: TEST_CLASS_ID,
-		talentSources: [],
-		buffs: [],
-		abilitySources: [],
+		linearModel: TEST_LINEAR_MODEL,
+		itemDatabase: TEST_ITEM_DATABASE,
 		enabledConsumableIds: [],
 	};
 
@@ -713,11 +711,12 @@ describe("solveConfigForSimMetric", () => {
 		);
 	});
 
-	// Sim objective modes configure buffs via the raid profile, not the formula-mode buffs list -
-	// BuffSection stays hidden and options.buffs stuck at its all-unchecked default whenever a sim
-	// objective mode is active (see ConfigCard.tsx) - so solveConfig must be called with the raid
-	// profile's translated buffs, not whatever (possibly empty) options.buffs was passed in.
-	it("solves using the raid profile's buffs, not options.buffs, ignoring an avoidance target that would otherwise assume zero buffs", async () => {
+	// This used to assert that solveConfigForSimMetric replaced options.buffs with the raid
+	// profile's translated buffs, because the formula engine modelled buffs separately and would
+	// otherwise have scored items for a buffless character. There is nothing left to reconcile:
+	// the raid profile's buffs are already inside options.linearModel, measured by the sim (see
+	// src/sim/deriveLinearModel.ts). What matters now is simply that the model reaches the LP.
+	it("passes the measured stat model straight through to the LP", async () => {
 		vi.mocked(calibrateWeights).mockResolvedValueOnce({
 			optimizeStats: [],
 			stdevStats: [],
@@ -726,24 +725,15 @@ describe("solveConfigForSimMetric", () => {
 
 		await solveConfigForSimMetric(
 			[],
-			// options.buffs deliberately empty - simulating BuffSection's hidden, all-unchecked
-			// default in sim mode.
 			baseOptions,
 			[],
 			{ items: [], enchants: [], gems: [] },
 			{ tmi: 1 },
-			// DEFAULT_SIM_CALIBRATION_PROFILE's raidProfile has Blessing of Kings, improved Power
-			// Word: Fortitude, etc. enabled - see protPaladinProfile.ts's PROT_PALADIN_*_BUFFS.
 			singleRoundProfile,
 		);
 
 		const [, solveConfigOptions] = vi.mocked(solveConfig).mock.calls[0];
-		expect(solveConfigOptions.buffs).not.toEqual([]);
-		expect(solveConfigOptions.buffs).toEqual(
-			expect.arrayContaining([
-				expect.objectContaining({ id: "blessing-of-kings" }),
-			]),
-		);
+		expect(solveConfigOptions.linearModel).toBe(TEST_LINEAR_MODEL);
 	});
 });
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_SIM_CALIBRATION_PROFILE } from "#/types/SimCalibrationProfile";
+import { TEST_ITEM_DATABASE } from "./__fixtures__/testItemDatabase";
 import {
 	TEST_CLASS_ID,
 	TEST_CONSUMABLE_IDS,
@@ -8,6 +9,7 @@ import {
 	TEST_RACE_ID,
 	testItemPool,
 } from "./__fixtures__/testItemPool";
+import { TEST_LINEAR_MODEL } from "./__fixtures__/testLinearModel";
 import {
 	computeAchievedStats,
 	validateSolution,
@@ -16,26 +18,12 @@ import { type solve, solveAll } from "./index";
 import { prepareItemCandidates } from "./items";
 import { SolverConfiguration } from "./SolverConfiguration";
 import { type SolveOptions, solveConfig } from "./solveConfig";
-import {
-	type InputItem,
-	type LPItem,
-	type ModifierSource,
-	STAT_NAMES,
-	type Stat,
-} from "./types";
+import { type InputItem, type LPItem, STAT_NAMES, type Stat } from "./types";
 
-// representative of real talent/racial/buff avoidance contributions a character always has -
-// calculateAvoidanceTarget subtracts these from the fixed cap, so omitting them (as an empty
-// talentSources/buffs array would) tests an unrealistic "buffless" character, not a real one
-const TEST_AVOIDANCE_BUFF: ModifierSource = {
-	id: "test-avoidance-buff",
-	name: "Test Avoidance Buff",
-	type: "buff",
-	stats: [
-		{ name: "Dodge", value: 20, type: "flat" },
-		{ name: "Defense", value: 40, type: "flat" },
-	],
-};
+// "Enchant Ring - Stats", which only an Enchanter can apply to their own rings. The database
+// identifies an enchant by the ITEM that applies it (22538), where the hand-maintained data
+// used the spell id (27927) - same enchant, authoritative id.
+const ENCHANTING_ONLY_RING_ENCHANT = "22538";
 
 const OBJECTIVE_STATS: Stat[] = [
 	{ name: "Stamina", value: 1, type: "flat" },
@@ -57,11 +45,9 @@ const baseOptions = (overrides: Partial<SolveOptions> = {}): SolveOptions => ({
 	excludeJewelcraftingItems: false,
 	excludeEnchantingItems: false,
 	phase: 3,
-	raceId: TEST_RACE_ID,
 	classId: TEST_CLASS_ID,
-	talentSources: [],
-	buffs: [],
-	abilitySources: [],
+	linearModel: TEST_LINEAR_MODEL,
+	itemDatabase: TEST_ITEM_DATABASE,
 	enabledConsumableIds: [],
 	...overrides,
 });
@@ -74,27 +60,33 @@ describe("solveConfig", () => {
 
 		expect(validateSolution(result, config)).toEqual([]);
 		const achieved = computeAchievedStats(result, config);
-		// golden values captured from the current (pre-MIP-reformulation) solver - since both
-		// today's model and a correct future reformulation solve to the true optimum
-		// (mipgap: 0.0), these must stay exactly reproducible across the rewrite
-		expect(achieved.avoidance).toBe(100.50431589303089);
-		expect(achieved.uncritability).toBe(8.72);
-		expect(achieved.objective).toBe(3059.984123);
+		// Golden values. The solver runs to the true optimum (mipgap: 0.0), so these are exactly
+		// reproducible and any drift is a real change in what the LP considers best. The figures
+		// are the ITEMS' contribution only, measured against TEST_LINEAR_MODEL's coefficients.
+		//
+		// Re-captured twice: once when the sim-measured stat model replaced the hand-written
+		// stat engine, and again when the item pool moved from src/data/items.json to the
+		// vendored db.json. The second move picked the SAME 16 base items and raised the
+		// objective from 2978.31 to 2988.36 - the database carries enchants the hand data never
+		// had (Glyph of the Wild, on the head slot here), so the LP simply had more to choose
+		// from. Avoidance fell slightly because nothing constrains it in this scenario.
+		expect(achieved.avoidance).toBe(73.74731453011535);
+		expect(achieved.uncritability).toBe(7.064390065722888);
+		expect(achieved.objective).toBe(2988.3631778599997);
 	}, 30000);
 
 	it("scenario 2: avoidance floor active", async () => {
 		const options = baseOptions({
 			uncrushabilitySetting: 1,
-			buffs: [TEST_AVOIDANCE_BUFF],
 		});
 		const result = await solveConfig(testItemPool, options);
 		const config = new SolverConfiguration(options);
 
 		expect(validateSolution(result, config)).toEqual([]);
 		const achieved = computeAchievedStats(result, config);
-		expect(achieved.avoidance).toBe(104.28122517322284);
-		expect(achieved.uncritability).toBe(9.4);
-		expect(achieved.objective).toBe(3154.297943);
+		expect(achieved.avoidance).toBe(73.74731453011535);
+		expect(achieved.uncritability).toBe(7.064390065722888);
+		expect(achieved.objective).toBe(2988.3631778599997);
 	}, 60000);
 
 	it("scenario 3: uncrit floor active", async () => {
@@ -104,19 +96,21 @@ describe("solveConfig", () => {
 
 		expect(validateSolution(result, config)).toEqual([]);
 		const achieved = computeAchievedStats(result, config);
-		expect(achieved.avoidance).toBe(100.50431589303089);
-		expect(achieved.uncritability).toBe(8.72);
-		expect(achieved.objective).toBe(3059.984123);
+		expect(achieved.avoidance).toBe(73.74731453011535);
+		expect(achieved.uncritability).toBe(7.064390065722888);
+		expect(achieved.objective).toBe(2988.3631778599997);
 	}, 60000);
 
 	it("scenario 4: avoidance + uncrit + resistance floors together", async () => {
 		// only "Enchant Cloak - Greater Shadow Resistance" (+15) grants any resistance stat
-		// applicable to this fixture, forcing the solver to pick it on the Back slot to comply
+		// applicable to this fixture, forcing the solver to pick it on the Back slot to comply.
+		// The floor has to clear what the character already has: the raid profile's Shadow
+		// Protection puts base Shadow Resistance at 80, so a 10-point floor would be met by
+		// wearing nothing at all - the constraint only binds above that.
 		const options = baseOptions({
 			uncrushabilitySetting: 1,
 			uncritabilitySetting: 1,
-			buffs: [TEST_AVOIDANCE_BUFF],
-			resistanceFloors: [{ stat: "ShadowResistance", value: 10 }],
+			resistanceFloors: [{ stat: "ShadowResistance", value: 90 }],
 			enabledConsumableIds: [
 				TEST_CONSUMABLE_IDS.flask,
 				TEST_CONSUMABLE_IDS.guardianElixir,
@@ -128,9 +122,9 @@ describe("solveConfig", () => {
 
 		expect(validateSolution(result, config)).toEqual([]);
 		const achieved = computeAchievedStats(result, config);
-		expect(achieved.avoidance).toBe(104.28122517322284);
-		expect(achieved.uncritability).toBe(9.4);
-		expect(achieved.objective).toBe(3152.297943);
+		expect(achieved.avoidance).toBe(73.74731453011535);
+		expect(achieved.uncritability).toBe(7.064390065722888);
+		expect(achieved.objective).toBe(2986.3631778599993);
 		expect(achieved.resistances.ShadowResistance).toBe(15);
 	}, 60000);
 
@@ -196,8 +190,18 @@ describe("solveConfig", () => {
 		// solveAll's real solve() spins up a browser Worker, unavailable under vitest - inject
 		// solveConfig directly (same underlying logic solver.worker.ts calls) so this test
 		// exercises solveAll's real cross-config locking orchestration without a Worker
+		// The real solve() runs in the Worker, which is where the stat model is derived (see
+		// solver.worker.ts); this stand-in supplies the committed fixture in its place.
 		const solveFnForTest: typeof solve = (items, options, onProgress) =>
-			solveConfig(items, options, onProgress);
+			solveConfig(
+				items,
+				{
+					...options,
+					linearModel: TEST_LINEAR_MODEL,
+					itemDatabase: TEST_ITEM_DATABASE,
+				},
+				onProgress,
+			);
 
 		const results = await solveAll(
 			testItemPool,
@@ -208,7 +212,12 @@ describe("solveConfig", () => {
 		);
 		expect(results).toHaveLength(2);
 
-		const config = new SolverConfiguration({ ...baseConfig, ...solverConfig1 });
+		const config = new SolverConfiguration({
+			...baseConfig,
+			...solverConfig1,
+			linearModel: TEST_LINEAR_MODEL,
+			itemDatabase: TEST_ITEM_DATABASE,
+		});
 		expect(validateSolution(results[0].items, config)).toEqual([]);
 		expect(validateSolution(results[1].items, config)).toEqual([]);
 
@@ -263,7 +272,15 @@ describe("solveConfig", () => {
 		const capturedInputs: InputItem[][] = [];
 		const solveFnForTest: typeof solve = (items, options, onProgress) => {
 			capturedInputs.push(items);
-			return solveConfig(items, options, onProgress);
+			return solveConfig(
+				items,
+				{
+					...options,
+					linearModel: TEST_LINEAR_MODEL,
+					itemDatabase: TEST_ITEM_DATABASE,
+				},
+				onProgress,
+			);
 		};
 
 		const results = await solveAll(
@@ -361,7 +378,7 @@ describe("solveConfig", () => {
 	}, 60000);
 
 	it("scenario 8d: excludeEnchantingItems keeps Enchanting-only ring enchants out of the Finger candidate pool, independently of excludeJewelcraftingItems", async () => {
-		// Ring - Stats (27927, Finger, Enchanting-only per its formula's "Only the Enchanter's
+		// Ring - Stats (Finger, Enchanting-only per its formula's "Only the Enchanter's
 		// rings can be enchanted" restriction) grants Stamina among its stats, which is in
 		// OBJECTIVE_STATS, so it clears the relevant-stats filter regardless of eligibility - it
 		// must disappear from every Finger item's enchant candidates when excludeEnchantingItems
@@ -369,7 +386,11 @@ describe("solveConfig", () => {
 		// the raw candidate pool (not a solve outcome), since which enchant wins the slot depends
 		// on relative stat weighting, not just eligibility.
 		const fingerCandidateIds = (config: SolverConfiguration) => {
-			const { decomposableItems } = prepareItemCandidates(testItemPool, config);
+			const { decomposableItems } = prepareItemCandidates(
+				testItemPool,
+				config,
+				TEST_ITEM_DATABASE,
+			);
 			const finger = decomposableItems.find((item) =>
 				(TEST_ITEM_IDS.fingers as readonly string[]).includes(item.base.id),
 			);
@@ -379,17 +400,23 @@ describe("solveConfig", () => {
 		};
 
 		const defaultConfig = new SolverConfiguration(baseOptions());
-		expect(fingerCandidateIds(defaultConfig)).toContain("27927");
+		expect(fingerCandidateIds(defaultConfig)).toContain(
+			ENCHANTING_ONLY_RING_ENCHANT,
+		);
 
 		const enchantingExcludedConfig = new SolverConfiguration(
 			baseOptions({ excludeEnchantingItems: true }),
 		);
-		expect(fingerCandidateIds(enchantingExcludedConfig)).not.toContain("27927");
+		expect(fingerCandidateIds(enchantingExcludedConfig)).not.toContain(
+			ENCHANTING_ONLY_RING_ENCHANT,
+		);
 
 		const jewelcraftingExcludedConfig = new SolverConfiguration(
 			baseOptions({ excludeJewelcraftingItems: true }),
 		);
-		expect(fingerCandidateIds(jewelcraftingExcludedConfig)).toContain("27927");
+		expect(fingerCandidateIds(jewelcraftingExcludedConfig)).toContain(
+			ENCHANTING_ONLY_RING_ENCHANT,
+		);
 	});
 
 	it("scenario 8c: class-restricted enchants are excluded from the Head candidate pool for the wrong class", async () => {
@@ -398,7 +425,11 @@ describe("solveConfig", () => {
 		// against the raw candidate pool (not the final solve) since which enchant actually wins
 		// the slot depends on relative stat weighting, not just eligibility.
 		const headCandidateIds = (config: SolverConfiguration) => {
-			const { decomposableItems } = prepareItemCandidates(testItemPool, config);
+			const { decomposableItems } = prepareItemCandidates(
+				testItemPool,
+				config,
+				TEST_ITEM_DATABASE,
+			);
 			const head = decomposableItems.find(
 				(item) => item.base.id === TEST_ITEM_IDS.head,
 			);
@@ -417,29 +448,44 @@ describe("solveConfig", () => {
 	});
 
 	it("scenario 9: phase filter is cumulative - gems with phase <= the selected phase are eligible", async () => {
-		// Bright Crimson Spinel (35487, Red, phase 5) is the only Red-compatible gem in the data
-		// that grants AttackPower - at phase <5 no eligible gem exists, so relevant Red sockets go
-		// ungemmed; at phase 5 the solver picks it up
+		// Quick Lionseye (35761, Yellow, phase 5) is the strongest Spell Haste gem in the
+		// database, so under a Spell-Haste objective it survives dominance pruning (see
+		// pruneDominatedGems) and must appear at phase 5 - and must not exist at all at phase 3.
+		//
+		// Asserted on the candidate pool rather than the final solve: which gem WINS a socket
+		// depends on the stat model's cross-terms, while eligibility is what this scenario is
+		// about. It also has to be a stat nothing else feeds, or a lower-phase gem carrying a
+		// stat that converts into this one would dominate it.
 		const optimizeStats: Stat[] = [
-			{ name: "AttackPower", value: 1, type: "flat" },
+			{ name: "SpellHaste", value: 1, type: "flat" },
 		];
-		const phase5Gem = "35487";
+		const phase5Gem = "35761";
 
-		const lowPhase = await solveConfig(
-			testItemPool,
-			baseOptions({ optimizeStats, phase: 3 }),
-		);
-		expect(
-			lowPhase.some((item) => item.gems.some((gem) => gem.id === phase5Gem)),
-		).toBe(false);
+		const gemCandidateIds = (phase: number) => {
+			const config = new SolverConfiguration(
+				baseOptions({ optimizeStats, phase }),
+			);
+			const { decomposableItems } = prepareItemCandidates(
+				testItemPool,
+				config,
+				TEST_ITEM_DATABASE,
+			);
+			return new Set(
+				decomposableItems.flatMap((item) =>
+					item.sockets.flatMap((socket) =>
+						socket.candidates.map((candidate) => candidate.gem.id),
+					),
+				),
+			);
+		};
 
-		const highPhase = await solveConfig(
-			testItemPool,
-			baseOptions({ optimizeStats, phase: 5 }),
-		);
-		expect(
-			highPhase.some((item) => item.gems.some((gem) => gem.id === phase5Gem)),
-		).toBe(true);
+		const lowPhase = gemCandidateIds(3);
+		const highPhase = gemCandidateIds(5);
+
+		expect(lowPhase).not.toContain(phase5Gem);
+		expect(highPhase).toContain(phase5Gem);
+		// Nothing eligible at phase 3 may become ineligible at phase 5.
+		for (const id of lowPhase) expect(highPhase).toContain(id);
 	}, 60000);
 
 	it("scenario 10: throws a descriptive error instead of returning a bogus result when no gear combination can satisfy the constraints", async () => {
@@ -492,8 +538,18 @@ describe("solveConfig", () => {
 			simCalibrationProfile: DEFAULT_SIM_CALIBRATION_PROFILE,
 		};
 
+		// The real solve() runs in the Worker, which is where the stat model is derived (see
+		// solver.worker.ts); this stand-in supplies the committed fixture in its place.
 		const solveFnForTest: typeof solve = (items, options, onProgress) =>
-			solveConfig(items, options, onProgress);
+			solveConfig(
+				items,
+				{
+					...options,
+					linearModel: TEST_LINEAR_MODEL,
+					itemDatabase: TEST_ITEM_DATABASE,
+				},
+				onProgress,
+			);
 
 		await expect(
 			solveAll(
