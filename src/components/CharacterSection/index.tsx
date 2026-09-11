@@ -3,6 +3,7 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { memo } from "react";
+import { ID_BY_SIM_RACE, SIM_RACE_BY_ID } from "#/data/races";
 import type { RaidProfileSettings } from "#/types/SimCalibrationProfile";
 import ClassSelect from "./ClassSelect";
 import RaceSelect from "./RaceSelect";
@@ -11,8 +12,6 @@ import RaidProfileFields from "./RaidProfileFields";
 interface CharacterSectionProps {
 	classValue: string;
 	setClassValue: (value: string) => void;
-	raceValue: string;
-	setRaceValue: (value: string) => void;
 	raidProfile: RaidProfileSettings;
 	onRaidProfileChange: (raidProfile: RaidProfileSettings) => void;
 }
@@ -35,8 +34,6 @@ interface CharacterSectionProps {
 function CharacterSection({
 	classValue,
 	setClassValue,
-	raceValue,
-	setRaceValue,
 	raidProfile,
 	onRaidProfileChange,
 }: CharacterSectionProps) {
@@ -55,7 +52,18 @@ function CharacterSection({
 					Character
 				</Typography>
 				<ClassSelect value={classValue} onChange={setClassValue} />
-				<RaceSelect value={raceValue} onChange={setRaceValue} />
+				{/*
+				 * Race edits the raid profile directly rather than a separate raceValue state.
+				 * It used to be its own piece of app state that the simulator never read -
+				 * buildSimPlayer hardcoded RaceDraenei - so picking Human changed the label and
+				 * nothing else. The profile is what the sim reads, so that is where it lives.
+				 */}
+				<RaceSelect
+					value={ID_BY_SIM_RACE[raidProfile.race]}
+					onChange={(id) =>
+						onRaidProfileChange({ ...raidProfile, race: SIM_RACE_BY_ID[id] })
+					}
+				/>
 			</Stack>
 
 			<Divider sx={{ my: 1.5 }} />

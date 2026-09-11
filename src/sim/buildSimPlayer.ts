@@ -46,6 +46,9 @@ export function buildPlayer(
 
 	return {
 		...PROT_PALADIN_PLAYER_DEFAULTS,
+		// After the spread, so the character's own race wins over
+		// PROT_PALADIN_PLAYER_DEFAULTS.race - which is a baseline constant, not a choice.
+		race: raidProfile.race,
 		healingModel: profile.healingModel,
 		name: "Player",
 		class: "ClassPaladin",

@@ -33,7 +33,7 @@ export function migrateSimCalibrationProfile(
 /**
  * Simple load/update hook for the global sim calibration profile - mirrors useCharacterConfig's
  * shape. Persistence itself is handled by the caller via helpers/persistence.ts (same pattern
- * as classValue/raceValue/talents in routes/index.tsx), not by this hook directly.
+ * as classValue in routes/index.tsx), not by this hook directly.
  */
 export function useSimCalibrationProfile() {
 	const [simCalibrationProfile, setSimCalibrationProfile] =

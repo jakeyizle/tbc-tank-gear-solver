@@ -11,6 +11,7 @@ import SimCalibrationPanel from "#/components/SimCalibrationPanel";
 import SolveButton from "#/components/SolveButton";
 import type { DetectedCharacter } from "#/helpers/parseItemInput";
 import { analyzeItemInput, parseItemInput } from "#/helpers/parseItemInput";
+import { ID_BY_SIM_RACE, SIM_RACE_BY_ID } from "#/data/races";
 import { loadAppState, saveAppState } from "#/helpers/persistence";
 import { track, type UnknownId } from "#/helpers/track";
 import { useCharacterConfig } from "#/hooks/useCharacterConfig";
@@ -26,7 +27,6 @@ function App() {
 
 	const [itemInput, setItemInput] = useState(() => _saved?.itemInput ?? "");
 	const [classValue, setClassValue] = useState(() => _saved?.classValue ?? "2");
-	const [raceValue, setRaceValue] = useState(() => _saved?.raceValue ?? "1");
 	const [areEnchantsGemsLocked, setAreEnchantsGemsLocked] = useState(
 		() => _saved?.areEnchantsGemsLocked ?? false,
 	);
@@ -86,7 +86,6 @@ function App() {
 		saveAppState({
 			itemInput,
 			classValue,
-			raceValue,
 			areEnchantsGemsLocked,
 			excludeUniqueGems,
 			excludeJewelcraftingItems,
@@ -106,7 +105,15 @@ function App() {
 	const handleCharacterDetected = useCallback(
 		(character: DetectedCharacter) => {
 			if (character.classId) setClassValue(character.classId);
-			if (character.raceId) setRaceValue(character.raceId);
+			// Race, like the talent string, goes to the raid profile - the thing the simulator
+			// reads. It used to set a separate raceValue state the sim ignored entirely.
+			if (character.raceId && SIM_RACE_BY_ID[character.raceId]) {
+				const race = SIM_RACE_BY_ID[character.raceId];
+				updateSimCalibrationProfile((previous) => ({
+					...previous,
+					raidProfile: { ...previous.raidProfile, race },
+				}));
+			}
 			// The export's talent string goes straight to the raid profile, which is what the
 			// simulator actually reads. Before this, the imported character's talents were
 			// decoded into ranks for the deleted stat engine and never reached the sim at all.
@@ -167,7 +174,7 @@ function App() {
 			const items = parseItemInput(itemInput);
 
 			const baseConfig = {
-				raceId: raceValue,
+				raceId: ID_BY_SIM_RACE[simCalibrationProfile.raidProfile.race],
 				classId: classValue,
 				areEnchantsGemsLocked,
 				excludeUniqueGems,
@@ -181,7 +188,7 @@ function App() {
 			// Store the solve configuration values in context
 			updateCharacterConfig({
 				classId: classValue,
-				raceId: raceValue,
+				raceId: ID_BY_SIM_RACE[simCalibrationProfile.raidProfile.race],
 			});
 
 			const solverResults = await solveAll(
@@ -209,8 +216,7 @@ function App() {
 			saveAppState({
 				itemInput,
 				classValue,
-				raceValue,
-				areEnchantsGemsLocked,
+					areEnchantsGemsLocked,
 				excludeUniqueGems,
 				excludeJewelcraftingItems,
 				excludeEnchantingItems,
@@ -254,8 +260,6 @@ function App() {
 						}
 						classValue={classValue}
 						setClassValue={setClassValue}
-						raceValue={raceValue}
-						setRaceValue={setRaceValue}
 					/>
 
 					<ItemInputSection

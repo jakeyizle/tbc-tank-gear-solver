@@ -21,7 +21,6 @@ export interface PersistedState {
 	version: number;
 	itemInput: string;
 	classValue: string;
-	raceValue: string;
 	areEnchantsGemsLocked: boolean;
 	excludeUniqueGems: boolean;
 	// Optional - absent for saves from before these settings existed; loadAppState's caller

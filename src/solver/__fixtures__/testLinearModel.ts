@@ -11,12 +11,12 @@ import type { LinearStatModel } from "#/types/LinearStatModel";
 
 export const TEST_LINEAR_MODEL: LinearStatModel = {
 	base: {
-		Strength: 289,
-		Agility: 123,
+		Strength: 288,
+		Agility: 126,
 		Stamina: 307,
 		Intellect: 155,
-		HealingPower: 120.6,
-		SpellPower: 185.6,
+		HealingPower: 122.4,
+		SpellPower: 187.4,
 		ArcaneSpellPower: 80,
 		FireSpellPower: 0,
 		FrostSpellPower: 0,
@@ -27,8 +27,8 @@ export const TEST_LINEAR_MODEL: LinearStatModel = {
 		SpellCrit: 0,
 		SpellHaste: 0,
 		SpellPenetration: 0,
-		Spirit: 196,
-		AttackPower: 1032,
+		Spirit: 214,
+		AttackPower: 1030,
 		RangedAttackPower: 264,
 		FeralAttackPower: 0,
 		MeleeHit: 0,
@@ -38,11 +38,11 @@ export const TEST_LINEAR_MODEL: LinearStatModel = {
 		Expertise: 19.71154,
 		Defense: 47.3077,
 		Block: 0,
-		BlockValue: 14.450000000000001,
-		Dodge: 93.10154868000001,
+		BlockValue: 14.4,
+		Dodge: 95.37231816,
 		Parry: 0,
 		Resilience: 0,
-		Armor: 1105.5,
+		Armor: 1112.1000000000001,
 		BonusArmor: 0,
 		Health: 6267,
 		Mana: 4998,
@@ -51,24 +51,24 @@ export const TEST_LINEAR_MODEL: LinearStatModel = {
 		FireResistance: 33,
 		FrostResistance: 33,
 		NatureResistance: 33,
-		ShadowResistance: 80,
+		ShadowResistance: 70,
 		Miss: 7.8,
-		Avoidance: 60.769999999999996,
-		ShearAvoidance: 52.97,
+		Avoidance: 60.89,
+		ShearAvoidance: 53.089999999999996,
 		Uncritability: 0.8,
 	},
 	coefficients: {
 		Strength: {
 			Strength: 1.1,
 			AttackPower: 2.2,
-			BlockValue: 0.055,
+			BlockValue: 0.05500000000000001,
 		},
 		Agility: {
 			Agility: 1.1,
-			Dodge: 0.832615476,
-			Armor: 2.4200000000000004,
-			Avoidance: 0.04399999999999999,
-			ShearAvoidance: 0.04399999999999999,
+			Dodge: 0.8326154760000001,
+			Armor: 2.42,
+			Avoidance: 0.044,
+			ShearAvoidance: 0.044,
 		},
 		Stamina: {
 			Stamina: 1.283,
@@ -79,10 +79,10 @@ export const TEST_LINEAR_MODEL: LinearStatModel = {
 			Mana: 16.5,
 		},
 		HealingPower: {
-			HealingPower: 0.9999999999999999,
+			HealingPower: 1.0000000000000002,
 		},
 		SpellPower: {
-			SpellPower: 0.9999999999999999,
+			SpellPower: 1.0000000000000002,
 		},
 		ArcaneSpellPower: {
 			ArcaneSpellPower: 1,
@@ -115,9 +115,9 @@ export const TEST_LINEAR_MODEL: LinearStatModel = {
 			SpellPenetration: 1,
 		},
 		Spirit: {
-			HealingPower: 0.11,
-			SpellPower: 0.11000000000000003,
-			Spirit: 1.1,
+			HealingPower: 0.121,
+			SpellPower: 0.12099999999999997,
+			Spirit: 1.21,
 		},
 		AttackPower: {
 			AttackPower: 1,
@@ -152,9 +152,9 @@ export const TEST_LINEAR_MODEL: LinearStatModel = {
 			BlockValue: 1,
 		},
 		Dodge: {
-			Dodge: 1,
-			Avoidance: 0.052845522655166205,
-			ShearAvoidance: 0.052845522655166205,
+			Dodge: 1.0000000000000002,
+			Avoidance: 0.05284552265516621,
+			ShearAvoidance: 0.05284552265516621,
 		},
 		Parry: {
 			Parry: 1,
@@ -166,10 +166,10 @@ export const TEST_LINEAR_MODEL: LinearStatModel = {
 			Uncritability: 0.0253658388102407,
 		},
 		Armor: {
-			Armor: 1.1,
+			Armor: 1.1000000000000003,
 		},
 		BonusArmor: {
-			Armor: 1.1,
+			Armor: 1.1000000000000003,
 			BonusArmor: 1,
 		},
 		Health: {

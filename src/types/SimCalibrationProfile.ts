@@ -39,6 +39,9 @@ export type DrumsType =
 	| "LesserDrumsOfRestoration"
 	| "LesserDrumsOfWar";
 
+/** proto.Race, limited to the Paladin-eligible races (see src/data/races.ts). */
+export type SimRace = "RaceHuman" | "RaceDwarf" | "RaceBloodElf" | "RaceDraenei";
+
 export type PaladinAura =
 	| "AuraNone"
 	| "DevotionAura"
@@ -173,6 +176,13 @@ export interface SimpleRotationSettings {
 }
 
 export interface RaidProfileSettings {
+	/**
+	 * The character's race. Lives here, with the talent string, because this profile is what the
+	 * simulator actually reads - buildSimPlayer used to hardcode "RaceDraenei" while the UI
+	 * showed whatever the user (or their imported export) had picked, so a Human character was
+	 * silently simmed as a Draenei.
+	 */
+	race: SimRace;
 	talentsString: string;
 	raidBuffs: RaidBuffSettings;
 	partyBuffs: PartyBuffSettings;
@@ -237,6 +247,10 @@ export const DEFAULT_SIM_CALIBRATION_PROFILE: SimCalibrationProfile = {
 			PROT_PALADIN_PLAYER_DEFAULTS.healingModel.inspirationUptime,
 	},
 	raidProfile: {
+		// Human, matching the race the character selector has always defaulted to and shown.
+		// PROT_PALADIN_PLAYER_DEFAULTS hardcoded RaceDraenei, so the sim and the UI disagreed
+		// about who the character was; the UI's answer is the one the user actually picked.
+		race: "RaceHuman",
 		talentsString: PROT_PALADIN_TALENTS_STRING,
 		raidBuffs: { ...PROT_PALADIN_RAID_BUFFS } as RaidBuffSettings,
 		partyBuffs: { ...PROT_PALADIN_PARTY_BUFFS } as PartyBuffSettings,

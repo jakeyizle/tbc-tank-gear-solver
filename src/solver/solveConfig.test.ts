@@ -106,11 +106,14 @@ describe("solveConfig", () => {
 	}, 60000);
 
 	it("scenario 4: avoidance + uncrit + resistance floors together", async () => {
-		// only "Enchant Cloak - Greater Shadow Resistance" (+15) grants any resistance stat
-		// applicable to this fixture, forcing the solver to pick it on the Back slot to comply.
+		// Resistance is scarce in this fixture, so the floor genuinely forces the solver's hand -
+		// "Enchant Cloak - Greater Shadow Resistance" (+15) on the Back slot is the bulk of it,
+		// topped up elsewhere to clear the floor.
 		// The floor has to clear what the character already has: the raid profile's Shadow
-		// Protection puts base Shadow Resistance at 80, so a 10-point floor would be met by
-		// wearing nothing at all - the constraint only binds above that.
+		// Protection puts base Shadow Resistance at 70, so a 10-point floor would be met by
+		// wearing nothing at all - the constraint only binds above that. (It was 80 while the
+		// sim hardcoded RaceDraenei, whose +10 shadow resistance racial the character no longer
+		// has now that race comes from the profile.)
 		const options = baseOptions({
 			uncrushabilitySetting: 1,
 			uncritabilitySetting: 1,
@@ -126,10 +129,10 @@ describe("solveConfig", () => {
 
 		expect(validateSolution(result, config)).toEqual([]);
 		const achieved = computeAchievedStats(result, config);
-		expect(achieved.avoidance).toBe(68.61072964492394);
-		expect(achieved.uncritability).toBe(7.064390065722888);
-		expect(achieved.objective).toBe(2848.481177859999);
-		expect(achieved.resistances.ShadowResistance).toBe(15);
+		expect(achieved.avoidance).toBe(67.85934755430327);
+		expect(achieved.uncritability).toBe(6.984390065722888);
+		expect(achieved.objective).toBe(2822.300177199999);
+		expect(achieved.resistances.ShadowResistance).toBe(23);
 	}, 60000);
 
 	it("scenario 5: locked item is not re-expanded into new gem/enchant variants", async () => {
