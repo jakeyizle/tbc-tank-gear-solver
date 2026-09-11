@@ -905,10 +905,29 @@ func (unit *Unit) GetTotalParryChanceAsDefender(spell *Spell, atkTable *AttackTa
 	return math.Max(chance, 0.0)
 }
 
+// LOCAL PATCH (wow-tank-gear-solver) - diverges from upstream wowsims.
+//
+// Added `unit.GetDefenseReduction()`. In TBC, defense skill grants 0.04% to EACH of miss,
+// dodge, parry and block per point over the attacker's weapon skill. The three below already
+// add it; miss did not, so defense rating bought no miss at all in combat.
+//
+// That this is an omission rather than a simplification is visible in the level constants:
+// against a level-73 attacker every one of the four base chances is reduced by exactly 0.6
+// percentage points (= 15 skill * 0.04), i.e. they all already model the 350-defense vs
+// 365-weapon-skill baseline. GetDefenseReduction is the "skill above 350" term, and it
+// belongs to all four for the same reason the baseline does. Upstream's own UI agrees:
+// ui/core/player.tsx's getMissChanceInfo computes miss WITH the defense contribution, so
+// unpatched, the sim contradicts the character panel it ships.
+//
+// Measured before this patch: +100 defense skill moved dodge +4.00 and parry +4.09 but miss
+// +0.02, understating a geared prot paladin's avoidance by ~6 points and correspondingly
+// over-reporting DTPS/TMI and under-valuing Defense Rating in stat weights. See
+// src/sim/defenseMissChance.integration.test.ts, which fails if this line is reverted.
 func (unit *Unit) GetTotalChanceToBeMissedAsDefender(atkTable *AttackTable) float64 {
 	// ReducedPhysicalHitTakenChance is stored in percent points, BaseMissChance as a fraction.
 	chance := atkTable.BaseMissChance +
-		unit.PseudoStats.ReducedPhysicalHitTakenChance/100
+		unit.PseudoStats.ReducedPhysicalHitTakenChance/100 +
+		unit.GetDefenseReduction()
 	return math.Max(chance, 0.0)
 }
 
