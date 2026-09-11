@@ -12,7 +12,6 @@ import type { SimCalibrationProfile } from "#/types/SimCalibrationProfile";
 import CalibrationSettingsFields from "./CalibrationSettingsFields";
 import EncounterSettingsFields from "./EncounterSettingsFields";
 import HealingModelFields from "./HealingModelFields";
-import RaidProfileFields from "./RaidProfileFields";
 
 interface SimCalibrationPanelProps {
 	profile: SimCalibrationProfile;
@@ -20,9 +19,18 @@ interface SimCalibrationPanelProps {
 }
 
 /**
- * Everything the "Weighted Sim Metrics" objective mode's calibration sim uses that isn't the
- * gear itself - see src/types/SimCalibrationProfile.ts. Collapsed by default since most solves
- * never touch this; unedited settings reproduce today's fixed v1 calibration profile exactly.
+ * How the calibration sim is RUN - iteration counts, the encounter it runs against, and the
+ * healing model - as opposed to who the character is, which now lives in CharacterSection.
+ *
+ * The raid profile used to be in here too, behind this accordion and its "only used by Weighted
+ * Sim Metrics" caption. That stopped being true in Phase 2 (its buffs, debuffs, consumables and
+ * talent string are what the measured LinearStatModel is derived from, so they shape every
+ * solve), so it moved to the character surface. What is left genuinely is calibration-only,
+ * except the encounter's target level, which also sets the attacker level the stat model is
+ * measured against.
+ *
+ * Collapsed by default since most solves never touch it; unedited settings reproduce today's
+ * fixed v1 calibration profile exactly.
  */
 // Memoized so a parent re-render that doesn't change these props (e.g. routes/index.tsx's
 // solveProgress ticks during a solve) skips reconciling this panel - see useSolverConfigs.ts's
@@ -56,7 +64,7 @@ function SimCalibrationPanel({ profile, onChange }: SimCalibrationPanelProps) {
 					color="text.secondary"
 					sx={{ ml: "auto" }}
 				>
-					Only used by "Weighted Sim Metrics"
+					Mostly "Weighted Sim Metrics"; target level affects every solve
 				</Typography>
 			</Box>
 
@@ -97,13 +105,6 @@ function SimCalibrationPanel({ profile, onChange }: SimCalibrationPanelProps) {
 							}
 						/>
 					</Stack>
-
-					<Divider />
-
-					<RaidProfileFields
-						raidProfile={profile.raidProfile}
-						onChange={(raidProfile) => onChange({ ...profile, raidProfile })}
-					/>
 				</Stack>
 			</Collapse>
 		</Paper>

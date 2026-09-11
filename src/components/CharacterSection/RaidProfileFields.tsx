@@ -114,8 +114,8 @@ export default function RaidProfileFields({
 				/>
 				<Typography variant="caption" color="text.disabled">
 					Paste an exported talent string (e.g. from a talent calculator).
-					Rotation options below that need a specific talent are disabled
-					unless it's present here.
+					Rotation options below that need a specific talent are disabled unless
+					it's present here.
 				</Typography>
 			</Stack>
 
@@ -414,8 +414,8 @@ export default function RaidProfileFields({
 				<Typography variant="caption" color="text.disabled">
 					Flask/battle/guardian elixir are solved for on each gear set's own
 					Consumables section, not set here. Food, potion, weapon oil, and
-					explosive don't have a name lookup yet - enter their item IDs
-					directly (see wowhead).
+					explosive don't have a name lookup yet - enter their item IDs directly
+					(see wowhead).
 				</Typography>
 				<Stack
 					direction="row"
@@ -641,9 +641,7 @@ export default function RaidProfileFields({
 								<MenuItem
 									key={option.value}
 									value={option.value}
-									disabled={
-										option.value === "SanctityAura" && !hasSanctityAura
-									}
+									disabled={option.value === "SanctityAura" && !hasSanctityAura}
 								>
 									{option.label}
 								</MenuItem>

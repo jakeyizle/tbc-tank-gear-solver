@@ -47,9 +47,19 @@ export function useSimCalibrationProfile() {
 	// Wrapped in useCallback (rather than passing setSimCalibrationProfile directly) so this stays
 	// a stable reference across unrelated re-renders (e.g. solveProgress ticks - see
 	// useSolverConfigs.ts's own note on why that matters for SimCalibrationPanel's React.memo).
+	//
+	// It accepts an updater function as well as a value, so a caller that needs to patch one
+	// field can do so WITHOUT closing over the current profile. That matters: a useCallback that
+	// reads `simCalibrationProfile` either has to list it as a dependency (losing the stable
+	// identity this exists for) or silently writes a stale profile over anything edited since it
+	// was created. handleCharacterDetected in routes/index.tsx is exactly that case.
 	const updateSimCalibrationProfile = useCallback(
-		(profile: SimCalibrationProfile) => {
-			setSimCalibrationProfile(profile);
+		(
+			update:
+				| SimCalibrationProfile
+				| ((previous: SimCalibrationProfile) => SimCalibrationProfile),
+		) => {
+			setSimCalibrationProfile(update);
 		},
 		[],
 	);

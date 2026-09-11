@@ -110,17 +110,18 @@ function App() {
 			// The export's talent string goes straight to the raid profile, which is what the
 			// simulator actually reads. Before this, the imported character's talents were
 			// decoded into ranks for the deleted stat engine and never reached the sim at all.
+			// Patched via the updater form rather than by spreading the current profile, so this
+			// callback keeps the stable identity its useCallback exists for and can never write
+			// a stale profile over raid-profile edits made since it was created.
 			if (character.talentsString) {
-				updateSimCalibrationProfile({
-					...simCalibrationProfile,
-					raidProfile: {
-						...simCalibrationProfile.raidProfile,
-						talentsString: character.talentsString,
-					},
-				});
+				const talentsString = character.talentsString;
+				updateSimCalibrationProfile((previous) => ({
+					...previous,
+					raidProfile: { ...previous.raidProfile, talentsString },
+				}));
 			}
 		},
-		[],
+		[updateSimCalibrationProfile],
 	);
 
 	const handleSolveAll = async () => {
@@ -209,7 +210,7 @@ function App() {
 				itemInput,
 				classValue,
 				raceValue,
-					areEnchantsGemsLocked,
+				areEnchantsGemsLocked,
 				excludeUniqueGems,
 				excludeJewelcraftingItems,
 				excludeEnchantingItems,
@@ -244,6 +245,13 @@ function App() {
 			<Grid size={6}>
 				<Stack spacing={1.5} sx={{ p: 2 }}>
 					<CharacterSection
+						raidProfile={simCalibrationProfile.raidProfile}
+						onRaidProfileChange={(raidProfile) =>
+							updateSimCalibrationProfile({
+								...simCalibrationProfile,
+								raidProfile,
+							})
+						}
 						classValue={classValue}
 						setClassValue={setClassValue}
 						raceValue={raceValue}
@@ -284,18 +292,19 @@ function App() {
 						independentConfigs={independentConfigs}
 					/>
 
-					{configs.some(
-						(config) =>
-							config.objectiveMode === "tps" ||
-							config.objectiveMode === "dtps" ||
-							config.objectiveMode === "tmi" ||
-							config.objectiveMode === "balanced",
-					) && (
-						<SimCalibrationPanel
-							profile={simCalibrationProfile}
-							onChange={updateSimCalibrationProfile}
-						/>
-					)}
+					{/*
+					 * Rendered for every objective mode, not just the sim-metric ones. It used to
+					 * be gated on those, which was right when the whole profile was
+					 * calibration-only - but the encounter's target level sets the attacker level
+					 * the stat model is measured against (see deriveLinearModel), so it shapes a
+					 * plain "stats" or "ehp" solve too. The panel is collapsed by default, so
+					 * always mounting it costs nothing visually and stops a setting that matters
+					 * everywhere from being reachable only in modes most solves never use.
+					 */}
+					<SimCalibrationPanel
+						profile={simCalibrationProfile}
+						onChange={updateSimCalibrationProfile}
+					/>
 
 					<Box>
 						<SolveButton
