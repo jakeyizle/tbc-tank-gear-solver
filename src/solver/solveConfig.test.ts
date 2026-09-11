@@ -64,15 +64,19 @@ describe("solveConfig", () => {
 		// reproducible and any drift is a real change in what the LP considers best. The figures
 		// are the ITEMS' contribution only, measured against TEST_LINEAR_MODEL's coefficients.
 		//
-		// Re-captured twice: once when the sim-measured stat model replaced the hand-written
-		// stat engine, and again when the item pool moved from src/data/items.json to the
-		// vendored db.json. The second move picked the SAME 16 base items and raised the
-		// objective from 2978.31 to 2988.36 - the database carries enchants the hand data never
-		// had (Glyph of the Wild, on the head slot here), so the LP simply had more to choose
-		// from. Avoidance fell slightly because nothing constrains it in this scenario.
-		expect(achieved.avoidance).toBe(73.74731453011535);
-		expect(achieved.uncritability).toBe(7.064390065722888);
-		expect(achieved.objective).toBe(2988.3631778599997);
+		// Re-captured three times:
+		//  1. when the sim-measured stat model replaced the hand-written stat engine;
+		//  2. when the item pool moved from src/data/items.json to the vendored db.json - the
+		//     SAME 16 base items, objective 2978.31 -> 2988.36, because the database carries
+		//     enchants the hand data never had (Glyph of the Wild, on the head slot here);
+		//  3. when testItemPool's three Onslaught pieces (Warrior T6) were swapped for
+		//     paladin-legal gear. That drop (2988.36 -> 2852.50) is expected and is NOT a
+		//     regression: Onslaught is Warrior tier and TEST_CLASS_ID is Paladin, so the pool
+		//     was quietly scoring gear the character could never equip. The replacements are
+		//     genuinely weaker items, and that is the honest number.
+		expect(achieved.avoidance).toBe(68.77072964492395);
+		expect(achieved.uncritability).toBe(7.104390065722888);
+		expect(achieved.objective).toBe(2852.499639499999);
 	}, 30000);
 
 	it("scenario 2: avoidance floor active", async () => {
@@ -84,9 +88,9 @@ describe("solveConfig", () => {
 
 		expect(validateSolution(result, config)).toEqual([]);
 		const achieved = computeAchievedStats(result, config);
-		expect(achieved.avoidance).toBe(73.74731453011535);
-		expect(achieved.uncritability).toBe(7.064390065722888);
-		expect(achieved.objective).toBe(2988.3631778599997);
+		expect(achieved.avoidance).toBe(68.77072964492395);
+		expect(achieved.uncritability).toBe(7.104390065722888);
+		expect(achieved.objective).toBe(2852.499639499999);
 	}, 60000);
 
 	it("scenario 3: uncrit floor active", async () => {
@@ -96,9 +100,9 @@ describe("solveConfig", () => {
 
 		expect(validateSolution(result, config)).toEqual([]);
 		const achieved = computeAchievedStats(result, config);
-		expect(achieved.avoidance).toBe(73.74731453011535);
-		expect(achieved.uncritability).toBe(7.064390065722888);
-		expect(achieved.objective).toBe(2988.3631778599997);
+		expect(achieved.avoidance).toBe(68.77072964492395);
+		expect(achieved.uncritability).toBe(7.104390065722888);
+		expect(achieved.objective).toBe(2852.499639499999);
 	}, 60000);
 
 	it("scenario 4: avoidance + uncrit + resistance floors together", async () => {
@@ -122,9 +126,9 @@ describe("solveConfig", () => {
 
 		expect(validateSolution(result, config)).toEqual([]);
 		const achieved = computeAchievedStats(result, config);
-		expect(achieved.avoidance).toBe(73.74731453011535);
+		expect(achieved.avoidance).toBe(68.61072964492394);
 		expect(achieved.uncritability).toBe(7.064390065722888);
-		expect(achieved.objective).toBe(2986.3631778599993);
+		expect(achieved.objective).toBe(2848.481177859999);
 		expect(achieved.resistances.ShadowResistance).toBe(15);
 	}, 60000);
 
@@ -561,4 +565,41 @@ describe("solveConfig", () => {
 			),
 		).rejects.toThrow(/Unsolvable Config.*ShadowResistance resistance target/s);
 	}, 60000);
+});
+
+// A paladin must never be handed warrior tier gear. Beyond being an unwearable recommendation,
+// two pieces of another class's set panic the sim: applyItemSetBonusEffects runs that set's
+// bonus closure against whatever agent it is given, and sim/warrior/items.go:301 type-asserts
+// WarriorAgent - "*protection.ProtectionPaladin is not warrior.WarriorAgent". Found by running
+// a real solve in the browser; the whole solve failed, not just one number.
+describe("class-restricted items", () => {
+	it("excludes another class's tier set from the candidate pool", () => {
+		const config = new SolverConfiguration({
+			...baseOptions(),
+			optimizeStats: [{ name: "Stamina", value: 1, type: "flat" }],
+		});
+		// Three Onslaught (Warrior T6) pieces alongside the paladin T5 helm.
+		const pool: InputItem[] = [
+			{ id: "30980", gems: [] }, // Onslaught Shoulderguards - Warrior
+			{ id: "34442", gems: [] }, // Onslaught Wristguards - Warrior
+			{ id: "34568", gems: [] }, // Onslaught Boots - Warrior
+			{ id: "30125", gems: [] }, // Crystalforge Faceguard - Paladin
+			{ id: "32963", gems: [] }, // Merciless Gladiator's Gavel - unrestricted
+		];
+		const { fixedItems, decomposableItems } = prepareItemCandidates(
+			pool,
+			config,
+			TEST_ITEM_DATABASE,
+		);
+		const ids = [
+			...fixedItems.map((i) => i.id),
+			...decomposableItems.map((d) => d.base.id),
+		];
+		expect(ids).not.toContain("30980");
+		expect(ids).not.toContain("34442");
+		expect(ids).not.toContain("34568");
+		// The paladin's own tier piece and unrestricted gear are untouched.
+		expect(ids).toContain("30125");
+		expect(ids).toContain("32963");
+	});
 });

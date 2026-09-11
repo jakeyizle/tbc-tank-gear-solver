@@ -108,3 +108,28 @@ describe.skipIf(!hasDb)("tbcDatabase adapter", () => {
 		).toEqual([]);
 	});
 });
+
+// Class-restricted gear. Tier sets are the common case, and getting this wrong is not merely a
+// bad recommendation: two pieces of another class's set panic the sim outright - see the filter
+// in src/solver/items.ts's prepareItemCandidates for the exact failure.
+describe.skipIf(!hasDb)("toItem class restrictions", () => {
+	it("carries classAllowlist through as class ids", () => {
+		const byId = new Map(loadAdapted().items.map((i) => [i.id, i]));
+
+		// Onslaught Battlegear is Warrior T6; ClassWarrior = 1 in the proto Class enum.
+		const onslaught = byId.get("30980");
+		expect(onslaught?.name).toBe("Onslaught Shoulderguards");
+		expect(onslaught?.classes).toEqual(["1"]);
+
+		// Crystalforge is the Paladin T5 equivalent; ClassPaladin = 2.
+		const crystalforge = byId.get("30125");
+		expect(crystalforge?.name).toBe("Crystalforge Faceguard");
+		expect(crystalforge?.classes).toEqual(["2"]);
+
+		// The overwhelming majority of items carry no restriction at all, and must stay
+		// undefined rather than becoming an empty array that no class would match.
+		const unrestricted = byId.get("32963");
+		expect(unrestricted?.name).toBe("Merciless Gladiator's Gavel");
+		expect(unrestricted?.classes).toBeUndefined();
+	});
+});

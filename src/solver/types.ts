@@ -7,6 +7,12 @@ export interface Item {
 	stats: Stat[];
 	sockets: Socket[];
 	socketBonus: Stat[];
+	/**
+	 * Class ids (as strings, matching SolverConfig.classId and the proto Class enum) allowed to
+	 * equip this item, for class-restricted gear like tier sets. Undefined means unrestricted,
+	 * which is the overwhelming majority. Same shape and meaning as Enchant.classes.
+	 */
+	classes?: string[];
 }
 
 export interface ItemVariation extends Item {

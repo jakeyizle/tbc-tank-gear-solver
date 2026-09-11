@@ -51,7 +51,17 @@ export const prepareItemCandidates = (
 ): { fixedItems: LPItem[]; decomposableItems: DecomposableItem[] } => {
 	const items = inputItems
 		.map((item) => getItem(item, db))
-		.filter((item): item is ItemVariation => !!item);
+		.filter((item): item is ItemVariation => !!item)
+		// Class-restricted gear the character cannot equip. Recommending another class's tier
+		// set is wrong on its own, but it also CRASHES the sim: applyItemSetBonusEffects
+		// (vendor/tbc-sim/sim/core/item_sets.go:222) runs that set's bonus closure against
+		// whatever agent it is given, and e.g. sim/warrior/items.go:301 type-asserts
+		// WarriorAgent - so two Onslaught pieces on a paladin panic with
+		// "*protection.ProtectionPaladin is not warrior.WarriorAgent". Enchants have always
+		// been filtered this way (see getEnchants); items simply never were.
+		.filter(
+			(item) => !item.classes || item.classes.includes(config.classId),
+		);
 
 	const enchants = getEnchants(config, db);
 	const gems = getGems(config, db);

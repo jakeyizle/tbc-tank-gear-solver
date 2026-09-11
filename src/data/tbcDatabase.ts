@@ -258,6 +258,12 @@ export function toItem(raw: RawDbItem): Item | null {
 		stats: statsFromSparse(raw.scalingOptions?.["0"]?.stats),
 		sockets,
 		socketBonus: statsFromDense(raw.socketBonus),
+		// Class-restricted gear (tier sets, class quest rewards). Carried through as strings to
+		// match SolverConfig.classId; the proto Class enum's numbering IS the app's class ids
+		// (ClassWarrior = 1, ClassPaladin = 2, ...). Absent for the vast majority of items.
+		...(raw.classAllowlist?.length
+			? { classes: raw.classAllowlist.map(String) }
+			: {}),
 	};
 }
 
