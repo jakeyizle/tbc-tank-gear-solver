@@ -19,7 +19,7 @@
 // (sim.ts:234-245). We derive talent presence from the same user-editable talentsString via
 // parseTalentsString() (src/data/talents.ts) rather than porting tbc-new's own talent-string
 // decoder - see that function and TALENT_STRING_POSITIONS["2"] for the position lookup.
-import { parseTalentsString } from "#/data/talents";
+import { parseTalentsString } from "#/data/talentString";
 import { PROT_PALADIN_DEFAULT_APL } from "./protPaladinDefaultApl";
 
 export type SimpleRotationInput = {

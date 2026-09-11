@@ -4,7 +4,7 @@
 
 import { CLASS_NAME_TO_ID } from "#/data/classes";
 import { RACE_NAME_TO_ID } from "#/data/races";
-import { parseTalentsString } from "#/data/talents";
+import { parseTalentsString } from "#/data/talentString";
 import type { SolverItemDatabase } from "#/solver/itemDatabase";
 import { groupItemsBySlot, SLOT_ORDER } from "#/solver/itemSlots";
 import type { InputItem, LPItem } from "#/solver/types";

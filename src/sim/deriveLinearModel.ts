@@ -26,7 +26,7 @@ import {
 	MISS_DODGE_PARRY_BLOCK_CRIT_CHANCE_PER_DEFENSE,
 	PARRY_RATING_PER_PARRY_PERCENT,
 } from "#/data/mechanics";
-import { parseTalentsString } from "#/data/talents";
+import { parseTalentsString } from "#/data/talentString";
 import { STAT_INDEX_TO_NAME } from "#/data/tbcDatabase";
 import {
 	DISPLAY_BASE_MISS_PERCENT,
