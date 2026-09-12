@@ -116,6 +116,13 @@ type ItemInputAnalysis =
 			unknownItemIds: string[];
 			unknownGemIds: string[];
 			unknownEnchantIds: string[];
+			/**
+			 * Items in the pool the chosen class cannot equip (another class's tier set, mostly).
+			 * The solver drops these from the candidate pool - see prepareItemCandidates - so
+			 * without this the user pastes N items, is told N were recognized, and silently
+			 * solves over fewer.
+			 */
+			unequippableItems: { id: string; name: string }[];
 	  }
 	| { status: "error"; message: string };
 
@@ -137,6 +144,7 @@ const isEmptySlot = (id: string | undefined) => !id || id === "0";
 export const analyzeItemInput = (
 	input: string,
 	db?: SolverItemDatabase,
+	classId?: string,
 ): ItemInputAnalysis => {
 	const trimmed = input.trim();
 	if (!trimmed) return { status: "empty" };
@@ -160,9 +168,18 @@ export const analyzeItemInput = (
 		const unknownItemIds = new Set<string>();
 		const unknownGemIds = new Set<string>();
 		const unknownEnchantIds = new Set<string>();
+		const unequippableItems: { id: string; name: string }[] = [];
 		if (db) {
 			for (const item of items) {
-				if (!db.itemsById.has(item.id)) unknownItemIds.add(item.id);
+				const record = db.itemsById.get(item.id);
+				if (!record) unknownItemIds.add(item.id);
+				else if (
+					classId &&
+					record.classes &&
+					!record.classes.includes(classId)
+				) {
+					unequippableItems.push({ id: item.id, name: record.name });
+				}
 				for (const gem of item.gems) {
 					if (!isEmptySlot(gem) && !db.gemsById.has(gem)) {
 						unknownGemIds.add(gem);
@@ -180,7 +197,12 @@ export const analyzeItemInput = (
 			}
 		}
 
-		if (unknownItemIds.size || unknownGemIds.size || unknownEnchantIds.size) {
+		if (
+			unknownItemIds.size ||
+			unknownGemIds.size ||
+			unknownEnchantIds.size ||
+			unequippableItems.length
+		) {
 			return {
 				status: "warning",
 				count: items.length,
@@ -188,6 +210,7 @@ export const analyzeItemInput = (
 				unknownItemIds: [...unknownItemIds],
 				unknownGemIds: [...unknownGemIds],
 				unknownEnchantIds: [...unknownEnchantIds],
+				unequippableItems,
 			};
 		}
 

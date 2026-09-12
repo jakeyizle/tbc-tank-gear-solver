@@ -263,6 +263,7 @@ function App() {
 					/>
 
 					<ItemInputSection
+						classId={classValue}
 						itemInput={itemInput}
 						setItemInput={setItemInput}
 						areEnchantsGemsLocked={areEnchantsGemsLocked}

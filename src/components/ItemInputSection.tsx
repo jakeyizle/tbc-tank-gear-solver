@@ -36,6 +36,8 @@ interface ItemInputSectionProps {
 	setIndependentConfigs: (value: boolean) => void;
 	phase: number;
 	setPhase: (value: number) => void;
+	/** Used to flag pool items this class cannot equip - see analyzeItemInput. */
+	classId: string;
 	// Called once per pasted character export that resolves to a supported class -
 	// used to pre-fill the Character section's class/race/talent inputs, which stay
 	// editable afterward.
@@ -85,6 +87,7 @@ const formatUnknownIdsMessage = (analysis: {
 	unknownItemIds: string[];
 	unknownGemIds: string[];
 	unknownEnchantIds: string[];
+	unequippableItems: { id: string; name: string }[];
 }) => {
 	const clauses = [];
 	if (analysis.unknownItemIds.length) {
@@ -98,7 +101,35 @@ const formatUnknownIdsMessage = (analysis: {
 			`Unknown enchant IDs: ${analysis.unknownEnchantIds.join(", ")}.`,
 		);
 	}
+	if (analysis.unequippableItems.length) {
+		clauses.push(
+			`Your class cannot equip these, so they are excluded from solving: ${analysis.unequippableItems
+				.map((item) => `${item.name} (${item.id})`)
+				.join(", ")}.`,
+		);
+	}
 	return clauses.join(" ");
+};
+
+// The status line's suffix. Unknown ids and unequippable items are counted separately because
+// they mean different things: an unknown id is data this build does not recognise, while an
+// unequippable item is recognised perfectly well and simply cannot be worn by this class.
+const summarizeWarning = (analysis: {
+	unknownItemIds: string[];
+	unknownGemIds: string[];
+	unknownEnchantIds: string[];
+	unequippableItems: { id: string; name: string }[];
+}) => {
+	const unknown =
+		analysis.unknownItemIds.length +
+		analysis.unknownGemIds.length +
+		analysis.unknownEnchantIds.length;
+	const parts: string[] = [];
+	if (unknown) parts.push(`${unknown} unknown ID${unknown === 1 ? "" : "s"}`);
+	if (analysis.unequippableItems.length) {
+		parts.push(`${analysis.unequippableItems.length} not equippable`);
+	}
+	return parts.length ? ` · ${parts.join(" · ")}` : "";
 };
 
 const PLACEHOLDER = `Paste your WowSims Exporter output here, e.g.
@@ -126,13 +157,14 @@ function ItemInputSection({
 	setIndependentConfigs,
 	phase,
 	setPhase,
+	classId,
 	onCharacterDetected,
 }: ItemInputSectionProps) {
 	// undefined until db.json lands; analyzeItemInput skips id checking until then.
 	const itemDatabase = useSolverItemDatabase();
 	const analysis = useMemo(
-		() => analyzeItemInput(itemInput, itemDatabase),
-		[itemInput, itemDatabase],
+		() => analyzeItemInput(itemInput, itemDatabase, classId),
+		[itemInput, itemDatabase, classId],
 	);
 	const isValid = analysis.status === "valid" || analysis.status === "warning";
 	const character =
@@ -172,13 +204,15 @@ function ItemInputSection({
 				!containerRef.current.contains(e.target as Node)
 			) {
 				setFocused(false);
-				if (analyzeItemInput(itemInput, itemDatabase).status === "valid")
+				if (
+					analyzeItemInput(itemInput, itemDatabase, classId).status === "valid"
+				)
 					setManualEdit(false);
 			}
 		};
 		document.addEventListener("mousedown", handlePointerDown);
 		return () => document.removeEventListener("mousedown", handlePointerDown);
-	}, [focused, itemInput, itemDatabase]);
+	}, [focused, itemInput, itemDatabase, classId]);
 
 	const handlePasteFromClipboard = async () => {
 		setTextareaOpen(true);
@@ -221,17 +255,7 @@ function ItemInputSection({
 					{analysis.status === "warning" ? (
 						<Typography variant="body2" color="warning.main">
 							{analysis.count} {analysis.count === 1 ? "item" : "items"}
-							{" · "}
-							{analysis.unknownItemIds.length +
-								analysis.unknownGemIds.length +
-								analysis.unknownEnchantIds.length}{" "}
-							unknown ID
-							{analysis.unknownItemIds.length +
-								analysis.unknownGemIds.length +
-								analysis.unknownEnchantIds.length ===
-							1
-								? ""
-								: "s"}
+							{summarizeWarning(analysis)}
 						</Typography>
 					) : (
 						<Typography variant="body2" color="success.main">

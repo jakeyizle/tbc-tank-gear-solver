@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SLOT_ORDER } from "#/solver/itemSlots";
 import type { Enchant, LPItem, ProcessedItemType } from "#/solver/types";
+import { TEST_ITEM_DATABASE } from "#/solver/__fixtures__/testItemDatabase";
 import {
 	analyzeItemInput,
 	formatItemExport,
@@ -199,5 +200,50 @@ describe("analyzeItemInput", () => {
 	it("errors on non-JSON input instead of treating it as item IDs", () => {
 		const analysis = analyzeItemInput("28825, 29011, 28749");
 		expect(analysis.status).toBe("error");
+	});
+});
+
+// Items the chosen class cannot equip are dropped from the candidate pool by
+// prepareItemCandidates. Without surfacing that, the user pastes N items, is told N were
+// recognized, and silently solves over fewer - which is how a paladin pool full of warrior tier
+// gear looked like it was being considered when it was not.
+describe("analyzeItemInput class restrictions", () => {
+	const paladinExport = JSON.stringify({
+		items: [
+			{ id: 30125 }, // Crystalforge Faceguard - Paladin
+			{ id: 30980 }, // Onslaught Shoulderguards - Warrior
+			{ id: 32963 }, // Merciless Gladiator's Gavel - unrestricted
+		],
+	});
+
+	it("flags items the class cannot equip", () => {
+		const analysis = analyzeItemInput(
+			paladinExport,
+			TEST_ITEM_DATABASE,
+			"2", // Paladin
+		);
+		expect(analysis.status).toBe("warning");
+		if (analysis.status !== "warning") return;
+		expect(analysis.unequippableItems).toEqual([
+			{ id: "30980", name: "Onslaught Shoulderguards" },
+		]);
+		// Recognised perfectly well - just unwearable. It must not also be called unknown.
+		expect(analysis.unknownItemIds).toEqual([]);
+	});
+
+	it("flags nothing when the class can equip everything", () => {
+		const analysis = analyzeItemInput(
+			JSON.stringify({ items: [{ id: 30125 }, { id: 32963 }] }),
+			TEST_ITEM_DATABASE,
+			"2",
+		);
+		expect(analysis.status).toBe("valid");
+	});
+
+	it("does not flag restricted items when no class is supplied", () => {
+		// The paste box renders before a class is known in some flows; guessing would be worse
+		// than staying quiet, exactly as it already does for ids while the database downloads.
+		const analysis = analyzeItemInput(paladinExport, TEST_ITEM_DATABASE);
+		expect(analysis.status).toBe("valid");
 	});
 });
