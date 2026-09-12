@@ -47,7 +47,11 @@ type StoredState = Record<string, unknown> & { version?: number };
 
 /**
  * Upgrades a saved blob one version at a time, keyed by the version being upgraded FROM.
- * Empty today (CURRENT_VERSION is 1); the sim-as-source-of-truth work adds `1: migrateV1ToV2`.
+ * Deliberately empty at CURRENT_VERSION 2. The sim-as-source-of-truth refactor chose NOT to
+ * write a v1->v2 migration: with no MIGRATIONS[1], migrate() returns null and loadAppState falls
+ * through to salvage(), which keeps the pasted gear pool and resets the rest to defaults. The risk
+ * being avoided is not data loss but a WRONG migration - one returning a malformed config makes
+ * migrate() truthy, so salvage never runs, the bad state loads, crashes at render, and persists.
  *
  * A migration must be total: it receives whatever shape that version wrote and returns the
  * next version's shape, defaulting anything it cannot carry over. It must never throw for
