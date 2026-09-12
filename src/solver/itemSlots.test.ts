@@ -69,7 +69,16 @@ describe("SLOT_ORDER", () => {
 
 	// Consumables are solved as pseudo-items but are not equipment, so they must never appear in
 	// a gear export's slot layout.
+	//
+	// The list is asserted explicitly first. An earlier version of this test only looped over
+	// CONSUMABLE_TYPES asserting absence, which mutation testing showed to be vacuous: emptying
+	// the array made the loop body never run, and the test still passed.
 	it("excludes the consumable pseudo-slots", () => {
+		expect(CONSUMABLE_TYPES).toEqual([
+			"Flask",
+			"GuardianElixir",
+			"BattleElixir",
+		]);
 		for (const type of CONSUMABLE_TYPES) {
 			expect(SLOT_ORDER).not.toContain(type);
 		}

@@ -67,6 +67,10 @@ export const axisTotals = (
 		}
 	}
 
+	// Stryker disable next-line all: this guard is an early-out, not a behavioural branch. With
+	// defenseRating 0 both paths contribute exactly 0 - unrounded gives 0 / ratingPerPoint, and
+	// rounded gives floor(baseRating / rpp) - floor(baseRating / rpp) - so forcing it true cannot
+	// change any result.
 	if (defenseRating !== 0) {
 		// The Defense axis is the raw rating - a stat weight on defense weighs rating, not the
 		// skill it converts into - so it never sees the floor.

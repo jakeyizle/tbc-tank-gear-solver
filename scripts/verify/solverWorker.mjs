@@ -9,6 +9,11 @@
 //
 // Usage:  npm run verify:solver-worker  [-- --headed] [--keep-open]
 // Exit code is 0 only if every assertion passes, so this is CI-usable as-is.
+//
+// Needs a Playwright browser: `npx playwright install chromium`. Playwright pins a browser build
+// per release, so bumping the playwright devDependency requires running that again - the failure
+// mode is an explicit "Please run the following command to download new browsers" error, not a
+// confusing one.
 
 import { spawn } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -166,9 +171,14 @@ try {
 
 	const wasmResponses = [];
 	const dbResponses = [];
+	// The Response objects themselves, so the warm can be awaited properly rather than slept on.
+	const wasmBodies = [];
 	page.on("response", (r) => {
 		const url = r.url();
-		if (url.includes("lib.wasm.gz")) wasmResponses.push(r.status());
+		if (url.includes("lib.wasm.gz")) {
+			wasmResponses.push(r.status());
+			wasmBodies.push(r.finished());
+		}
 		if (url.includes("/sim/db.json")) dbResponses.push(r.status());
 	});
 
@@ -198,7 +208,19 @@ try {
 		"warm fetches the sim wasm without any user action",
 		`${wasmResponses.length} response(s)`,
 	);
-	// Let the instantiate finish before the first solve, so solve #1 measures a warm Worker.
+	// Wait for the warm to actually finish before solving, rather than sleeping a fixed guess.
+	//
+	// A blind sleep here made this harness flaky: on a cold machine (a freshly-downloaded browser,
+	// say) 37MB of wasm can still be instantiating when the sleep expires, so solve #1 races the
+	// warm. If that race errors, the Worker is recycled by design - and the run then reports two
+	// Workers and three db.json fetches, which looks exactly like the regression this harness
+	// exists to catch. A false positive here is worse than no check at all, because it teaches
+	// people to ignore the output.
+	//
+	// So: await the response body completing, then settle. The settle is still a sleep, because
+	// go.run()'s completion is not observable from outside the Worker - but it now starts from a
+	// known point instead of from "roughly when the headers arrived".
+	await Promise.all(wasmBodies).catch(() => {});
 	await sleep(20_000);
 	const afterWarm = { wasm: wasmResponses.length, db: dbResponses.length };
 

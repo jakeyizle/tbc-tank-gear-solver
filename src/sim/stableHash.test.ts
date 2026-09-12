@@ -21,6 +21,32 @@ describe("canonicalStringify", () => {
 		);
 	});
 
+	// Two keys is not enough to pin the comparator: with {a, b} even a comparator that never
+	// returns -1 sorts both insertion orders to the same result by luck. Mutation testing showed
+	// four survivors on the comparator line until this existed.
+	it("canonicalizes three keys from every insertion order", () => {
+		const orders = [
+			{ a: 1, b: 2, c: 3 },
+			{ a: 1, c: 3, b: 2 },
+			{ b: 2, a: 1, c: 3 },
+			{ b: 2, c: 3, a: 1 },
+			{ c: 3, a: 1, b: 2 },
+			{ c: 3, b: 2, a: 1 },
+		];
+		const encodings = new Set(orders.map(canonicalStringify));
+		expect(encodings.size).toBe(1);
+	});
+
+	// Pins the exact encoding, which the order-independence tests above cannot: they only compare
+	// two encodings to each other, so a mutated separator or delimiter passes them both.
+	it("encodes objects and arrays in an exact, stable format", () => {
+		expect(canonicalStringify({ b: 2, a: 1 })).toBe('{"a":1,"b":2}');
+		expect(canonicalStringify([1, 2])).toBe("[1,2]");
+		expect(canonicalStringify({ a: [1, { c: 3, b: 2 }] })).toBe(
+			'{"a":[1,{"b":2,"c":3}]}',
+		);
+	});
+
 	it("sorts keys at every depth, not just the top level", () => {
 		expect(canonicalStringify({ outer: { a: 1, b: 2 } })).toBe(
 			canonicalStringify({ outer: { b: 2, a: 1 } }),

@@ -200,6 +200,15 @@ describe("calculateScores", () => {
 		expect(scores.objectiveScore).toBeCloseTo(45, 10);
 	});
 
+	// Exercises the DEFAULT parameters rather than passing them. Mutation testing showed the
+	// defaults (`avoidanceStatName = "Avoidance"`, `resistanceStats = []`) could both be replaced
+	// with garbage and every test still passed, because they were always supplied explicitly.
+	it("defaults to the Avoidance axis and no resistances", () => {
+		const scores = calculateScores([flat("Agility", 4)], [], MODEL);
+		expect(scores.avoidanceScore).toBeCloseTo(2, 10);
+		expect(scores.resistanceScores).toEqual({});
+	});
+
 	it("reports avoidance from the requested avoidance axis", () => {
 		const scores = calculateScores(
 			[flat("Agility", 4)],
@@ -294,7 +303,9 @@ describe("collectItemStats", () => {
 				socketBonus: [flat("Stamina", 4)],
 			}),
 		]);
-		expect(unmet.some((s) => s.name === "Stamina")).toBe(false);
+		// Asserted as exact emptiness, not just "no Stamina": the unmet branch returns [], and a
+		// mutant replacing it with a junk array passes any weaker check.
+		expect(unmet).toEqual([]);
 
 		const met = collectItemStats([
 			lpItem({

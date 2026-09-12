@@ -13,14 +13,18 @@ It found that the second question mattered far more than the first.
 | Command | What it does |
 |---|---|
 | `npm test` | The full suite, including the six real-wasm files (~53s) |
-| `npm run test:fast` | Everything except those six (290 tests, ~4s) |
+| `npm run test:fast` | Everything except those six (395 tests, ~4s) |
 | `npm run test:coverage` | Line/branch coverage, full suite |
 | `npm run test:coverage:fast` | Coverage over the fast subset only |
-| `npm run test:mutate` | Mutation testing (~13 min); HTML report in `reports/mutation/` |
+| `npm run test:mutate` | Mutation testing (~8-13 min); HTML + JSON report in `reports/mutation/` |
 | `npm run verify:solver-worker` | Browser harness for Worker/wasm lifetime |
 
 `vitest.fast.config.ts` owns the list of slow files, in one place, so `test:fast`,
 `test:coverage:fast` and Stryker all agree on what "fast" means.
+
+`verify:solver-worker` needs a Playwright browser (`npx playwright install chromium`), and
+Playwright pins a browser build per release - so bumping that devDependency means running the
+install again.
 
 ## Finding 1: the solver suite could not detect two deleted guards
 
@@ -46,6 +50,11 @@ gives the counterfactual:
 |---|---|
 | The suite as it stood before this pass | **8** |
 | With `src/solver/scores.test.ts` added | **5** |
+| After acting on those five (see below) | **0** |
+
+The middle row is the measurement that matters: it isolates the new test's effect while
+everything else is held constant. The last row is where the file ended up after the surviving
+mutants were triaged - three more tests and one annotated equivalent.
 
 The three newly-killed mutants are at lines 55 (x2) and 61 — exactly:
 
@@ -106,12 +115,56 @@ failed; the assertion now encodes the real contract, with the reasoning.
 Coverage, full suite: **51.1% statements / 82.9% branches**. The statement figure is dominated by
 the UI layer, which is out of scope for this pass — 41 components and 4 routes at 0%.
 
-Mutation score over the scoped set (see "Blind spots"): **57.6%** before this pass's tests,
-from 3,445 mutants. Worst offenders by surviving mutant count were `solveConfig.ts` (131),
-`items.ts` (147), `calibrateWeights.ts` (53+75), `solveSimMetric.ts` (92) and `index.ts` (55).
+Mutation score over the scoped set (see "Blind spots"): **57.6% before this pass, 64.1% after**,
+from ~3,200 mutants. Per file, for the modules this pass targeted:
+
+| module | before | after | survivors left |
+|---|---|---|---|
+| `data/talentString.ts` | untested | **100%** | 0 |
+| `solver/scores.ts` | 88.6% | **100%** | 0 |
+| `solver/itemSlots.ts` | 62.1% | **100%** | 0 |
+| `solver/itemDatabase.ts` | 44.4% | **100%** | 0 |
+| `helpers/resultStats.ts` | 0% | **97.0%** | 1 |
+| `sim/stableHash.ts` | 66.7% | **84.9%** | 5 (all equivalent, annotated) |
+| `sim/buildSimPlayer.ts` | - | **88.2%** | 2 |
+
+The remainder is dominated by files this pass did not target: `solveConfig.ts` (163 survivors,
+45%), `items.ts` (161, 60%), `calibrateWeights.ts` (128, 62%), `solveSimMetric.ts` (127, 44%) and
+`solver/index.ts` (103, 45%). These are the two biggest files in the repo plus the LP core; their
+survivors are real but mostly low-value edge cases, and they are the obvious next target if this
+ever gets a second pass.
 
 No `thresholds.break` is set. Picking a bar before knowing the baseline invents an argument; the
 number is recorded here so a future commit can ratchet from it deliberately.
+
+## Equivalent mutants, annotated rather than chased
+
+Three survivors are provably behaviour-preserving and are now marked `// Stryker disable
+next-line all` **with the reason**, so they do not reappear in every future run and train everyone
+to ignore the report:
+
+- `stableHash.ts`'s key comparator - any deterministic total order canonicalizes, so reversing it
+  preserves the only property that matters. A *non*-deterministic comparator is still killed, by
+  the three-key/six-order test added for exactly that purpose.
+- `stableHash.ts`'s djb2 mixing arithmetic - any deterministic function that distinguishes
+  different inputs works, and those properties are tested. Killing an operator mutant here would
+  mean snapshotting an exact hash value, pinning an implementation detail rather than a
+  requirement.
+- `scores.ts`'s `if (defenseRating !== 0)` - an early-out, not a branch. At 0 rating both paths
+  contribute exactly 0.
+
+## Two of my own tests were themselves vacuous
+
+Worth recording, because it is the same failure this pass was looking for:
+
+- `itemSlots.test.ts` asserted the consumable pseudo-slots are absent from `SLOT_ORDER` by
+  looping over `CONSUMABLE_TYPES`. Emptying that array made the loop body never run and the test
+  still passed. It now asserts the list explicitly first.
+- `itemDatabase.test.ts` exercised the supplement merge only with an EMPTY source, where the
+  dedupe key function is never consulted - it could be replaced with `() => undefined` and every
+  test still passed. There is now a non-empty-source case.
+
+Both were found by reading surviving mutants, not by review.
 
 ## Tests added
 

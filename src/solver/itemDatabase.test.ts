@@ -62,6 +62,18 @@ describe("indexItemDatabase: supplement merging", () => {
 		expect(ids).toHaveLength(new Set(ids).size);
 	});
 
+	// With a non-empty source the dedupe key function actually gets consulted, which an
+	// empty-source test never does - mutation testing showed the key function could be replaced
+	// with `() => undefined` and every empty-source test still passed.
+	it("keeps supplement enchants when the source carries unrelated ones", () => {
+		const withSupplementOnly = indexItemDatabase(source({ enchants: [] }));
+		const db = indexItemDatabase(
+			source({ enchants: [enchant("unrelated", "not-a-supplement-effect")] }),
+		);
+		// Every supplement enchant survives alongside the source's own.
+		expect(db.enchants).toHaveLength(withSupplementOnly.enchants.length + 1);
+	});
+
 	// The SUPPLEMENT is deduped against the source on effectID, because db.json identifies an
 	// enchant by the item that applies it while the supplement sometimes uses a spell id - so the
 	// id is the unstable key of the two and effectID is what "the same enchant" means here.
@@ -96,6 +108,39 @@ describe("indexItemDatabase: supplement merging", () => {
 	});
 });
 
+// SUPPLEMENT_ENCHANT_CLASSES backfills a class restriction that lives on the ITEM applying an
+// enchant, not on the enchant record - and 126 of 143 enchants name an item the equipment table
+// does not contain, so the restriction is simply lost for those. Phase 3 found this the hard way:
+// Presence of Might silently stopped being Warrior-only, which would let the solver enchant a
+// paladin with it.
+describe("indexItemDatabase: enchant class backfill", () => {
+	it("backfills a class restriction the database record lacks", () => {
+		// 2583 is the one entry in SUPPLEMENT_ENCHANT_CLASSES, restricted to class "1" (Warrior).
+		const db = indexItemDatabase(
+			source({ enchants: [enchant("presence-of-might", "2583")] }),
+		);
+		expect(db.enchantsByEffectId.get("2583")?.classes).toEqual(["1"]);
+	});
+
+	// The database's own answer wins when it has one - the backfill is a gap-filler, not an
+	// override, or a later database fix would be silently undone by stale hand data.
+	it("leaves an existing class restriction alone", () => {
+		const db = indexItemDatabase(
+			source({
+				enchants: [enchant("own", "2583", { classes: ["2"] })],
+			}),
+		);
+		expect(db.enchantsByEffectId.get("2583")?.classes).toEqual(["2"]);
+	});
+
+	it("leaves enchants with no supplement entry unrestricted", () => {
+		const db = indexItemDatabase(
+			source({ enchants: [enchant("plain", "99999")] }),
+		);
+		expect(db.enchantsByEffectId.get("99999")?.classes).toBeUndefined();
+	});
+});
+
 describe("indexItemDatabase: lookup maps", () => {
 	// Five effectIds are shared by two enchants differing only by slot (2649 is both
 	// "Bracer - Fortitude" and "Boots - Fortitude"). Keeping the FIRST matches what the old
@@ -111,6 +156,21 @@ describe("indexItemDatabase: lookup maps", () => {
 		// Both still exist under their own ids - only the effectId map collapses them.
 		expect(db.enchantsById.get("first")).toBeDefined();
 		expect(db.enchantsById.get("second")).toBeDefined();
+	});
+
+	// Same first-wins rule on the id map. Needs two enchants that genuinely share an id: with
+	// distinct ids there is no collision, so the guard is unobservable and a mutant removing it
+	// survives.
+	it("keeps the first enchant when two share an id", () => {
+		const db = indexItemDatabase(
+			source({
+				enchants: [
+					enchant("same-id", "effect-a"),
+					enchant("same-id", "effect-b"),
+				],
+			}),
+		);
+		expect(db.enchantsById.get("same-id")?.effectID).toBe("effect-a");
 	});
 
 	it("indexes gems by id without touching the array", () => {
