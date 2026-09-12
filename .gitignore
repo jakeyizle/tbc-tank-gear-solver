@@ -11,3 +11,8 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+
+# Verification-pass outputs (npm run test:coverage / test:mutate)
+coverage
+reports
+.stryker-tmp

@@ -3,6 +3,7 @@ import {
 	DEFAULT_SIM_CALIBRATION_PROFILE,
 	type SimCalibrationProfile,
 } from "#/types/SimCalibrationProfile";
+import { toGearRefs } from "./buildSimPlayer";
 import {
 	buildStatWeightsRequest,
 	type TbcUiDatabase,
@@ -142,5 +143,85 @@ describe("buildStatWeightsRequest", () => {
 		expect(request.raidBuffs.bloodlust).toBe(true);
 		expect(request.partyBuffs.battleShout).toBe("TristateEffectImproved");
 		expect(request.debuffs.misery).toBe(true);
+	});
+});
+
+// buildSimPlayer's own assertions, added here rather than in a separate file because
+// buildStatWeightsRequest is already a thin wrapper over buildPlayer/buildEncounter (lines 57 and
+// 61) and this test file already drives it with a real profile.
+//
+// Every one of these guards a trap the proto3 JSON mapping sets, and all four fail SILENTLY: a
+// misplaced field is dropped rather than rejected, so the sim happily returns numbers for a
+// character that is not the one the user configured.
+describe("buildSimPlayer's proto shape", () => {
+	// A proto3 JSON oneof is flattened onto its parent message, never nested under its group
+	// name. Nesting it under "spec" is the bug the Phase 0 execution log records: the sim then
+	// sees no spec options at all and sims a specless paladin.
+	it("puts protectionPaladin at the top level, with no 'spec' wrapper", () => {
+		const request = buildRequest(DEFAULT_SIM_CALIBRATION_PROFILE);
+		expect(request.player.protectionPaladin).toBeDefined();
+		expect(
+			(request.player as unknown as Record<string, unknown>).spec,
+		).toBeUndefined();
+	});
+
+	// rotation is top-level too, and it must be the PRECOMPILED APL - the Go sim never reads the
+	// simple-rotation booleans directly.
+	it("puts the precompiled rotation at the top level", () => {
+		const request = buildRequest(DEFAULT_SIM_CALIBRATION_PROFILE);
+		expect(request.player.rotation).toEqual(
+			buildProtPaladinRotation(
+				DEFAULT_SIM_CALIBRATION_PROFILE.raidProfile.simpleRotation,
+				DEFAULT_SIM_CALIBRATION_PROFILE.raidProfile.talentsString,
+			),
+		);
+	});
+
+	// The character's own race must win over PROT_PALADIN_PLAYER_DEFAULTS.race, which is a
+	// baseline constant rather than a choice. This is a spread-ORDER dependency: move `race:`
+	// above the spread and every character silently sims as the default race again, which is
+	// exactly the bug Phase 4 fixed (a Human simmed as a Draenei).
+	it("lets the profile's race override the baseline default", () => {
+		const request = buildRequest({
+			...DEFAULT_SIM_CALIBRATION_PROFILE,
+			raidProfile: {
+				...DEFAULT_SIM_CALIBRATION_PROFILE.raidProfile,
+				race: "RaceDwarf",
+			},
+		});
+		expect(request.player.race).toBe("RaceDwarf");
+	});
+
+	it("equips exactly the gear it was handed", () => {
+		const request = buildRequest(DEFAULT_SIM_CALIBRATION_PROFILE);
+		expect(request.player.equipment.items).toHaveLength(fakeGear.length);
+		expect(request.player.equipment.items[0].id).toBe(1);
+	});
+});
+
+describe("toGearRefs", () => {
+	// Empty gem sockets come through as id 0. Passing those to the database filter would ask it
+	// for a gem that does not exist; dropping them is what keeps the SimDatabase minimal.
+	it("drops empty gem sockets", () => {
+		expect(
+			toGearRefs([
+				{ id: "1", enchant: { id: "" }, gemSlots: ["0", "12345", "0"] },
+			]),
+		).toEqual([{ id: 1, enchant: undefined, gems: [12345] }]);
+	});
+
+	// enchant is always a defined object (EMPTY_ENCHANT when unenchanted, id: ""), so the check
+	// has to be on the id rather than on the object.
+	it("omits the enchant when the item is unenchanted", () => {
+		expect(
+			toGearRefs([{ id: "1", enchant: { id: "" }, gemSlots: [] }])[0].enchant,
+		).toBeUndefined();
+	});
+
+	it("converts ids from strings to the numbers the proto expects", () => {
+		const [ref] = toGearRefs([
+			{ id: "28677", enchant: { id: "2649" }, gemSlots: ["24032"] },
+		]);
+		expect(ref).toEqual({ id: 28677, enchant: 2649, gems: [24032] });
 	});
 });
