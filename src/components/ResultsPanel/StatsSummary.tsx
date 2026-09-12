@@ -16,6 +16,7 @@ import type { CharacterStatsSnapshot } from "#/types/CharacterStats";
 import type { SimMetricsSnapshot } from "#/types/SimCalibrationProfile";
 import type { BaseConfig } from "#/types/SolverConfig";
 import StatsGroup from "./StatsGroup";
+import { activeBuffGroups } from "#/helpers/activeBuffs";
 import StatWeightTabs from "./StatWeightTabs";
 
 interface StatsSummaryProps {
@@ -101,6 +102,9 @@ export default function StatsSummary({
 	const resilienceRating = simStat(view, STAT.Resilience);
 	const spellHitRating = simStat(view, STAT.SpellHit);
 	const spellCritRating = simStat(view, STAT.SpellCrit);
+
+	const raidProfile = baseConfig.simCalibrationProfile?.raidProfile;
+	const buffGroups = raidProfile ? activeBuffGroups(raidProfile) : [];
 
 	const mitigation = mitigationInfo(view, {
 		// 1 for results saved before the solver recorded this, which under-reports Effective HP
@@ -279,12 +283,43 @@ export default function StatsSummary({
 			</Box>
 
 			{/*
-			 * The "Buffs included" chip row used to sit here. It listed the formula engine's
-			 * buff objects, which described neither what the sim applied nor what the user had
-			 * enabled once the raid profile became the real source - so it was removed rather
-			 * than ported. Its replacement is owed by the config-model collapse (Phase 4),
-			 * which is where a single authoritative list of active buffs will exist.
+			 * Replaces the old "Buffs included" chip row, which listed the deleted formula
+			 * engine's four buff objects and so described neither what the sim applied nor what
+			 * the user had enabled. These labels are derived from the raid profile, which IS
+			 * what the measured stat model is built from, so they cannot drift from the numbers
+			 * above them.
+			 *
+			 * Only shown on the buffed view: with the toggle off, the numbers are the character
+			 * without any of this, and listing it would contradict them.
 			 */}
+			{includeBuffsConsumables && buffGroups.length > 0 && (
+				<Box sx={{ mt: 1.5 }}>
+					<Typography
+						variant="overline"
+						color="text.secondary"
+						sx={{ display: "block", lineHeight: 1.8 }}
+					>
+						Applied by the simulator
+					</Typography>
+					{buffGroups.map((group) => (
+						<Box
+							key={group.title}
+							sx={{ display: "flex", gap: 0.75, alignItems: "baseline", mb: 0.5 }}
+						>
+							<Typography
+								variant="caption"
+								color="text.disabled"
+								sx={{ flexShrink: 0, width: 62 }}
+							>
+								{group.title}
+							</Typography>
+							<Typography variant="caption" color="text.secondary">
+								{group.labels.join(" · ")}
+							</Typography>
+						</Box>
+					))}
+				</Box>
+			)}
 
 			{showSimMetrics && (
 				<Box
