@@ -1,8 +1,33 @@
+import { loadTbcDomainDatabase } from "#/data/tbcDatabase";
 import { perfTrace } from "#/helpers/perfTrace";
-import type { CalibratedWeights } from "#/sim/calibrateWeights";
+import {
+	type CalibratedWeights,
+	measureFinalSimMetrics,
+	metricRatiosForBalance,
+} from "#/sim/calibrateWeights";
+import { deriveLinearModel } from "#/sim/deriveLinearModel";
+import { measureCharacterStats } from "#/sim/measureCharacterStats";
+import { PROT_PALADIN_BASELINE_GEAR } from "#/sim/protPaladinBaselineGear";
+import { splitGearAndConsumables } from "#/sim/resolveGearAndConsumables";
+import { loadTbcDatabase } from "#/sim/simDatabaseClient";
+import { solveConfigForSimMetric } from "#/sim/solveSimMetric";
+import { loadWasm } from "#/sim/wasmCoordinator";
+import { DEFAULT_SIM_CALIBRATION_PROFILE } from "#/types/SimCalibrationProfile";
+import { indexItemDatabase } from "./itemDatabase";
 import type { SolveOptions } from "./solveConfig";
 import { solveGearSet } from "./solveEHP";
 import type { InputItem } from "./types";
+
+// The one place src/solver/ is allowed to reach into src/sim/. Everywhere else in the solver
+// that boundary is enforced by biome (see biome.json's noRestrictedImports override), because
+// the LP core is generic over its stat model and must stay that way.
+//
+// These used to be dynamic import()s for the same reason, which cost a round trip and bought
+// nothing: every one of them was awaited unconditionally at the top of onmessage, so the split
+// chunk was always fetched immediately after the Worker booted. Now that the Worker is shared
+// for the session (see src/solver/index.ts) that cost would have been paid once rather than
+// per solve, but a lint rule states the constraint directly instead of encoding it in a
+// module-loading trick that reads like a performance decision.
 
 // Every request carries an id and every reply echoes it. This Worker is now shared across
 // solves and across the configs within one solve (see src/solver/index.ts), so "the message
@@ -33,10 +58,6 @@ interface WarmRequest {
 type WorkerRequest = SolveRequest | WarmRequest;
 
 async function warm(): Promise<void> {
-	const [{ loadWasm }, { loadTbcDomainDatabase }] = await Promise.all([
-		import("#/sim/wasmCoordinator"),
-		import("#/data/tbcDatabase"),
-	]);
 	// Deliberately not deriveLinearModel: that depends on the calibration profile, which the
 	// user may still edit before solving. These two do not depend on it at all.
 	await Promise.all([loadWasm(), loadTbcDomainDatabase()]);
@@ -54,24 +75,6 @@ self.onmessage = async (e) => {
 		}
 
 		const { items, options, precomputedRound1 } = request;
-		// Dynamically imported so src/solver/ (the generic LP core) never statically imports
-		// src/sim/ (the tbc-new integration) - see docs/plans/sim-backed-objectives.md's
-		// "Open decisions" note.
-		const [
-			{ loadTbcDatabase },
-			{ DEFAULT_SIM_CALIBRATION_PROFILE },
-			{ deriveLinearModel },
-			{ measureCharacterStats },
-			{ loadTbcDomainDatabase },
-			{ indexItemDatabase },
-		] = await Promise.all([
-			import("#/sim/simDatabaseClient"),
-			import("#/types/SimCalibrationProfile"),
-			import("#/sim/deriveLinearModel"),
-			import("#/sim/measureCharacterStats"),
-			import("#/data/tbcDatabase"),
-			import("./itemDatabase"),
-		]);
 		const db = await loadTbcDatabase();
 		const profile =
 			options.simCalibrationProfile ?? DEFAULT_SIM_CALIBRATION_PROFILE;
@@ -104,16 +107,8 @@ self.onmessage = async (e) => {
 			solveOptions.objectiveMode === "tmi" ||
 			solveOptions.objectiveMode === "balanced"
 		) {
-			const [
-				{ solveConfigForSimMetric },
-				{ metricRatiosForBalance },
-				{ PROT_PALADIN_BASELINE_GEAR },
-			] = await Promise.all([
-				import("#/sim/solveSimMetric"),
-				import("#/sim/calibrateWeights"),
-				import("#/sim/protPaladinBaselineGear"),
-			]);
 			const metricRatios =
+
 				solveOptions.objectiveMode === "balanced"
 					? metricRatiosForBalance(
 							solveOptions.balance ?? 0.5,
@@ -165,11 +160,6 @@ self.onmessage = async (e) => {
 		// measureFinalSimMetrics needs - run the same one-shot "finalize and measure" step the
 		// sim-backed branch above uses (see its own comment) so TPS/DTPS/TMI-5 display for every
 		// objective mode, not just the sim-backed ones.
-		const [{ splitGearAndConsumables }, { measureFinalSimMetrics }] =
-			await Promise.all([
-				import("#/sim/resolveGearAndConsumables"),
-				import("#/sim/calibrateWeights"),
-			]);
 		const { gear, consumables } = splitGearAndConsumables(result);
 		const simMetrics = await measureFinalSimMetrics(gear, db, {
 			...profile,

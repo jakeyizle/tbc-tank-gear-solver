@@ -30,6 +30,46 @@
 			"recommended": true
 		}
 	},
+	// src/solver/ is the generic LP core: it optimizes against a LinearStatModel handed to it,
+	// and knows nothing about the tbc-new sim that measures one. That boundary used to be
+	// enforced by import()-ing src/sim/ dynamically inside solver.worker.ts, which read like a
+	// bundling decision and was awaited unconditionally anyway. Stated as a rule instead, so the
+	// worker can import normally.
+	//
+	// Two files are exempt because they ARE the seam rather than the core: solver.worker.ts
+	// (builds the stat model and the item pool before solving) and index.ts (the main-thread
+	// orchestrator, which owns the localStorage-backed round-1 weights cache and the
+	// calibration-stat translation). Tests are exempt so they can mock what they stub.
+	//
+	// #/data/tbcDatabase is deliberately NOT restricted: it is the neutral layer that imports
+	// neither side.
+	"overrides": [
+		{
+			"includes": [
+				"**/src/solver/**",
+				"!**/src/solver/index.ts",
+				"!**/src/solver/solver.worker.ts",
+				"!**/src/solver/**/*.test.ts"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"patterns": [
+									{
+										"group": ["#/sim/*", "**/sim/*"],
+										"message": "src/solver/ is the generic LP core and must not depend on src/sim/ (the tbc-new integration). solver.worker.ts is the one seam between them; everything else takes what it needs as a parameter - see src/types/LinearStatModel.ts."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		}
+	],
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double"
