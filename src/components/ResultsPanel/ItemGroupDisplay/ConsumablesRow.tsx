@@ -2,8 +2,7 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { CONSUMABLES } from "#/data/consumables";
-import ItemTooltips from "#/data/item-tooltips.json";
-import { getConsumableWowheadUrl } from "#/helpers/wowhead";
+import { getConsumableWowheadUrl, wowheadIconUrl } from "#/helpers/wowhead";
 import type { LPItem } from "#/solver/types";
 
 interface ConsumablesRowProps {
@@ -47,14 +46,16 @@ export default function ConsumablesRow({ items }: ConsumablesRowProps) {
 			) : (
 				<Stack spacing={0.5}>
 					{items.map((item) => {
-						const consumable = CONSUMABLES.find((c) => String(c.id) === item.id);
+						const consumable = CONSUMABLES.find(
+							(c) => String(c.id) === item.id,
+						);
 						const href = getConsumableWowheadUrl(
 							consumable?.id ?? Number(item.id),
 							consumable?.name ?? item.name,
 						);
-						const tooltip = ItemTooltips.find(
-							(t) => t.id === item.id,
-						)?.icon;
+						// The LPItem already carries the icon (see solver/consumables.ts), so the
+						// CONSUMABLES lookup above is only needed for the wowhead href.
+						const iconUrl = wowheadIconUrl(item.icon ?? consumable?.icon);
 
 						return (
 							<Stack
@@ -71,7 +72,7 @@ export default function ConsumablesRow({ items }: ConsumablesRowProps) {
 								>
 									<Box
 										component="img"
-										src={`https://wow.zamimg.com/images/wow/icons/large/${tooltip}.jpg`}
+										src={iconUrl}
 										alt={item.name}
 										sx={{ width: 34, height: 34, borderRadius: "5px" }}
 									/>

@@ -161,6 +161,7 @@ export const __enumTablesForTest = {
 export interface RawDbItem {
 	id: number;
 	name: string;
+	icon?: string;
 	type: number;
 	weaponType?: number;
 	handType?: number;
@@ -176,6 +177,7 @@ export interface RawDbItem {
 export interface RawDbGem {
 	id: number;
 	name: string;
+	icon?: string;
 	color: number;
 	stats?: number[];
 	phase?: number;
@@ -244,6 +246,7 @@ export function toItem(raw: RawDbItem): Item | null {
 	return {
 		name: raw.name,
 		id: String(raw.id),
+		...(raw.icon ? { icon: raw.icon } : {}),
 		type,
 		...(raw.handType && HAND_TYPE_BY_INDEX[raw.handType]
 			? {
@@ -276,6 +279,7 @@ export function toGem(raw: RawDbGem): Gem | null {
 	return {
 		name: raw.name,
 		id: String(raw.id),
+		...(raw.icon ? { icon: raw.icon } : {}),
 		color,
 		phase: String(raw.phase ?? 1),
 		stats: statsFromDense(raw.stats),

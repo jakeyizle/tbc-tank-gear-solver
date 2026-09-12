@@ -2,7 +2,7 @@ import LockIcon from "@mui/icons-material/Lock";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import ItemTooltips from "#/data/item-tooltips.json";
+import { wowheadIconUrl } from "#/helpers/wowhead";
 import type { LPItem } from "#/solver/types";
 
 interface ConsumablesCellProps {
@@ -20,7 +20,7 @@ function ConsumablesCell({ items }: ConsumablesCellProps) {
 	return (
 		<Stack spacing={0.5} sx={{ minWidth: 0 }}>
 			{items.map((item) => {
-				const tooltip = ItemTooltips.find((t) => t.id === item.id)?.icon;
+				const iconUrl = wowheadIconUrl(item.icon);
 				return (
 					<Box
 						key={item.uniqueId}
@@ -33,7 +33,7 @@ function ConsumablesCell({ items }: ConsumablesCellProps) {
 					>
 						<Box
 							component="img"
-							src={`https://wow.zamimg.com/images/wow/icons/large/${tooltip}.jpg`}
+							src={iconUrl}
 							alt={item.name}
 							sx={{ width: 28, height: 28, borderRadius: "5px", flexShrink: 0 }}
 						/>

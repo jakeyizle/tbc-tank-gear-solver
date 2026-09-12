@@ -1,7 +1,6 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import GemToolTips from "#/data/gem-tooltips.json";
-import ItemTooltips from "#/data/item-tooltips.json";
+import { wowheadIconUrl } from "#/helpers/wowhead";
 import type { LPItem } from "#/solver/types";
 
 const GEM_COLORS: Record<string, string> = {
@@ -62,7 +61,7 @@ export default function ItemDisplay({ slotLabel, item }: ItemDisplayProps) {
 		);
 	}
 
-	const tooltip = ItemTooltips.find((t) => t.id === item.id)?.icon;
+	const iconUrl = wowheadIconUrl(item.icon);
 	const hasEnchant = Boolean(item.enchant?.effectID && item.enchant?.name);
 
 	const gemOccurrences: Record<string, number> = {};
@@ -109,7 +108,7 @@ export default function ItemDisplay({ slotLabel, item }: ItemDisplayProps) {
 			>
 				<Box
 					component="img"
-					src={`https://wow.zamimg.com/images/wow/icons/large/${tooltip}.jpg`}
+					src={iconUrl}
 					alt={item.name}
 					sx={{ width: 34, height: 34, borderRadius: "5px" }}
 				/>
@@ -168,7 +167,7 @@ export default function ItemDisplay({ slotLabel, item }: ItemDisplayProps) {
 				}}
 			>
 				{keyedGems.map((gem) => {
-					const iconName = GemToolTips.find((t) => t.id === gem.id)?.iconName;
+					const gemIconUrl = wowheadIconUrl(gem.icon);
 					const color = GEM_COLORS[gem.color];
 					return (
 						<Box
@@ -187,10 +186,10 @@ export default function ItemDisplay({ slotLabel, item }: ItemDisplayProps) {
 								overflow: "hidden",
 							}}
 						>
-							{iconName && (
+							{gemIconUrl && (
 								<Box
 									component="img"
-									src={`https://wow.zamimg.com/images/wow/icons/large/${iconName}.jpg`}
+									src={gemIconUrl}
 									alt={gem.name}
 									sx={{ width: "100%", height: "100%" }}
 								/>

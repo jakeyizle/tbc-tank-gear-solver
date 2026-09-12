@@ -14,6 +14,7 @@ export const getConsumableLPItems = (
 		// consumable id is stringified here and read back with Number() where the sim needs it.
 		return {
 			id: String(consumable.id),
+			icon: consumable.icon,
 			name: consumable.name,
 			type: consumable.type,
 			stats: consumable.stats,

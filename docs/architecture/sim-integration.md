@@ -46,6 +46,17 @@ every solve, not just the sim-backed ones.
 `db.json` and adapts those records into this repo's domain types. It imports neither side, so
 both may import it.
 
+**Icons come from there too.** `Item.icon` and `Gem.icon` are carried straight off `db.json` by
+those adapters and ride along to `LPItem`, so the results panel reads the slug off the record it
+is already rendering. This replaced a bundled 1.2MB `item-tooltips.json` (29,999 entries) that was
+scanned linearly per row - deleting it took the main chunk from 1,601kB to 361kB (gzip 290 -> 109).
+
+The six consumables in `src/data/consumables.ts` are the sole exception, and are now the only
+hand-written game data left in the repo: they are absent from `db.items`, `db.consumables` has no
+icon field, and `db.itemIcons` is empty, so nothing in the database can supply them. Their stats
+ARE in `db.consumables` though, and `consumables.test.ts` pins them against it - which is how a
+missing +20 crit on Elixir of Major Agility was found.
+
 ### The `src/solver/ ↛ src/sim/` boundary
 
 The LP core is generic over its stat model: it optimizes a dot product against coefficients

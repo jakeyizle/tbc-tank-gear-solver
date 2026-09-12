@@ -8,6 +8,13 @@ export interface Item {
 	sockets: Socket[];
 	socketBonus: Stat[];
 	/**
+	 * Wowhead icon slug, straight from db.json's `icon` field, used to build the image URL the
+	 * results panel renders. Carried on the record rather than looked up at render time: the
+	 * panel used to scan a 29,999-entry bundled JSON per row, which is both 1.2MB of shipped
+	 * data and a linear search for something the database already told us.
+	 */
+	icon?: string;
+	/**
 	 * Class ids (as strings, matching SolverConfig.classId and the proto Class enum) allowed to
 	 * equip this item, for class-restricted gear like tier sets. Undefined means unrestricted,
 	 * which is the overwhelming majority. Same shape and meaning as Enchant.classes.
@@ -241,6 +248,12 @@ export interface ConsumableItem {
 	name: string;
 	type: ConsumableType;
 	stats: Stat[];
+	/**
+	 * Wowhead icon slug. Held by hand here, unlike gear and gems, because db.consumables has no
+	 * icon field and db.itemIcons is empty - consumables are not in db.items either, so there is
+	 * no database source for these six.
+	 */
+	icon: string;
 }
 
 export type HandType = "TwoHand" | "OneHand" | "OffHand" | "MainHand";
@@ -271,6 +284,8 @@ export interface Enchant {
 export interface Gem {
 	name: string;
 	id: string;
+	/** Wowhead icon slug from db.json - see Item.icon. */
+	icon?: string;
 	// "Prismatic" covers the two all-resistance spheres (22459 Void Sphere, 22460 Prismatic
 	// Sphere), which fit a socket of any colour. NOTE: socketBonus.ts's gemColorMatches has
 	// no Prismatic entry, so these currently never satisfy a socket bonus - see its comment.
