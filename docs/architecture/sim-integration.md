@@ -147,6 +147,15 @@ Three things this measurement cannot do, each handled explicitly:
 - **The worker pool** (`simWorkerPool.ts` + `simExecutor.worker.ts`) — dedicated wasm-only
   Workers for iteration-bound sims, fed by `simJobQueue.ts` as a pipelined job queue.
 
+There must be exactly **one** coordinator instance. `statWeightsClient.ts` used to carry its own
+verbatim copy of the loader - its own `wasmGlobals`, its own `wasmReady`, its own `go.run` - so a
+solver Worker really did build two 37MB Go instances whose exports clobbered each other on
+`globalThis`, which is the exact failure `wasmCoordinator` was extracted to prevent. The
+extraction created the new module but never deleted the original. `resetSimEnvironment` was
+clearing only that private copy too, so the instance `computeStats`/`deriveLinearModel` ran on
+was never actually recycled despite the name. `scripts/verify/solverWorker.mjs` now fails if a
+second instance appears.
+
 Default pool size mirrors wowsims' own `Math.min(4, hardwareConcurrency / 2)`; measurement on
 real hardware showed ~3.4x speedup at that count with negligible gain past it. It is overridable
 via the profile's `calibration.workerCount`.
@@ -163,8 +172,13 @@ as `lib.wasm.gz`. Whether the fetched bytes are still compressed on arrival is s
 (Vite's dev server transparently decompresses; Cloudflare's asset server does not), so
 `fetchWasmModule` checks the gzip magic number rather than assuming either way.
 
-`index.html` carries a `rel="prefetch"` for it so the fetch starts during HTML parse, at a
-priority that yields to the app's own bundle.
+**There is deliberately no `rel="prefetch"` hint for it.** One was tried: starting the fetch
+during HTML parse gets the bytes moving a few hundred ms before the mount-time warm would, but
+the prefetched response is only reusable if the host lets it be cached, and the dev server sends
+`Cache-Control: no-cache`. Measured in a real browser, the hint produced *two* full downloads
+(~36MB decompressed each) instead of one. Risking a doubled transfer of the largest asset in the
+app, on cache headers this code does not control, is a bad trade for a few hundred ms - the
+mount-time warm already starts the fetch within milliseconds of first paint.
 
 ### The proto field map
 
@@ -282,6 +296,13 @@ not a formality: an earlier session shipped a worker change that passed the type
 linter, and the full test suite, and failed the production build outright — Vite's default worker
 output format could not code-split (fixed by `worker: { format: 'es' }` in `vite.config.ts`).
 Bundler/output-format constraints only surface during a real build.
+
+**`npm run verify:solver-worker` is the gate for Worker and wasm lifetime.** It drives the real
+app in a real browser and asserts that one solver Worker serves the session, that a stats-mode
+session builds exactly one Go instance, and that a second solve loads no wasm or database at
+all. Nothing else in the repo can see this: every unit test passes whether the Worker is shared
+or rebuilt per solve, because the difference is network traffic and process lifetime rather than
+behaviour. It found the duplicate coordinator described above on its first run.
 
 For anything touching the stat model, the correctness claim is an equality, and it is worth
 asserting directly: for a random gear set,

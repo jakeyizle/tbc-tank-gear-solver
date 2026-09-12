@@ -16,12 +16,16 @@
 // meaningful per-chunk setup cost to amortize - see docs/architecture/sim-integration.md's
 // "Two execution paths"), so the only real win of the job-queue model is letting independent
 // requests - most importantly, calibrateWeights.ts's independent *replicates* - actually run
-// concurrently, which one-request-in-flight-at-a-time splitting could never do. This
-// instance's own wasm module is still used as the "coordinator" for the cheap,
-// non-iteration-bound calls (statWeightRequests, statWeightCompute).
-import "./wasm_exec.js";
+// concurrently, which one-request-in-flight-at-a-time splitting could never do. The cheap,
+// non-iteration-bound calls (statWeightRequests, statWeightCompute) run on the shared
+// coordinator instance instead - see wasmCoordinator.ts.
+//
+// This module used to carry its own verbatim copy of that loader: its own wasmGlobals, its own
+// wasmReady, its own go.run. wasmCoordinator was extracted from here precisely to stop that,
+// but the original was never deleted, so the solver Worker really did build TWO 37MB Go
+// instances whose exports clobbered each other on globalThis - the exact failure wasmCoordinator's
+// header warns about. Found by scripts/verify/solverWorker.mjs, which counts wasm fetches.
 import { perfTrace } from "#/helpers/perfTrace";
-import { fetchWasmModule } from "./fetchWasmModule";
 import {
 	ProgressMetrics,
 	RaidSimRequest,
@@ -33,47 +37,11 @@ import {
 } from "./proto/api.js";
 import { runSimJobQueue, type SimJob } from "./simJobQueue";
 import { SimWorkerPool } from "./simWorkerPool";
-
-interface GoWasmGlobals {
-	wasmready?: () => void;
-	statWeights?: (requestBytes: Uint8Array) => Uint8Array;
-	statWeightsAsync?: (
-		requestBytes: Uint8Array,
-		onProgress: (progressBytes: Uint8Array) => void,
-		requestId: string,
-	) => void;
-	statWeightRequests?: (requestBytes: Uint8Array) => Uint8Array;
-	statWeightCompute?: (requestBytes: Uint8Array) => Uint8Array;
-	raidSim?: (requestBytes: Uint8Array) => Uint8Array;
-	Go?: new () => {
-		importObject: WebAssembly.Imports;
-		run: (instance: WebAssembly.Instance) => Promise<void>;
-	};
-}
-
-const wasmGlobals = globalThis as unknown as GoWasmGlobals;
-
-let wasmReady: Promise<void> | undefined;
-
-function loadWasm(): Promise<void> {
-	if (!wasmReady) {
-		const stopInstantiate = perfTrace.mark("coordinatorWasmInstantiate");
-		wasmReady = new Promise<void>((resolve) => {
-			wasmGlobals.wasmready = () => {
-				stopInstantiate();
-				resolve();
-			};
-		});
-
-		if (!wasmGlobals.Go)
-			throw new Error("wasm_exec.js did not register globalThis.Go");
-		const go = new wasmGlobals.Go();
-		fetchWasmModule("/sim/lib.wasm.gz", go.importObject).then((result) =>
-			go.run(result.instance),
-		);
-	}
-	return wasmReady;
-}
+import {
+	loadWasm,
+	resetCoordinatorWasm,
+	wasmGlobals,
+} from "./wasmCoordinator";
 
 /** Calls the wasm module's statWeights() export, lazily loading it on first use. */
 export async function runStatWeights(
@@ -110,7 +78,10 @@ export function resetSimEnvironment(): void {
 		"[sim] Recycling wasm coordinator + worker pool between calibration rounds.",
 	);
 	pool?.recycle();
-	wasmReady = undefined;
+	// Recycles the SHARED coordinator (see wasmCoordinator.ts). This used to clear only this
+	// module's private duplicate, so the instance computeStats/deriveLinearModel ran on was never
+	// actually recycled despite this function's name.
+	resetCoordinatorWasm();
 }
 
 /**

@@ -7,16 +7,6 @@
   <title>TBC Prot Paladin Gear Solver</title>
   <meta name="description" content="A gear optimization tool for Protection Paladin tanks in World of Warcraft: The Burning Crusade (TBC). Paste your gear pool and solve for the optimal item, enchant, and gem combination using Linear Programming." />
   <link rel="icon" href="/favicon.ico" />
-  <!--
-    The sim wasm is the single largest thing a solve waits on (5.7MB gzipped, ~37MB
-    instantiated), and nothing needs it until the solver Worker warms on mount. Starting the
-    fetch during HTML parse gets it in flight before the app bundle has even run, at the low
-    priority rel=prefetch implies so it yields to that bundle rather than competing with it.
-
-    Deliberately not db.json: useSolverItemDatabase already fetches it on mount for the
-    unknown-id check, so a hint would only duplicate a request the app makes anyway.
-  -->
-  <link rel="prefetch" href="/sim/lib.wasm.gz" as="fetch" crossorigin />
   <meta property="og:title" content="TBC Prot Paladin Gear Solver" />
   <meta property="og:description" content="A gear optimization tool for Protection Paladin tanks in World of Warcraft: The Burning Crusade (TBC). Paste your gear pool and solve for the optimal item, enchant, and gem combination using Linear Programming." />
   <meta property="og:type" content="website" />
