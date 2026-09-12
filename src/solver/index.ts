@@ -75,7 +75,10 @@ export interface WorkerProgressDetail {
 	calibrationTotalSims?: number;
 }
 
-type WorkerMessage =
+// Echoed back from the request that produced it - see solver.worker.ts. The Worker outlives
+// any one solve now, so the id is what keeps a late message from an abandoned request from
+// being routed to its successor.
+type WorkerMessage = { requestId: number } & (
 	| ({ type: "progress" } & WorkerProgressDetail)
 	| {
 			type: "result";
@@ -88,9 +91,11 @@ type WorkerMessage =
 			physicalDamageTakenMultiplier?: number;
 	  }
 	| { type: "error"; message: string }
+	| { type: "warmed" }
 	// Investigative timing breakdown for where a solve spent its time - see
 	// src/helpers/perfTrace.ts and solver.worker.ts's own postMessage("perf") call sites.
-	| { type: "perf"; summary: PerfSummaryRow[] };
+	| { type: "perf"; summary: PerfSummaryRow[] }
+);
 
 // Round 1 of a sim-backed solve always calibrates around the same fixed baseline gear preset
 // (see solveSimMetric.ts), so its result depends only on the profile and which metric blend is
@@ -126,6 +131,174 @@ function round1CacheKeyFor(options: SolveOptions): Round1CacheKey | undefined {
 	};
 }
 
+// One Worker for the whole session, not one per solve.
+//
+// This used to construct a Worker inside solve() and terminate it on every exit path, which
+// meant every config of every solve paid the same fixed startup cost from scratch: a Worker is
+// its own realm, so all the module-level memoization the sim relies on (wasmCoordinator's
+// instance, #/data/tbcDatabase's fetch+adapt caches, computeStatsClient's LRU) died with it.
+// A two-config solve re-gunzipped 5.7MB -> 37MB of wasm, re-instantiated it, re-ran go.run and
+// re-parsed the 3.1MB database twice.
+//
+// Keeping one Worker makes all of that once-per-session, and it is also what makes warming
+// (warmSolverWorker, below) possible at all - warming on the main thread would have built a
+// 37MB instance in a realm that has no sim consumers.
+let sharedWorker: Worker | undefined;
+let nextRequestId = 1;
+
+type OnSimResult = (result: {
+	simMetrics?: SimMetricsSnapshot;
+	perMetricStatWeights?: Record<"tps" | "dtps" | "tmi", Stat[]>;
+	perMetricStatWeightStdevs?: Record<"tps" | "dtps" | "tmi", Stat[]>;
+	characterStats?: CharacterStatsSnapshot;
+	physicalDamageTakenMultiplier?: number;
+}) => void;
+
+interface PendingSolve {
+	resolve: (items: LPItem[]) => void;
+	reject: (error: Error) => void;
+	emitProgress?: (progress: WorkerProgressDetail) => void;
+	onSimResult?: OnSimResult;
+	profile: SimCalibrationProfile;
+	round1CacheKey?: Round1CacheKey;
+	startedAt: number;
+}
+
+const pendingSolves = new Map<number, PendingSolve>();
+const pendingWarms = new Map<
+	number,
+	{ resolve: () => void; reject: (error: Error) => void }
+>();
+
+// Throws the Worker away so the next request builds a fresh one, failing everything still
+// waiting on it. This is the explicit form of what the old per-solve code did implicitly by
+// terminating after every solve.
+function recycleSolverWorker(reason: Error): void {
+	const worker = sharedWorker;
+	sharedWorker = undefined;
+	worker?.terminate();
+
+	const abandonedSolves = [...pendingSolves.values()];
+	const abandonedWarms = [...pendingWarms.values()];
+	pendingSolves.clear();
+	pendingWarms.clear();
+	for (const entry of abandonedSolves) entry.reject(reason);
+	for (const entry of abandonedWarms) entry.reject(reason);
+}
+
+function routeWorkerMessage(data: WorkerMessage): void {
+	if (data.type === "warmed") {
+		pendingWarms.get(data.requestId)?.resolve();
+		pendingWarms.delete(data.requestId);
+		return;
+	}
+
+	const entry = pendingSolves.get(data.requestId);
+	// A message from a request that has already settled - in practice a progress or perf
+	// message queued behind the result, or anything at all from a request abandoned by a
+	// recycle. Dropping it is the whole point of carrying the id.
+	if (!entry) {
+		if (data.type === "error") {
+			pendingWarms.get(data.requestId)?.reject(new Error(data.message));
+			pendingWarms.delete(data.requestId);
+		}
+		return;
+	}
+
+	switch (data.type) {
+		case "progress": {
+			const { type: _type, requestId: _requestId, ...progress } = data;
+			entry.emitProgress?.(progress);
+			return;
+		}
+		case "perf":
+			// Printed on the main thread (not just the Worker's own separate DevTools console
+			// context) so this is visible without switching DevTools' worker-context dropdown -
+			// see src/helpers/perfTrace.ts and solver.worker.ts's postMessage("perf") calls.
+			console.table(data.summary);
+			return;
+		case "error": {
+			pendingSolves.delete(data.requestId);
+			// Recycle rather than reuse. A Go panic inside the wasm (see the cross-class tier-set
+			// crash in the plan's Phase 4 notes) leaves the Go runtime dead, and nothing in the
+			// message distinguishes that from a clean user-facing throw like the zero-objective
+			// guard - so assume the worst, exactly as terminating on every error used to. The
+			// cost is one wasm reload after a failed solve, on a path the user must react to
+			// anyway.
+			recycleSolverWorker(
+				new Error("The solver was restarted after an earlier solve failed."),
+			);
+			entry.reject(new Error(data.message));
+			return;
+		}
+		case "result": {
+			pendingSolves.delete(data.requestId);
+			// Independent, main-thread-measured end-to-end wall clock, separate from the Worker's
+			// own perfTrace summary above - if this meaningfully exceeds the sum of that summary's
+			// top-level spans, the gap points at costs the Worker-side trace structurally can't
+			// see (postMessage marshaling of the initial payload, and - on the first solve only
+			// now - Worker spawn/startup latency).
+			console.log(
+				`[perf] main-thread solve() wall clock: ${(performance.now() - entry.startedAt).toFixed(1)}ms`,
+			);
+			if (data.simMetrics || data.perMetricStatWeights || data.characterStats) {
+				entry.onSimResult?.({
+					simMetrics: data.simMetrics,
+					perMetricStatWeights: data.perMetricStatWeights,
+					perMetricStatWeightStdevs: data.perMetricStatWeightStdevs,
+					characterStats: data.characterStats,
+					physicalDamageTakenMultiplier: data.physicalDamageTakenMultiplier,
+				});
+			}
+			if (entry.round1CacheKey && data.round1StatWeights) {
+				setCachedRound1Weights(
+					entry.profile,
+					entry.round1CacheKey,
+					data.round1StatWeights,
+				);
+			}
+			entry.resolve(data.items);
+			return;
+		}
+	}
+}
+
+function getSolverWorker(): Worker {
+	if (sharedWorker) return sharedWorker;
+	const worker = new Worker(new URL("./solver.worker.ts", import.meta.url), {
+		type: "module",
+	});
+	worker.onmessage = (e) => routeWorkerMessage(e.data as WorkerMessage);
+	worker.onerror = (e) => {
+		console.error(e);
+		recycleSolverWorker(new Error(e.message || "The solver worker failed."));
+	};
+	sharedWorker = worker;
+	return worker;
+}
+
+/**
+ * Spawns the shared Worker and has it instantiate the sim wasm and load the item database
+ * before the user asks for anything, so the first solve does not pay for them.
+ *
+ * Fire-and-forget: a failure here is not a user-facing error, because the next solve retries
+ * the same work through its own error path. Deliberately does NOT derive the linear model -
+ * that depends on the calibration profile, which the user may still edit.
+ */
+export function warmSolverWorker(): Promise<void> {
+	const requestId = nextRequestId++;
+	const worker = getSolverWorker();
+	return new Promise<void>((resolve, reject) => {
+		pendingWarms.set(requestId, { resolve, reject });
+		worker.postMessage({ type: "warm", requestId });
+	});
+}
+
+/** Test seam: drops the shared Worker so each test starts from a clean realm. */
+export function resetSolverWorker(): void {
+	recycleSolverWorker(new Error("The solver worker was reset."));
+}
+
 export const solve = async (
 	items: InputItem[],
 	options: SolveOptions,
@@ -134,91 +307,45 @@ export const solve = async (
 	// measureFinalSimMetrics/finalPerMetricStatWeights. A callback (rather than widening this
 	// function's return type) keeps every existing `typeof solve`-typed callsite (tests
 	// substituting solveGearSet directly) compiling unchanged.
-	onSimResult?: (result: {
-		simMetrics?: SimMetricsSnapshot;
-		perMetricStatWeights?: Record<"tps" | "dtps" | "tmi", Stat[]>;
-		perMetricStatWeightStdevs?: Record<"tps" | "dtps" | "tmi", Stat[]>;
-		characterStats?: CharacterStatsSnapshot;
-		physicalDamageTakenMultiplier?: number;
-	}) => void,
+	onSimResult?: OnSimResult,
 ): Promise<LPItem[]> => {
-	return new Promise((resolve, reject) => {
-		const worker = new Worker(new URL("./solver.worker.ts", import.meta.url), {
-			type: "module",
+	const profile =
+		options.simCalibrationProfile ?? DEFAULT_SIM_CALIBRATION_PROFILE;
+	const round1CacheKey = round1CacheKeyFor(options);
+	const precomputedRound1 = round1CacheKey
+		? getCachedRound1Weights(profile, round1CacheKey)
+		: undefined;
+
+	const requestId = nextRequestId++;
+	// Built before the Promise so a Worker construction failure rejects here rather than
+	// leaving an entry stranded in pendingSolves.
+	const worker = getSolverWorker();
+
+	return new Promise<LPItem[]>((resolve, reject) => {
+		pendingSolves.set(requestId, {
+			resolve,
+			reject,
+			// A backgrounded tab keeps sim Worker threads running at full speed but deprioritizes
+			// this main thread's message processing, so refocusing can dump a large backlog of
+			// queued "progress" messages at once. Throttling how often that actually triggers a
+			// React state update (rather than doing so unconditionally, once per raw message) is
+			// what keeps draining that backlog fast instead of causing a multi-second catch-up -
+			// see createTrailingThrottle's own comment.
+			emitProgress: onProgress
+				? createTrailingThrottle(onProgress, 150)
+				: undefined,
+			onSimResult,
+			profile,
+			round1CacheKey,
+			startedAt: performance.now(),
 		});
-
-		// A backgrounded tab keeps sim Worker threads running at full speed but deprioritizes
-		// this main thread's message processing, so refocusing can dump a large backlog of
-		// queued "progress" messages at once. Throttling how often that actually triggers a
-		// React state update (rather than doing so unconditionally, once per raw message) is
-		// what keeps draining that backlog fast instead of causing a multi-second catch-up -
-		// see createTrailingThrottle's own comment.
-		const emitProgress = onProgress
-			? createTrailingThrottle(onProgress, 150)
-			: undefined;
-
-		const solveStartedAt = performance.now();
-
-		worker.onmessage = (e) => {
-			const data = e.data as WorkerMessage;
-			if (data.type === "progress") {
-				const { type: _type, ...progress } = data;
-				emitProgress?.(progress);
-				return;
-			}
-
-			if (data.type === "perf") {
-				// Printed on the main thread (not just the Worker's own separate DevTools console
-				// context) so this is visible without switching DevTools' worker-context dropdown -
-				// see src/helpers/perfTrace.ts and solver.worker.ts's postMessage("perf") calls.
-				console.table(data.summary);
-				return;
-			}
-
-			if (data.type === "error") {
-				worker.terminate();
-				reject(new Error(data.message));
-				return;
-			}
-
-			console.log("worker result");
-			// Independent, main-thread-measured end-to-end wall clock, separate from the Worker's
-			// own perfTrace summary above - if this meaningfully exceeds the sum of that summary's
-			// top-level spans, the gap points at costs the Worker-side trace structurally can't see
-			// (Worker spawn/startup latency, postMessage marshaling of the initial payload, etc).
-			console.log(
-				`[perf] main-thread solve() wall clock: ${(performance.now() - solveStartedAt).toFixed(1)}ms`,
-			);
-			worker.terminate();
-			if (data.simMetrics || data.perMetricStatWeights || data.characterStats) {
-				onSimResult?.({
-					simMetrics: data.simMetrics,
-					perMetricStatWeights: data.perMetricStatWeights,
-					perMetricStatWeightStdevs: data.perMetricStatWeightStdevs,
-					characterStats: data.characterStats,
-					physicalDamageTakenMultiplier: data.physicalDamageTakenMultiplier,
-				});
-			}
-			if (round1CacheKey && data.round1StatWeights) {
-				setCachedRound1Weights(profile, round1CacheKey, data.round1StatWeights);
-			}
-			resolve(data.items);
-		};
-
-		worker.onerror = (e) => {
-			console.error(e);
-			worker.terminate();
-			reject(e);
-		};
-
-		const profile =
-			options.simCalibrationProfile ?? DEFAULT_SIM_CALIBRATION_PROFILE;
-		const round1CacheKey = round1CacheKeyFor(options);
-		const precomputedRound1 = round1CacheKey
-			? getCachedRound1Weights(profile, round1CacheKey)
-			: undefined;
-
-		worker.postMessage({ items, options, precomputedRound1 });
+		worker.postMessage({
+			type: "solve",
+			requestId,
+			items,
+			options,
+			precomputedRound1,
+		});
 	});
 };
 

@@ -2,7 +2,7 @@ import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import CharacterSection from "#/components/CharacterSection";
 import ConfigurationPanel from "#/components/ConfigurationPanel";
 import ItemInputSection from "#/components/ItemInputSection";
@@ -18,7 +18,7 @@ import { useCharacterConfig } from "#/hooks/useCharacterConfig";
 import { useSimCalibrationProfile } from "#/hooks/useSimCalibrationProfile";
 import { useSolverConfigs } from "#/hooks/useSolverConfigs";
 import type { SolveAllProgress } from "#/solver";
-import { solveAll } from "#/solver";
+import { solveAll, warmSolverWorker } from "#/solver";
 import type { SolveResult } from "#/types/SolverConfig";
 export const Route = createFileRoute("/")({ component: App });
 
@@ -75,6 +75,16 @@ function App() {
 		() => _saved?.activeResultId ?? null,
 	);
 	const [solveError, setSolveError] = useState<string | null>(null);
+
+	// Spawn the shared solver Worker and let it instantiate the sim wasm and load the item
+	// database now, rather than when the user first presses Solve. Both costs are fixed and
+	// profile-independent, and before the Worker persisted across solves there was no point
+	// paying them early - each solve threw its realm away. Deliberately after mount rather
+	// than at module scope so the 5.7MB wasm fetch does not compete with the app's own
+	// first paint. Fire-and-forget: a failure just means the first solve warms it itself.
+	useEffect(() => {
+		void warmSolverWorker().catch(() => {});
+	}, []);
 
 	// a failed/invalid solve leaves no valid result set, so clear it from both state and
 	// localStorage - otherwise reloading the page (or the next render) would silently resurrect

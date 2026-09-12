@@ -4,19 +4,56 @@ import type { SolveOptions } from "./solveConfig";
 import { solveGearSet } from "./solveEHP";
 import type { InputItem } from "./types";
 
+// Every request carries an id and every reply echoes it. This Worker is now shared across
+// solves and across the configs within one solve (see src/solver/index.ts), so "the message
+// that just arrived belongs to the solve that is currently awaiting" is no longer automatic -
+// a progress message from an abandoned request must not be routed to its successor.
+interface SolveRequest {
+	type?: "solve";
+	requestId: number;
+	items: InputItem[];
+	// The main thread does not have the sim loaded, so it cannot build the stat model or the
+	// item pool - both happen here, below, before anything is solved.
+	options: Omit<SolveOptions, "linearModel" | "itemDatabase">;
+	// Round 1's weights from a previous solve with the same profile/metric blend, computed on
+	// the main thread (this Worker has no `localStorage` to read the cache itself) - see
+	// solver/index.ts's round1CacheKeyFor and round1WeightsCache.ts.
+	precomputedRound1?: CalibratedWeights;
+}
+
+// Sent once at app mount so the two fixed, profile-independent costs of a solve - instantiating
+// the 37MB Go wasm and fetching + parsing + adapting the 3.1MB database - are already paid by
+// the time the user presses Solve. Both memoize at module scope, which only became worth warming
+// when this Worker started outliving a single solve.
+interface WarmRequest {
+	type: "warm";
+	requestId: number;
+}
+
+type WorkerRequest = SolveRequest | WarmRequest;
+
+async function warm(): Promise<void> {
+	const [{ loadWasm }, { loadTbcDomainDatabase }] = await Promise.all([
+		import("#/sim/wasmCoordinator"),
+		import("#/data/tbcDatabase"),
+	]);
+	// Deliberately not deriveLinearModel: that depends on the calibration profile, which the
+	// user may still edit before solving. These two do not depend on it at all.
+	await Promise.all([loadWasm(), loadTbcDomainDatabase()]);
+}
+
 self.onmessage = async (e) => {
-	const { items, options, precomputedRound1 } = e.data as {
-		items: InputItem[];
-		// The main thread does not have the sim loaded, so it cannot build the stat model or the
-		// item pool - both happen here, below, before anything is solved.
-		options: Omit<SolveOptions, "linearModel" | "itemDatabase">;
-		// Round 1's weights from a previous solve with the same profile/metric blend, computed on
-		// the main thread (this Worker has no `localStorage` to read the cache itself) - see
-		// solver/index.ts's round1CacheKeyFor and round1WeightsCache.ts.
-		precomputedRound1?: CalibratedWeights;
-	};
+	const request = e.data as WorkerRequest;
+	const { requestId } = request;
 
 	try {
+		if (request.type === "warm") {
+			await warm();
+			postMessage({ type: "warmed", requestId });
+			return;
+		}
+
+		const { items, options, precomputedRound1 } = request;
 		// Dynamically imported so src/solver/ (the generic LP core) never statically imports
 		// src/sim/ (the tbc-new integration) - see docs/plans/sim-backed-objectives.md's
 		// "Open decisions" note.
@@ -43,6 +80,10 @@ self.onmessage = async (e) => {
 		// solver knows about race, talents, buffs, debuffs, consumables and stat conversions
 		// arrives in this one object, measured from the sim - see src/sim/deriveLinearModel.ts.
 		// One derivation per solve, shared by every SolverConfiguration the solve builds.
+		//
+		// Across solves this is now usually free: computeStatsClient memoizes on request
+		// content, and that cache survives with the Worker, so a re-solve at an unchanged
+		// profile replays the ~25 probes from memory instead of the wasm.
 		const linearModel = await perfTrace.timeAsync("deriveLinearModel", () =>
 			deriveLinearModel(db, profile),
 		);
@@ -86,7 +127,7 @@ self.onmessage = async (e) => {
 				db,
 				metricRatios,
 				profile,
-				(progress) => postMessage({ type: "progress", ...progress }),
+				(progress) => postMessage({ type: "progress", requestId, ...progress }),
 				precomputedRound1,
 			);
 			result = simResult.items;
@@ -94,9 +135,10 @@ self.onmessage = async (e) => {
 			// solveConfigForSimMetric already reset/logged its own trace internally (see its own
 			// perfTrace.reset()/log() calls) - just forward the summary to the main thread so it's
 			// visible without switching DevTools' worker-context dropdown (see src/solver/index.ts).
-			postMessage({ type: "perf", summary: perfTrace.summary() });
+			postMessage({ type: "perf", requestId, summary: perfTrace.summary() });
 			postMessage({
 				type: "result",
+				requestId,
 				items: result,
 				simMetrics: simResult.simMetrics,
 				perMetricStatWeights: simResult.finalPerMetricStatWeights,
@@ -114,10 +156,10 @@ self.onmessage = async (e) => {
 		// modes too.
 		perfTrace.reset();
 		result = await solveGearSet(items, solveOptions, (progress) =>
-			postMessage({ type: "progress", ...progress }),
+			postMessage({ type: "progress", requestId, ...progress }),
 		);
 		perfTrace.log("solve");
-		postMessage({ type: "perf", summary: perfTrace.summary() });
+		postMessage({ type: "perf", requestId, summary: perfTrace.summary() });
 
 		// These modes never calibrate against the sim, but the finished gear is exactly what
 		// measureFinalSimMetrics needs - run the same one-shot "finalize and measure" step the
@@ -143,6 +185,7 @@ self.onmessage = async (e) => {
 
 		postMessage({
 			type: "result",
+			requestId,
 			items: result,
 			simMetrics,
 			characterStats,
@@ -152,6 +195,7 @@ self.onmessage = async (e) => {
 		console.error(error);
 		postMessage({
 			type: "error",
+			requestId,
 			message: error instanceof Error ? error.message : String(error),
 		});
 	}
