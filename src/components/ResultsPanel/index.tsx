@@ -13,6 +13,7 @@ import type { SolveResult } from "#/types/SolverConfig";
 import CompareView from "./CompareView";
 import EmptyResultsPlaceholder from "./EmptyResultsPlaceholder";
 import ErrorResultsPlaceholder from "./ErrorResultsPlaceholder";
+import InheritedItemsNotice from "./InheritedItemsNotice";
 import ItemGroupDisplay from "./ItemGroupDisplay";
 import LoadingResultsPlaceholder from "./LoadingResultsPlaceHolder";
 import ResultsTabs from "./ResultsTabs";
@@ -53,6 +54,7 @@ export default function ResultsPanel({
 		perMetricStatWeightStdevs: activeResult.perMetricStatWeightStdevs,
 		characterStats: activeResult.characterStats,
 		physicalDamageTakenMultiplier: activeResult.physicalDamageTakenMultiplier,
+		inheritedItemIds: activeResult.inheritedItemIds,
 	};
 
 	const handleCopy = () => {
@@ -176,6 +178,10 @@ export default function ResultsPanel({
 						}}
 					>
 						<Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
+							<InheritedItemsNotice
+								items={displayed.items}
+								inheritedItemIds={displayed.inheritedItemIds}
+							/>
 							<ItemGroupDisplay items={displayed.items} />
 						</Box>
 

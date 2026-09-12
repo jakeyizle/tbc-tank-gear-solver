@@ -83,6 +83,18 @@ export interface SolveResult {
 	 * existed do not carry it.
 	 */
 	physicalDamageTakenMultiplier?: number;
+	/**
+	 * Ids in this set that an EARLIER config had already chosen, and whose gems/enchant were
+	 * therefore frozen before this config ever solved - see solveAll. An item exists once and can
+	 * be gemmed one way, so with dependent configs the first set to take an item decides how it
+	 * is gemmed and every later set lives with that.
+	 *
+	 * Surfaced so a later set's result is legible: without it, a set can score well below what
+	 * its pool allows, and move when unrelated items are added, for reasons nothing on screen
+	 * explains. Empty (not absent) when nothing was inherited; absent on results saved before
+	 * this existed.
+	 */
+	inheritedItemIds?: string[];
 }
 
 export interface BaseConfig {

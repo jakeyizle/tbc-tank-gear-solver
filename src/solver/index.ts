@@ -279,6 +279,19 @@ export const solveAll = async (
 	});
 	let currentInputItems: InputItem[] = initialInputItems;
 
+	// Ids an EARLIER config chose, and therefore froze the gems/enchant of for every config after
+	// it (see replaceInputItems and prepareItemCandidates' locked branch). This is tracked here,
+	// at the one place that actually knows, rather than re-derived in the UI from LPItem.locked -
+	// which cannot tell "an earlier set fixed this" apart from "the user ticked lock enchants
+	// & gems".
+	//
+	// Not tracked when the user HAS ticked that box: they fixed every item's gems themselves, so
+	// an earlier config re-fixing them to the same thing constrains nothing and flagging it would
+	// be noise on every row.
+	const tracksInheritance =
+		!baseConfig.independentConfigs && !baseConfig.areEnchantsGemsLocked;
+	const lockedByEarlierConfigs = new Set<string>();
+
 	const totalConfigs = solverConfigs.length;
 	for (const [configIndex, solverConfig] of solverConfigs.entries()) {
 		onProgress?.({
@@ -298,6 +311,7 @@ export const solveAll = async (
 			| undefined;
 		let characterStats: CharacterStatsSnapshot | undefined;
 		let physicalDamageTakenMultiplier: number | undefined;
+		const inheritedComingIn = new Set(lockedByEarlierConfigs);
 		try {
 			items = await solveFn(
 				currentInputItems,
@@ -333,11 +347,20 @@ export const solveAll = async (
 			perMetricStatWeightStdevs,
 			characterStats,
 			physicalDamageTakenMultiplier,
+			// Only the inherited items this set actually ENDED UP using - an item an earlier
+			// config froze but this one did not pick constrains nothing here.
+			inheritedItemIds: items
+				.filter((item) => inheritedComingIn.has(item.id))
+				.map((item) => item.id),
 			id: solverConfig.id,
 			name: solverConfig.name,
 			baseConfig,
 			solverConfig,
 		});
+
+		if (tracksInheritance) {
+			for (const item of items) lockedByEarlierConfigs.add(item.id);
+		}
 
 		currentInputItems = baseConfig.independentConfigs
 			? initialInputItems

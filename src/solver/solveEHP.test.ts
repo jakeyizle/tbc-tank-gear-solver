@@ -263,3 +263,89 @@ describe("zero-objective guard", () => {
 		expect(result.length).toBeGreaterThan(0);
 	}, 60000);
 });
+
+// Dependent configs (the default) lock each set's picks into the next set's pool WITH their gems,
+// because an item exists once and can be gemmed one way. That is intended, but it makes a later
+// set's result depend on earlier ones - which is what made an 18-item pool look like it scored
+// worse than its own 17-item subset. solveAll records what was inherited so the UI can say so.
+describe("inherited item tracking", () => {
+	const configFor = (id: string, name: string) => ({
+		id,
+		name,
+		uncritabilitySetting: 0,
+		uncrushabilitySetting: 0,
+		optimizeStats: [{ name: "Stamina" as const, value: 1, type: "flat" as const }],
+		objectiveMode: "stats" as const,
+		balance: 0.5,
+		survivabilityMetric: "tmi" as const,
+		resistanceFloors: [],
+		enabledConsumableIds: [],
+		enabledCalibrationStats: [],
+	});
+
+	const baseConfigFor = (overrides: Record<string, unknown>) => ({
+		areEnchantsGemsLocked: false,
+		excludeUniqueGems: false,
+		excludeJewelcraftingItems: false,
+		excludeEnchantingItems: false,
+		independentConfigs: false,
+		phase: 3,
+		raceId: TEST_RACE_ID,
+		classId: TEST_CLASS_ID,
+		simCalibrationProfile: DEFAULT_SIM_CALIBRATION_PROFILE,
+		...overrides,
+	});
+
+	const solveFnForTest: typeof solve = (items, options, onProgress) =>
+		solveGearSet(
+			items,
+			{
+				...options,
+				linearModel: TEST_LINEAR_MODEL,
+				itemDatabase: TEST_ITEM_DATABASE,
+			},
+			onProgress,
+		);
+
+	it("records what a later set inherited, and nothing for the first", async () => {
+		const results = await solveAll(
+			testItemPool,
+			baseConfigFor({}),
+			[configFor("a", "First"), configFor("b", "Second")],
+			undefined,
+			solveFnForTest,
+		);
+		// The first set solves an untouched pool, so it inherits nothing.
+		expect(results[0].inheritedItemIds).toEqual([]);
+		// The second inherits every item the first took and it also kept.
+		expect(results[1].inheritedItemIds?.length).toBeGreaterThan(0);
+		const firstIds = new Set(results[0].items.map((item) => item.id));
+		for (const id of results[1].inheritedItemIds ?? []) {
+			expect(firstIds.has(id)).toBe(true);
+		}
+	}, 120000);
+
+	it("records nothing when configs solve independently", async () => {
+		const results = await solveAll(
+			testItemPool,
+			baseConfigFor({ independentConfigs: true }),
+			[configFor("a", "First"), configFor("b", "Second")],
+			undefined,
+			solveFnForTest,
+		);
+		expect(results[1].inheritedItemIds).toEqual([]);
+	}, 120000);
+
+	it("records nothing when the user locked gems themselves", async () => {
+		// They fixed every item's gems, so an earlier set re-fixing them to the same thing
+		// constrains nothing - flagging it would be noise on every row.
+		const results = await solveAll(
+			testItemPool,
+			baseConfigFor({ areEnchantsGemsLocked: true }),
+			[configFor("a", "First"), configFor("b", "Second")],
+			undefined,
+			solveFnForTest,
+		);
+		expect(results[1].inheritedItemIds).toEqual([]);
+	}, 120000);
+});
