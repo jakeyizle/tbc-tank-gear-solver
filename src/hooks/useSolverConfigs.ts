@@ -12,7 +12,7 @@ const ALL_CONSUMABLE_IDS = CONSUMABLES.map((consumable) => consumable.id);
 
 // Migrates configs saved under an earlier multi-metric sim objective mechanism - three exclusive
 // TPS/DTPS/TMI-5 modes, then a {tps, dtps, tmi5} ratio blend, then a single Threat<->
-// Survivability balance slider (see docs/plans/sim-backed-objectives.md) - onto today's modes,
+// Survivability balance slider (see docs/architecture/sim-integration.md) - onto today's modes,
 // which include a real "balanced" mode again (a plain weighted blend - see
 // calibrateWeights.ts's metricRatiosForBalance). A config already saved under the old balance
 // slider (`mode === "simWeighted"`) maps directly onto "balanced", carrying its `balance`/

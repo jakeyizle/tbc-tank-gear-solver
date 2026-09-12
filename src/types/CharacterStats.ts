@@ -2,7 +2,7 @@
 //
 // These live in src/types/ rather than src/sim/ for the same reason SimMetricsSnapshot does:
 // src/solver/ and the UI need to name them, but neither may pull in the sim module graph.
-// See docs/plans/sim-backed-objectives.md's note on the src/solver -> src/sim boundary.
+// See docs/architecture/sim-integration.md's "The src/solver -> src/sim boundary".
 
 /** One snapshot of a character's stats: raw stat array plus derived pseudo-stats. */
 export interface UnitStatsView {

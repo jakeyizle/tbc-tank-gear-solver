@@ -6,7 +6,7 @@
 // stat engine that drifted from the sim, and the cheapest way to grow a third is to let two
 // request builders assemble the player differently.
 //
-// See docs/plans/sim-backed-objectives.md for the corrected proto field map this relies on
+// See docs/architecture/sim-integration.md's "The proto field map" for what this relies on
 // (Player.rotation is top-level; a oneof like `protectionPaladin` is flattened onto its
 // parent message in JSON, not nested under a `spec` key).
 import type { SimCalibrationProfile } from "#/types/SimCalibrationProfile";

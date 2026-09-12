@@ -8,7 +8,7 @@
 // `valueVariables` block below, which encodes those same booleans as APL value refs).
 //
 // Since v1's simple-rotation settings are fixed (not user-editable — see north star in
-// docs/plans/sim-backed-objectives.md), we use this precompiled output directly instead of
+// docs/architecture/sim-integration.md), we use this precompiled output directly instead of
 // vendoring the `simpleRotation()` transform function and `playerTalentStringToProto` to
 // regenerate it at runtime. If the simple-rotation booleans ever become a user setting, this
 // file should be replaced by actually running `simpleRotation()` against the chosen options.

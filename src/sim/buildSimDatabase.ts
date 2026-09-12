@@ -9,7 +9,7 @@
 // of SimItem/SimGem/SimEnchant with a few extra UI-only fields), so building a minimal
 // SimDatabase is a filter-by-id + drop-UI-fields operation, not a data pipeline of our own.
 //
-// See docs/plans/sim-backed-objectives.md for the full design rationale.
+// See docs/architecture/sim-integration.md's "The SimDatabase" for the design rationale.
 
 export interface GearItemRef {
 	id: number;

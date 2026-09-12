@@ -40,7 +40,7 @@ const UNCRUSHABLE_TAGS: Record<number, string> = {
 
 // Objective modes that ignore optimizeStats and instead recalibrate their own weight
 // vector - "ehp" via a closed-form formula, "tps"/"dtps"/"tmi"/"balanced" via a real combat sim
-// (see docs/plans/sim-backed-objectives.md). All are labeled/explained the same way in this UI.
+// (see docs/architecture/sim-integration.md). All are labeled/explained the same way in this UI.
 const NON_STATS_OBJECTIVE_LABELS: Record<string, string> = {
 	ehp: "Maximize Effective HP",
 	hardAvoidance: "Maximize Hard Avoidance",

@@ -1,7 +1,7 @@
 // Hardcoded v1 reference encounter: copied verbatim from tbc-new's own
 // vendor/tbc-sim/ui/paladin/protection/builds/default_encounter_only.build.json — a generic
 // 180s single-target raid boss profile. Shown to the user as read-only context ("Optimized
-// against: ...") per docs/plans/sim-backed-objectives.md's north star, not yet selectable.
+// against: ...") per docs/architecture/sim-integration.md's "North star", not yet selectable.
 
 export const PROT_PALADIN_REFERENCE_ENCOUNTER_NAME = "Generic raid boss (180s)";
 
@@ -41,7 +41,7 @@ export const PROT_PALADIN_REFERENCE_ENCOUNTER = {
 			level: 73,
 			mobType: "MobTypeMechanical",
 			// Positional stat array, index-matched to common.proto's Stat enum ordinals
-			// (see docs/plans/sim-backed-objectives.md's SimDatabase note) — index 17 is
+			// (see docs/architecture/sim-integration.md's "The SimDatabase") — index 17 is
 			// Armor (320, trivial), index 31 is the boss's own Armor (7685), index 33 is
 			// Health (6070400).
 			stats: [

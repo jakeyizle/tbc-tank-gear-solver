@@ -2,7 +2,7 @@
 // perturbation requests, across one or more replicates - see calibrateWeights.ts) across a
 // SimWorkerPool as a pipelined job queue, instead of statWeightsClient.ts's old model of
 // splitting each request across the whole pool and barrier-waiting before starting the next
-// one. See docs/plans/sim-backed-objectives.md and this session's own investigation for why:
+// one. See docs/architecture/sim-integration.md and this session's own investigation for why:
 // splitting was measured to add ~0% total CPU overhead (no meaningful per-chunk setup cost to
 // amortize), so the only real win here is letting independent requests - most importantly,
 // independent *replicates* - actually run concurrently instead of one after another, which

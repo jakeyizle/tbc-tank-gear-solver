@@ -1,7 +1,7 @@
 // Iterative sim-calibrated solve: mirrors solveEHP.ts's Sequential-Linear-Programming shape
 // (solve -> recompute weights around the result -> resolve until stable), but the per-round
 // weight vector comes from a real tbc-new sim calibration instead of a closed-form
-// derivative, since TPS/DTPS/TMI-5 have no closed form. See docs/plans/sim-backed-objectives.md's
+// derivative, since TPS/DTPS/TMI-5 have no closed form. See docs/architecture/sim-integration.md's
 // Phase 3 design and its note on why this needs re-linearizing each round: calibration is a
 // local Taylor approximation around one gear set, and avoidance/block have real curvature.
 import { perfTrace } from "#/helpers/perfTrace";

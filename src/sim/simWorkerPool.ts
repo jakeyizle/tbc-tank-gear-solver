@@ -3,7 +3,7 @@
 // parallel rather than one instance handling the whole batch single-threaded. Default sizing
 // mirrors wowsims' own ui/core/sim.ts:142-143 (`Math.min(4, hardwareConcurrency / 2)`) - this
 // session's performance investigation confirmed ~3.4x real speedup at that worker count on
-// real hardware, with negligible further gain past it (see docs/plans/sim-backed-objectives.md).
+// real hardware, with negligible further gain past it (see docs/architecture/sim-integration.md).
 // A caller can override this via the constructor's `desiredSize` (see
 // SimCalibrationProfile.ts's `calibration.workerCount` - surfaced as a user setting since the
 // "negligible further gain" finding was measured on one machine, not every user's).

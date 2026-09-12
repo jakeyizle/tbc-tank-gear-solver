@@ -1,7 +1,7 @@
 // Runs a real tbc-new sim calibration for a gear set and returns the result as this repo's
 // `Stat[]` weight-vector shape - the same shape `optimizeStats` already accepts, so callers
 // can feed it straight into the existing solver ("stats" objective mode) with no other
-// solver changes. See docs/plans/sim-backed-objectives.md's Phase 3 design.
+// solver changes. See docs/architecture/sim-integration.md's "Calibration".
 //
 // A single calibration batch computes tps/dtps/tmi together (see buildStatWeightsRequest.ts),
 // so `metricRatios` lets a caller blend more than one of them into one weight vector at no

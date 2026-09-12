@@ -5,7 +5,7 @@
 // helpers in tbc-new's UI layer we don't want to pull in wholesale) — this is the same
 // baseline tbc-new's own UI defaults a new Protection Paladin sim to.
 //
-// Deliberately a single hardcoded bundle for v1 (see docs/plans/sim-backed-objectives.md's
+// Deliberately a single hardcoded bundle for v1 (see docs/architecture/sim-integration.md's
 // north star) rather than user-editable settings — but every field here maps 1:1 onto a
 // proto field tbc-new's own settings UI exposes, so turning any one of these into a real
 // solver setting later is "read from user input instead of this constant", not a redesign.

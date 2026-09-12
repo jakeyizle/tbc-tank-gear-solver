@@ -13,12 +13,12 @@
 // baseline + every calibrated stat's low/high perturbation - rather than splitting each
 // individual request across the whole pool and barrier-waiting before starting the next one.
 // This session's own investigation measured that splitting adds ~0% total CPU overhead (no
-// meaningful per-chunk setup cost to amortize - see docs/plans/sim-backed-objectives.md's Step
-// 0 measurement), so the only real win of the job-queue model is letting independent requests -
-// most importantly, calibrateWeights.ts's independent *replicates* - actually run concurrently,
-// which one-request-in-flight-at-a-time splitting could never do. This instance's own wasm
-// module is still used as the "coordinator" for the cheap, non-iteration-bound calls
-// (statWeightRequests, statWeightCompute).
+// meaningful per-chunk setup cost to amortize - see docs/architecture/sim-integration.md's
+// "Two execution paths"), so the only real win of the job-queue model is letting independent
+// requests - most importantly, calibrateWeights.ts's independent *replicates* - actually run
+// concurrently, which one-request-in-flight-at-a-time splitting could never do. This
+// instance's own wasm module is still used as the "coordinator" for the cheap,
+// non-iteration-bound calls (statWeightRequests, statWeightCompute).
 import "./wasm_exec.js";
 import { perfTrace } from "#/helpers/perfTrace";
 import { fetchWasmModule } from "./fetchWasmModule";

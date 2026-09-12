@@ -23,7 +23,7 @@ export interface SolverConfiguration {
 	// Block); also force-disables the Avoidance floor constraint, since holding hard avoidance to
 	// a Block-inclusive floor while maximizing it is redundant - see solveConfigForHardAvoidance.
 	// 'tps'/'dtps'/'tmi' = sim-calibrated objective (Protection Paladin only for now) - see
-	// docs/plans/sim-backed-objectives.md - purely maximizing (tps) or minimizing (dtps/tmi) that
+	// docs/architecture/sim-integration.md - purely maximizing (tps) or minimizing (dtps/tmi) that
 	// one metric, no blend with anything else. 'balanced' = a weighted blend of tps against
 	// whichever metric `survivabilityMetric` names, per `balance` - see
 	// calibrateWeights.ts's metricRatiosForBalance. Like 'ehp', all of these ignore

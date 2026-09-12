@@ -1,5 +1,5 @@
 // Assembles a full proto.StatWeightsRequest (JSON form) for a Protection Paladin gear set,
-// using the hardcoded v1 calibration profile. See docs/plans/sim-backed-objectives.md for
+// using the hardcoded v1 calibration profile. See docs/architecture/sim-integration.md for
 // the corrected proto field map this relies on (Player.rotation is top-level; raidBuffs/
 // partyBuffs/debuffs are siblings of `player` on the request, not nested in it; a oneof like
 // `protectionPaladin` is flattened onto its parent message in JSON, not nested under a

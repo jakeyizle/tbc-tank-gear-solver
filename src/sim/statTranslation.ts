@@ -1,7 +1,7 @@
 // Translation between this repo's StatName and tbc-new's proto.Stat enum, for the subset of
 // stats a Protection Paladin calibration cares about. Units already match on both sides
 // (flat rating-point atoms) — this is a pure name remap, not a scaling conversion. See
-// docs/plans/sim-backed-objectives.md's "tbc-new stats.Stat <-> StatName translation table".
+// docs/architecture/sim-integration.md's "tbc-new stats.Stat <-> StatName translation table".
 import type { StatName } from "#/solver/types";
 
 // tbc-new proto.Stat JSON enum names (src/sim/proto/common.ts), keyed by this repo's
