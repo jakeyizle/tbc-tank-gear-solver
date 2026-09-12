@@ -1,5 +1,5 @@
 // A tiny named-span timing aggregator for investigating where a sim-backed solve spends its
-// time - see docs/plans (instrument-the-sim-backed-solve-pipeline). Deliberately dependency-free
+// time. Deliberately dependency-free
 // (only `performance.now()` and `console.table`) so it works unmodified in any JS context this
 // app runs in: the main thread, solver.worker.ts, and the dedicated sim Worker threads
 // (simExecutor.worker.ts).

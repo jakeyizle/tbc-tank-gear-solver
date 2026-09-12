@@ -26,9 +26,16 @@ interface AchievedStats {
 	resistances: Partial<Record<string, number>>;
 }
 
-// Independently recomputes what a solved item set actually achieves, by re-scoring the whole
-// set from the stat model, rather than trusting the solver's internal per-item score fields -
-// so this stays meaningful no matter how the solver represents its internal solution.
+// Recomputes what a solved item set actually achieves by re-scoring the whole set from the stat
+// model, rather than trusting the solver's internal per-item score fields - so this stays
+// meaningful no matter how the solver represents its internal solution.
+//
+// NOT an independent oracle, despite being the thing 21 solver assertions check against. It
+// calls scoreItemSet. The aggregation paths do differ (the LP hands GLPK per-item UNROUNDED
+// coefficients and lets GLPK sum them; this re-scores the assembled set with roundDefense), so
+// it catches model and constraint bugs - but a bug INSIDE axisTotals moves both sides of every
+// assertion identically and no solver test can see it. scores.test.ts is the oracle for that,
+// deliberately built on a hand-written model. Do not "simplify" it to use the real fixture.
 //
 // Figures are the ITEMS' contribution only, and are checked below against config's item-level
 // targets (which already have the character's base subtracted out). Defense skill's floor is

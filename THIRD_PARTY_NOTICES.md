@@ -71,13 +71,13 @@ noted here for completeness:
 - **Copyright:** (c) 2022 wowsims team
 - **License:** MIT
 
-Several of this project's static data files under `src/data/`
-(`items.json`, `gems.json`, `enchants.json`, `item-tooltips.json`,
-`level_stats.json`, etc.) were derived from item, gem, and base-stat data
-compiled by the wowsims/tbc project (its `assets/item_data/*.csv` files and
-`sim/core` base-stat tables). The `WowSims Exporter addon JSON` gear input
-format this tool accepts (see `helpers/parseItemInput.ts`) is also modeled
-on wowsims/tbc's export format.
+This project vendors the wowsims/tbc simulator under `vendor/tbc-sim/` and
+ships it compiled to wasm, along with its item database (`db.json`). All item,
+gem, enchant and base-stat data the tool uses comes from there at runtime; the
+~30 supplementary records in `src/data/itemSupplement.ts` and the consumables
+in `src/data/consumables.ts` are derived from the same project. The `WowSims
+Exporter addon JSON` gear input format this tool accepts (see
+`helpers/parseItemInput.ts`) is also modeled on wowsims/tbc's export format.
 
 Additionally, the sim-backed solver objectives (TPS/DTPS/TMI-5, Protection Paladin only —
 see `src/sim/`) build on wowsims/tbc's combat simulator directly:
@@ -158,12 +158,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Game data and assets (World of Warcraft: The Burning Crusade)
 
-Item, enchant, gem, and stat data in `src/data/` (`items.json`,
-`enchants.json`, `gems.json`, etc.) is derived from World of Warcraft game
-data — via wowsims/tbc (above) and item tooltip data/icons sourced from
-[Wowhead](https://www.wowhead.com) (`www.wowhead.com`) and Blizzard's public
-icon CDN (`wow.zamimg.com`) — see `scripts/getGemIcons.ts` and
-`src/data/item-tooltips.json`.
+Item, enchant, gem, and stat data is derived from World of Warcraft game data
+via wowsims/tbc (above). Item icons are referenced by name from Blizzard's
+public icon CDN (`wow.zamimg.com`) and items link out to
+[Wowhead](https://www.wowhead.com); see `src/helpers/wowhead.ts`.
 
 World of Warcraft, Burning Crusade Classic, and all associated names, item
 data, and imagery are trademarks and/or copyrights of Blizzard Entertainment,

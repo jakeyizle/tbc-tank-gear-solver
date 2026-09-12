@@ -65,7 +65,7 @@ export const BOSS_LEVEL = CHARACTER_LEVEL + 3;
 // vendor/tbc-sim/sim/core/target.go:406-412.
 //
 // THESE ARE COMBAT VALUES, NOT DISPLAY VALUES - do not use them to compute the avoidance
-// figure shown to the user, and do not "correct" src/data/baseStats.ts to match them.
+// figure shown to the user, and do not "correct" the measured base to match them.
 //
 // A level-73 boss makes each of miss/dodge/parry/block exactly 0.6 percentage points less
 // effective (5% -> 4.4%, and dodge 0% -> -0.6%). There are two self-consistent conventions
@@ -74,8 +74,8 @@ export const BOSS_LEVEL = CHARACTER_LEVEL + 3;
 //   2. ignore it and compare against 100 + 0.6*4 = 102.4%   <- what everyone actually uses
 // wowsims' own character panel is convention 2: player.tsx's getMissChanceInfo hardcodes
 // `base: 5`, and the dodge/parry/block pseudo-stats carry the CLASS base chance without the
-// attack table's level term. baseStats.ts's 5 / 5 / 5 / 0.65 and avoidance.ts's 102.4
-// target are therefore correct and agree with wowsims.
+// attack table's level term. The 5 / 5 / 5 / 0.65 base that deriveLinearModel measures from
+// computeStats, and avoidance.ts's 102.4 target, are therefore correct and agree with wowsims.
 //
 // The functions below exist for combat-accurate math (and the armor constant beside them);
 // the attack table applies them at swing time.
@@ -95,8 +95,8 @@ export const baseCrushChance = (attackerLevel: number) =>
  * vendor/tbc-sim/sim/core/spell_resistances.go:133.
  *
  * Depends on the ATTACKER's level, which is why a single hardcoded constant is wrong:
- * 11960 at level 73 (a boss) but 11492.5 at level 72 - the discrepancy TODO.md recorded
- * against the hardcoded constant in the deleted helpers/convertStat.ts.
+ * 11960 at level 73 (a boss) but 11492.5 at level 72 - the discrepancy that made the single
+ * hardcoded constant in the deleted helpers/convertStat.ts wrong for heroics.
  */
 export const armorConstant = (attackerLevel: number) =>
 	attackerLevel * 467.5 - 22167.5;
