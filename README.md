@@ -1,10 +1,31 @@
-﻿# wow-tank-gear-solver
+# TBC Prot Paladin Gear Solver
 
-A gear optimization tool for Protection Paladin tanks in World of Warcraft: The Burning Crusade (TBC). Players paste their gear pool, configure talents/buffs/constraints per gear set, and the solver selects the optimal item+enchant+gem combination using Linear Programming.
+Finds the best gear, enchants and gems for a Protection Paladin tank in World of Warcraft: The Burning Crusade. Paste your character export, set your constraints (uncrushable, uncrit, resistance floors), and the solver picks the optimal combination from everything you own, formulated as a linear program and solved in the browser.
 
-This is an unofficial fan-made tool, not affiliated with or endorsed by Blizzard Entertainment. Licensed under [GPL-3.0-or-later](LICENSE) (required by the `glpk.js` solver dependency) — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency and game-data attributions.
+**Live:** https://tbc-tank-gear-solver.vercel.app
 
-## Quick Start
+![A solved gear set: chosen items, enchants and gems on the right, constraints on the left](docs/screenshot.png)
+
+## How it works
+
+- **Gear selection as an LP.** Every item × enchant × gem option becomes a variable; slot rules, unique gems, socket bonuses and the avoidance / crit-reduction / resistance floors become constraints. [GLPK](https://www.gnu.org/software/glpk/) compiled to WebAssembly solves it in a Web Worker so the UI never blocks.
+- **Several gear sets, one inventory.** Sets are solved in priority order. Once a set picks an item's enchant and gems, lower sets must reuse them — just like in the game, where you can't enchant the same item two ways.
+- **Simulation-calibrated stat weights.** Besides fixed stat weights and maximum effective HP, the solver can optimize simulated metrics — threat per second, damage taken per second, and TMI. It runs a [wowsims](https://github.com/wowsims) combat simulator — Go, compiled to WebAssembly and loaded on demand — to calibrate the weights, then re-solves until the chosen gear stops changing.
+- **Tested domain math.** The rating conversions, avoidance and crit-reduction formulas, and the solver pipeline have Vitest tests next to the code they cover.
+
+## Tech stack
+
+| Concern | Library |
+|---|---|
+| Framework | React 19 + Vite (client-side SPA) |
+| Routing | TanStack Router (file-based, `src/routes/`) |
+| UI | MUI v7 |
+| LP solver | `glpk.js` (GLPK compiled to WASM), run in a Web Worker |
+| Combat sim | Vendored wowsims sim (Go → WASM), protobuf API via `protobuf-ts` |
+| Lint / format | Biome |
+| Tests | Vitest + jsdom |
+
+## Development
 
 ```bash
 npm install
@@ -14,21 +35,9 @@ npm run test
 npm run check    # Biome lint + format
 ```
 
----
+Rebuilding the simulator WASM (`npm run sim:build-wasm`) needs a Go toolchain; the prebuilt module in `public/sim/` is enough for normal development.
 
-## Tech Stack
-
-| Concern | Library |
-|---|---|
-| Framework | React 19 + Vite (client-side SPA, no SSR) |
-| Routing | TanStack Router (file-based, `src/routes/`) |
-| UI | MUI v7 (preferred). Tailwind CSS v4 is present but largely leftover from the initial project template — prefer MUI components. |
-| LP Solver | `glpk.js` (GLPK compiled to WASM) |
-| Linting/Formatting | Biome (not ESLint/Prettier) |
-| Testing | Vitest + jsdom |
-| Path alias | `#/` → `src/` (also `@/` → `src/`) |
-
-The LP solver runs inside a **Web Worker** (`src/solver/solver.worker.ts`) to avoid blocking the UI thread.
+This is an unofficial fan-made tool, not affiliated with or endorsed by Blizzard Entertainment. Licensed under [GPL-3.0-or-later](LICENSE) (required by the `glpk.js` solver dependency) — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency and game-data attributions.
 
 ---
 
@@ -166,4 +175,3 @@ For open bugs, gaps, and cleanup work, see [TODO.md](TODO.md) rather than this f
 - **Stat values in data files are always ratings**, never percentages.
 - **Class IDs**: Paladin = `"2"`. **Race IDs**: Human = `"1"`. These are strings, not numbers.
 - **Biome** handles both linting and formatting. Run `npm run check` before committing.
-
